@@ -1,0 +1,28 @@
+{
+  "id": "pt-ensemble",
+  "prompt": "How uncertain is the ECMWF temperature forecast for Reading, UK over the next 5 days? Use the ensemble and give me the likely range per day.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "polytope"
+    },
+    {
+      "kind": "command",
+      "pattern": "ptpoint\\.py.*--ensemble"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ensemble|members|percentile|range"
+    },
+    {
+      "kind": "final",
+      "pattern": "\u00b0C|degC"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io"
+    }
+  ]
+}

@@ -80,6 +80,57 @@ def test_ekplot_meteogram_panels_none_becomes_nan():
     assert math.isnan(p["values"][0]) and p["values"][1] == 1.2
 
 
+ENS_JSON = {
+    "run": "2026-10-02T12:00Z",
+    "model": "ifs-ens",
+    "gridpoint": {"lat": 51.42, "lon": -0.98},
+    "units": {"t2m_C": "degC", "precip_mm": "mm since previous step"},
+    "series": [
+        {
+            "step": s,
+            "valid_time": f"2026-10-02T{12 + s:02d}:00Z",
+            "t2m_C": 15.0 + s,
+            "t2m_C_p10": 14.0 + s,
+            "t2m_C_p50": 15.0 + s,
+            "t2m_C_p90": 16.5 + s,
+            "precip_mm": 0.1,
+            "precip_mm_p10": 0.0,
+            "precip_mm_p50": 0.1,
+            "precip_mm_p90": 0.8,
+            "members": 50,
+        }
+        for s in range(0, 12, 3)
+    ],
+}
+
+
+def test_ekplot_meteogram_panels_ensemble_band():
+    m = load_script("earthkit", "ekplot")
+    p = {x["key"]: x for x in m.meteogram_panels(ENS_JSON)}
+    assert p["t2m_C"]["band"] == ([14.0, 17.0, 20.0, 23.0], [16.5, 19.5, 22.5, 25.5])
+    assert "band" in p["precip_mm"]
+    assert "band" not in {x["key"]: x for x in m.meteogram_panels(POINT_JSON)}["t2m_C"]
+
+
+def test_ekplot_attribution_comes_from_the_data():
+    m = load_script("earthkit", "ekplot")
+    assert (
+        m.attribution_for({"attribution": {"short": "Data: © 2026 ECMWF"}})
+        == "Data: © 2026 ECMWF"
+    )
+    assert "CC BY 4.0" in m.attribution_for({})  # Open Data default
+
+
+@pytest.mark.earthkit
+def test_ekplot_meteogram_ensemble_png(tmp_path):
+    j = tmp_path / "e.json"
+    j.write_text(json.dumps(ENS_JSON))
+    png = tmp_path / "e.png"
+    out = uv("ekplot.py", "meteogram", j, "-o", png)
+    assert out.returncode == 0, out.stderr
+    assert png.read_bytes()[:4] == b"\x89PNG"
+
+
 # --- earthkit-backed ---------------------------------------------------------------------------
 
 

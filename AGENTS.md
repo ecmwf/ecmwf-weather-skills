@@ -150,6 +150,14 @@ ran — auth, quota, CLI missing; not a skill result). Prerequisites: `claude` l
 `GEMINI_API_KEY`. Gemini's JSON output has no command log, so only `skill`/`final`/`file`
 expectations are meaningful for it.
 
+**Lessons from evals so far** (keep adding):
+- An agent that can't find the right skill will fall back to third-party weather APIs and present
+  the result as ECMWF data — every skill says "ECMWF sources only", and point-forecast cases assert
+  no third-party hosts are called.
+- Descriptions route: if a skill's description mentions a term ("IFS ENS") but can't serve the
+  task, it must point to the skill that can.
+- Agents drop attribution unless told to end the answer with it.
+
 **Read transcripts, not just verdicts.** A PASS can hide a struggling agent: the first
 `ek-meteogram` run passed but took 283 s, retried mirrors and thinned steps — which exposed a
 precipitation bug and a slow fetcher. Check `seconds`, the command list

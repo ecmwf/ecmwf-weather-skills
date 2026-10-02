@@ -16,7 +16,11 @@ See `PLAN.md` for context and milestones.
       keep a warm earthkit process or pre-extract a point index
 - [ ] M2 polish — `opencharts.py get --valid-time` validation; regenerate `layers.md` from
       GetCapabilities weekly
-- [ ] M3 — `polytope` skill + point-forecast fallback wiring
+- [x] M3 — `polytope` skill + point-forecast fallback wiring
+- [ ] M3 polish — meteogram median line colour (pale yellow, low contrast); precipitation
+      intervals change length (1 h → 3 h → 6 h) — consider normalising to mm/h
+- [ ] Web map: use Polytope for click meteograms when `ptpoint.py --check` passes (seconds, not
+      ~300 MB)
 - [ ] M4 — `cds-ads` skill (ERA5, CAMS)
 - [ ] M5 — `mars` skill
 - [ ] M6 — tooling: `validate_packaging.py`, `check_skill_links.py`, `bump_version.py`,

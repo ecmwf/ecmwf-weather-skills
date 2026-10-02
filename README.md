@@ -1,7 +1,7 @@
 # ECMWF Weather — Agent Skills
 
-> **Status: pre-release.** `open-data`, `earthkit` and `opencharts-wms` are implemented and tested;
-> `polytope`, `cds-ads` and `mars` are stubs. See `PLAN.md` and `TODO.md`.
+> **Status: pre-release.** `open-data`, `earthkit`, `opencharts-wms` and `polytope` are implemented and
+> tested; `cds-ads` and `mars` are stubs. See `PLAN.md` and `TODO.md`.
 
 Six [Agent Skills](https://agentskills.io) that teach coding agents how to find, request, decode and
 visualise ECMWF data — real-time IFS and AIFS forecasts, ERA5 reanalysis, CAMS air quality, the MARS

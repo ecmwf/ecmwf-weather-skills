@@ -32,6 +32,9 @@ metadata:
 | 2 m temperature or precipitation **maps** | OpenCharts (`medium-2t-wind`, `medium-rain-rate`…) — the public WMS has no surface temperature/precipitation layers |
 | Forecast numbers at a place | the `open-data` skill |
 
+Use ECMWF sources only — never substitute a third-party weather API; if no ECMWF route works,
+say so.
+
 ## Web map workflow
 
 ```

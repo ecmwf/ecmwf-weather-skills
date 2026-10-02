@@ -1,0 +1,32 @@
+{
+  "id": "pt-point-forecast",
+  "prompt": "Using my ECMWF account, get the hourly forecast for Lisbon for the next 24 hours as efficiently as possible.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "polytope"
+    },
+    {
+      "kind": "command",
+      "pattern": "ptpoint\\.py"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "odpoint\\.py(?!.*--estimate-only)"
+    },
+    {
+      "kind": "final",
+      "pattern": "\u00b0C|degC"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)licen[cs]e|\u00a9"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "pt-access",
+  "prompt": "Do I have access to ECMWF Polytope from this machine, and what would it give me compared to ECMWF open data? Don't print any keys.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "polytope"},
+    {"kind": "command", "pattern": "ptpoint\\.py.*--check"},
+    {"kind": "final_not", "pattern": "[0-9a-f]{32}"},
+    {"kind": "final", "pattern": "(?i)open data"}
+  ]
+}

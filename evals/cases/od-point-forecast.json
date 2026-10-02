@@ -1,14 +1,36 @@
 {
   "id": "od-point-forecast",
-  "prompt": "What will the weather be like in Lisbon over the next two days? Use ECMWF data.",
+  "prompt": "What will the weather be like in Lisbon over the next two days? Use the free ECMWF open data.",
   "timeout": 900,
   "max_budget_usd": 3,
   "expect": [
-    {"kind": "skill", "name": "open-data"},
-    {"kind": "command", "pattern": "odpoint\\.py"},
-    {"kind": "command_not", "pattern": "pip install (earthkit(\\s|$)|.*earthkit-data\\[all\\])"},
-    {"kind": "final", "pattern": "°C|degC"},
-    {"kind": "final", "pattern": "(?i)ECMWF"},
-    {"kind": "final", "pattern": "CC[ -]BY"}
+    {
+      "kind": "skill",
+      "name": "open-data"
+    },
+    {
+      "kind": "command",
+      "pattern": "odpoint\\.py"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "pip install (earthkit(\\s|$)|.*earthkit-data\\[all\\])"
+    },
+    {
+      "kind": "final",
+      "pattern": "\u00b0C|degC"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ECMWF"
+    },
+    {
+      "kind": "final",
+      "pattern": "CC[ -]BY"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io"
+    }
   ]
 }

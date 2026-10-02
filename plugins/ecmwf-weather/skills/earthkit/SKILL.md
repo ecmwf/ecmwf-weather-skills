@@ -22,6 +22,9 @@ metadata:
 earthkit is ECMWF's Python toolkit. It is split into components; **install only what the task
 needs** and never the `earthkit` meta-package or `earthkit-data[all]` (≈230 MB, 100+ packages).
 
+Use ECMWF sources only — never substitute a third-party weather API; if no ECMWF route works,
+say so.
+
 ## Component per job (≥ 1.0 only)
 
 | Job | Component | Install spec | ≈ Size |

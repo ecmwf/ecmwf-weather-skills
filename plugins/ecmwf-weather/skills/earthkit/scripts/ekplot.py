@@ -35,6 +35,11 @@ def attribution_text(year: int | None = None) -> str:
     return f"Data: © {year or datetime.now(timezone.utc).year} ECMWF, CC BY 4.0"
 
 
+def attribution_for(point: dict) -> str:
+    """Use the licence line the data carries (operational data isn't CC BY); default Open Data."""
+    return (point.get("attribution") or {}).get("short") or attribution_text()
+
+
 def meteogram_panels(point: dict) -> list[dict]:
     rows = point["series"]
     out = []
@@ -51,6 +56,9 @@ def meteogram_panels(point: dict) -> list[dict]:
                     ],
                 }
             )
+            lo, hi = f"{key}_p10", f"{key}_p90"  # ensemble output (polytope ptpoint.py --ensemble)
+            if all(lo in r and hi in r for r in rows):
+                out[-1]["band"] = ([r[lo] for r in rows], [r[hi] for r in rows])
     return out
 
 
@@ -82,15 +90,22 @@ def plot_meteogram(point: dict, output: str) -> None:
             attrs={"units": p["units"].split(" ")[0], "long_name": p["title"]},
         )
         ts = fig.add_timeseries()
-        (ts.bar if p["kind"] == "bar" else ts.line)(da)
-        ts.title(f"{p['title']} ({p['units']})")
+        title = f"{p['title']} ({p['units']})"
+        if "band" in p:  # ensemble: shade the 10-90 % range, draw the median
+            lo, hi = (da.copy(data=v) for v in p["band"])
+            ts.fill_between(lo, hi, alpha=0.3)
+            ts.line(da)
+            title += " — median and 10-90 % range"
+        else:
+            (ts.bar if p["kind"] == "bar" else ts.line)(da)
+        ts.title(title)
     gp = point.get("gridpoint", {})
     fig.title(
         f"ECMWF {point.get('model', '').upper()} run {point.get('run', '')} — "
         f"{gp.get('lat')}, {gp.get('lon')}"
     )
     fig.save(output)
-    _stamp(output)
+    _stamp(output, attribution_for(point))
 
 
 def plot_map(
@@ -122,7 +137,7 @@ def plot_map(
     _stamp(output)
 
 
-def _stamp(output: str) -> None:
+def _stamp(output: str, text: str | None = None) -> None:
     """Add the attribution line to the saved figure (bottom-right)."""
     import matplotlib.pyplot as plt
 
@@ -130,7 +145,7 @@ def _stamp(output: str) -> None:
     fig.text(
         0.99,
         -0.01,  # below the axes; bbox_inches="tight" expands the canvas to include it
-        attribution_text(),
+        text or attribution_text(),
         ha="right",
         va="top",
         fontsize=7,
@@ -172,7 +187,11 @@ def main(argv=None) -> int:
     except (ValueError, OSError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    print(f"saved {a.output} ({attribution_text()})")
+    label = attribution_text()
+    if a.cmd == "meteogram":
+        with open(a.json_path) as fh:
+            label = attribution_for(json.load(fh))
+    print(f"saved {a.output} ({label})")
     return 0
 
 

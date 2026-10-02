@@ -4,10 +4,29 @@
   "timeout": 1200,
   "max_budget_usd": 3,
   "expect": [
-    {"kind": "skill", "name": "open-data"},
-    {"kind": "command", "pattern": "odpoint\\.py"},
-    {"kind": "command", "pattern": "ekplot\\.py.*meteogram"},
-    {"kind": "file", "pattern": "reading.png"},
-    {"kind": "final", "pattern": "(?i)ECMWF"}
+    {
+      "kind": "skill",
+      "name": "open-data"
+    },
+    {
+      "kind": "command",
+      "pattern": "odpoint\\.py"
+    },
+    {
+      "kind": "command",
+      "pattern": "ekplot\\.py.*meteogram"
+    },
+    {
+      "kind": "file",
+      "pattern": "reading.png"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ECMWF"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io"
+    }
   ]
 }

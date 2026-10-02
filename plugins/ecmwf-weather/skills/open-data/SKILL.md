@@ -36,6 +36,10 @@ and `--json`.
 | Size before downloading | `python3 scripts/odcatalog.py estimate --param 2t,tp --step 0-240` |
 | Raw GRIB of selected fields only | `python3 scripts/odcatalog.py download --param 2t --step 24 -o out.grib2` |
 | Decode, plot or process GRIB | the `earthkit` skill |
+| **Ensemble spread / uncertainty at a place** | the `polytope` skill: `ptpoint.py --check`, then `ptpoint.py --ensemble` |
+
+Use ECMWF sources only — never substitute a third-party weather API; if no ECMWF route works,
+say so.
 
 ## Point forecast workflow
 
