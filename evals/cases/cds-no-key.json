@@ -1,0 +1,12 @@
+{
+  "id": "cds-no-key",
+  "prompt": "Download ERA5 total precipitation over Portugal for January 2020 as NetCDF.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "cds-ads"},
+    {"kind": "command", "pattern": "cds\\.py\\s+check"},
+    {"kind": "final", "pattern": "(?i)\\.cdsapirc|CDSAPI_KEY|API key"},
+    {"kind": "command_not", "pattern": "(?i)open-meteo|meteostat"}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "ads-pm25-keyless",
+  "prompt": "What's the Copernicus/ECMWF forecast for PM2.5 in Milan tomorrow around midday?",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "command", "pattern": "wms\\.py\\s+info.*composition_pm2p5|cds\\.py"},
+    {"kind": "final", "pattern": "(?i)µg|ug ?/ ?m|microgram"},
+    {"kind": "final", "pattern": "(?i)Copernicus Atmosphere Monitoring Service|CAMS"},
+    {"kind": "command_not", "pattern": "(?i)open-meteo|iqair|waqi"}
+  ]
+}

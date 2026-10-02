@@ -21,7 +21,9 @@ See `PLAN.md` for context and milestones.
       intervals change length (1 h → 3 h → 6 h) — consider normalising to mm/h
 - [ ] Web map: use Polytope for click meteograms when `ptpoint.py --check` passes (seconds, not
       ~300 MB)
-- [ ] M4 — `cds-ads` skill (ERA5, CAMS)
+- [x] M4 — `cds-ads` skill (ERA5, CAMS)
+- [ ] M4 — live-test `cds.py retrieve` / `era5-point` download with a CDS key and an ADS key
+      (no keys on the dev machine); confirm ERA5 time-series CSV column names
 - [ ] M5 — `mars` skill
 - [ ] M6 — tooling: `validate_packaging.py`, `check_skill_links.py`, `bump_version.py`,
       `build_dist.py`, `regenerate_references.py`, pre-push hook, CI workflows (unit + weekly

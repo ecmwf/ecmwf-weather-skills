@@ -1,0 +1,473 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["earthkit-data[cds]>=1.2"]
+# ///
+"""Copernicus Climate (CDS) and Atmosphere (ADS) Data Stores — discover, validate, retrieve.
+
+Everything except `retrieve` is standard library and needs no account (public catalogue and
+costing APIs). `retrieve` uses earthkit-data's cds/ads source (`uv run` installs it).
+
+  python3 cds.py check                                     # which keys exist (never printed)
+  python3 cds.py search "era5 land"                         # dataset ids
+  python3 cds.py describe reanalysis-era5-single-levels     # inputs, licence, DOI, citation
+  python3 cds.py validate --dataset ID --request req.json   # local checks + server cost/limit
+  python3 cds.py era5-point --lat 38.72 --lon -9.14 --start 1991-01-01 --end 2020-12-31 \
+      --variable 2m_temperature --dry-run                   # ERA5 point time series request
+  uv run  cds.py retrieve --dataset ID --request req.json -o out.nc
+  python3 cds.py search "air quality" --store ads           # CAMS datasets
+"""
+
+from __future__ import annotations
+
+import argparse
+import difflib
+import json
+import os
+import re
+import shutil
+import sys
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import quote
+
+STORES = {
+    "cds": {
+        "api": "https://cds.climate.copernicus.eu/api",
+        "name": "Climate Data Store",
+        "service": "Copernicus Climate Change Service",
+        "abbr": "C3S",
+        "rc": ".cdsapirc",
+    },
+    "ads": {
+        "api": "https://ads.atmosphere.copernicus.eu/api",
+        "name": "Atmosphere Data Store",
+        "service": "Copernicus Atmosphere Monitoring Service",
+        "abbr": "CAMS",
+        "rc": ".adsapirc",
+    },
+}
+KEY_HELP = (
+    "Register (free) at https://cds.climate.copernicus.eu (ADS: https://ads.atmosphere.copernicus.eu), "
+    "copy the key from your profile into ~/.cdsapirc (ADS: ~/.adsapirc) as two lines "
+    "'url: <store>/api' and 'key: <key>' (CDS also reads CDSAPI_URL/CDSAPI_KEY), and accept "
+    "each dataset's licence once on its web page (Download tab)."
+)
+NON_REQUEST_WIDGETS = {"geo_group", "licences", "global"}
+USER_AGENT = "ecmwf-weather-skill/0.1 (+https://github.com/ecmwf/ecmwf-weather-skill)"
+TIMEOUT_S = 60  # catalogue documents are < 100 KB
+
+
+# --- credentials ----------------------------------------------------------------------------------
+
+
+def credentials(store: str, env=os.environ, home: Path | None = None) -> str | None:
+    """Where the key would come from — never its value. earthkit reads ADS only from ~/.adsapirc."""
+    home = home or Path.home()
+    if store == "cds":
+        if env.get("CDSAPI_KEY"):
+            return "CDSAPI_URL/CDSAPI_KEY"
+        rc = Path(env.get("CDSAPI_RC", home / ".cdsapirc"))
+        if rc.exists() and "ads." not in rc.read_text():
+            return "~/.cdsapirc"
+        return None
+    return "~/.adsapirc" if (home / ".adsapirc").exists() else None
+
+
+# --- network --------------------------------------------------------------------------------------
+
+
+def _http(url: str, body: dict | None = None):
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"User-Agent": USER_AGENT, "Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+        return json.loads(r.read())
+
+
+def get_collection(store: str, dataset: str) -> dict:
+    return _http(f"{STORES[store]['api']}/catalogue/v1/collections/{dataset}")
+
+
+def get_form(collection: dict) -> list:
+    href = next(
+        (l["href"] for l in collection.get("links", []) if l.get("rel") == "form"), None
+    )
+    return _http(href) if href else []
+
+
+def costing(store: str, dataset: str, request: dict) -> dict:
+    return _http(
+        f"{STORES[store]['api']}/retrieve/v1/processes/{dataset}/costing",
+        {"inputs": request},
+    )
+
+
+# --- catalogue --------------------------------------------------------------------------------------
+
+
+def search_results(search_json: dict, text: str) -> list[dict]:
+    words = text.lower().split()
+    out = []
+    for c in search_json.get("collections", []):
+        hay = f"{c['id']} {c.get('title', '')}".lower()
+        if all(w in hay for w in words):
+            out.append(
+                {"id": c["id"], "title": c.get("title"), "licence": c.get("license")}
+            )
+    return out
+
+
+def _collect_values(obj) -> list:
+    if isinstance(obj, dict):
+        vals = (
+            list(obj.get("values", [])) if isinstance(obj.get("values"), list) else []
+        )
+        for k, v in obj.items():
+            if k != "values":
+                vals += _collect_values(v)
+        return vals
+    if isinstance(obj, list):
+        return [x for item in obj for x in _collect_values(item)]
+    return []
+
+
+def form_options(form: list) -> dict:
+    opts = {}
+    for w in form:
+        name, t, d = w.get("name"), w.get("type", ""), w.get("details", {})
+        if not name or name in NON_REQUEST_WIDGETS:
+            continue
+        if t == "DateRangeWidget":
+            opts[name] = {"type": "date", "range": [d.get("minStart"), d.get("maxEnd")]}
+        elif t in ("GeographicExtentWidget", "GeographicLocationWidget"):
+            opts[name] = {
+                "type": "area" if "Extent" in t else "location",
+                "range": d.get("range", {}),
+            }
+        else:
+            vals = list(dict.fromkeys(_collect_values(d)))
+            opts[name] = {"type": "choice" if "Choice" in t else "list", "values": vals}
+    return opts
+
+
+def attribution(store: str, year: int | None = None) -> str:
+    year = year or datetime.now(timezone.utc).year
+    return (
+        f"Generated using {STORES[store]['service']} information {year}. Neither the European "
+        "Commission nor ECMWF is responsible for any use that may be made of the Copernicus "
+        "information or data it contains."
+    )
+
+
+def describe(collection: dict, form: list, store: str) -> dict:
+    doi = collection.get("sci:doi")
+    s = STORES[store]
+    title = collection.get("title", collection.get("id"))
+    return {
+        "id": collection.get("id"),
+        "title": title,
+        "store": store,
+        "licence": collection.get("license"),
+        "doi": doi,
+        "temporal": (
+            collection.get("extent", {}).get("temporal", {}).get("interval") or [[None]]
+        )[0],
+        "inputs": {
+            k: (
+                {**v, "values": v["values"][:40], "n_values": len(v["values"])}
+                if "values" in v
+                else v
+            )
+            for k, v in form_options(form).items()
+        },
+        "citation": f"{s['service']} ({s['abbr']}) {s['name']}: {title}. DOI: {doi}"
+        if doi
+        else title,
+        "attribution": attribution(store),
+        "licence_note": "Accept the licence once on the dataset's web page before the API will serve it.",
+    }
+
+
+# --- requests ---------------------------------------------------------------------------------------
+
+
+def _as_list(v):
+    return v if isinstance(v, list) else [v]
+
+
+def validate(request: dict, form: list) -> list[str]:
+    """Local checks against the dataset form. (Value *combinations* are checked by the server.)"""
+    opts, errs = form_options(form), []
+    for key, val in request.items():
+        o = opts.get(key)
+        if o is None:
+            errs.append(f"unknown key {key!r}; valid keys: {', '.join(opts)}")
+            continue
+        if o["type"] in ("list", "choice"):
+            for v in _as_list(val):
+                if o["values"] and str(v) not in o["values"]:
+                    near = difflib.get_close_matches(str(v), o["values"], n=3)
+                    hint = f" — did you mean {', '.join(near)}?" if near else ""
+                    errs.append(f"{key}: {v!r} not allowed{hint}")
+        elif o["type"] == "date":
+            lo, hi = o["range"]
+            for v in _as_list(val):
+                for d in str(v).split("/"):
+                    if (lo and d < lo) or (hi and d > hi):
+                        errs.append(
+                            f"date {d} outside the available range {lo} .. {hi}"
+                        )
+        elif o["type"] == "location":
+            lat, lon = val.get("latitude"), val.get("longitude")
+            if lat is None or not -90 <= lat <= 90:
+                errs.append(f"location latitude {lat} must be within -90..90")
+            if lon is None or not -180 <= lon <= 180:
+                errs.append(f"location longitude {lon} must be within -180..180")
+        elif o["type"] == "area":
+            if not (isinstance(val, list) and len(val) == 4):
+                errs.append("area must be [north, west, south, east]")
+            elif val[0] < val[2]:
+                errs.append(
+                    f"area north {val[0]} is south of south {val[2]} — order is [N, W, S, E]"
+                )
+    return errs
+
+
+def era5_point_request(
+    lat: float, lon: float, start: str, end: str, variables: list[str], fmt: str = "csv"
+) -> dict:
+    return {
+        "variable": variables,
+        "location": {"latitude": lat, "longitude": lon},
+        "date": [f"{start}/{end}"],
+        "data_format": fmt,
+    }
+
+
+# --- retrieve (earthkit) ------------------------------------------------------------------------------
+
+
+def retrieve(store: str, dataset: str, request: dict, output: str) -> None:
+    import contextlib
+
+    import earthkit.data as ekd
+
+    with contextlib.redirect_stdout(sys.stderr):
+        src = (
+            ekd.from_source(store, dataset, request, prompt=False)
+            if store == "cds"
+            else ekd.from_source(store, dataset, request)
+        )
+    shutil.copy(src.path, output)
+
+
+# --- CLI ---------------------------------------------------------------------------------------------
+
+
+def _print(obj, as_json: bool, text: str):
+    print(json.dumps(obj, indent=2) if as_json else text)
+
+
+def _validate_and_cost(store, dataset, request) -> dict:
+    coll = get_collection(store, dataset)
+    errs = validate(request, get_form(coll))
+    res = {
+        "dataset": dataset,
+        "store": store,
+        "request": request,
+        "valid": not errs,
+        "errors": errs,
+    }
+    if not errs:
+        try:
+            res["cost"] = costing(store, dataset, request)
+            c = res["cost"]
+            if c.get("cost", 0) > c.get("limit", float("inf")):
+                res["valid"] = False
+                res["errors"].append(
+                    f"request too large: cost {c['cost']} > limit {c['limit']} — split it "
+                    "(e.g. by year) or shrink area/variables"
+                )
+        except urllib.error.HTTPError as e:
+            res["errors"].append(
+                f"server rejected the request (HTTP {e.code}): {e.read()[:300].decode(errors='replace')}"
+            )
+            res["valid"] = False
+    res["attribution"] = attribution(store)
+    res["licence"] = coll.get("license")
+    res["doi"] = coll.get("sci:doi")
+    return res
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    def add(name, **kw):
+        sp = sub.add_parser(name, **kw)
+        sp.add_argument("--store", choices=list(STORES), default="cds")
+        sp.add_argument("--json", action="store_true")
+        return sp
+
+    add("check")
+    sp = add("search")
+    sp.add_argument("text")
+    sp = add("describe")
+    sp.add_argument("dataset")
+    for name in ("validate", "retrieve"):
+        sp = add(name)
+        sp.add_argument("--dataset", required=True)
+        sp.add_argument("--request", required=True, help="JSON file with the request")
+        if name == "retrieve":
+            sp.add_argument("-o", "--output", required=True)
+    sp = add(
+        "era5-point",
+        help="ERA5 hourly time series at a point (reanalysis-era5-single-levels-timeseries)",
+    )
+    sp.add_argument("--lat", type=float, required=True)
+    sp.add_argument("--lon", type=float, required=True)
+    sp.add_argument("--start", required=True, help="YYYY-MM-DD (from 1940-01-01)")
+    sp.add_argument("--end", required=True, help="YYYY-MM-DD (to ~5 days ago)")
+    sp.add_argument(
+        "--variable",
+        default="2m_temperature",
+        help="comma list, e.g. 2m_temperature,total_precipitation",
+    )
+    sp.add_argument("--format", default="csv", choices=["csv", "netcdf"])
+    sp.add_argument("--dry-run", action="store_true", help="validate and cost only")
+    sp.add_argument("-o", "--output")
+    a = ap.parse_args(argv)
+
+    try:
+        if a.cmd == "check":
+            res = {
+                "cds": credentials("cds"),
+                "ads": credentials("ads"),
+                "how_to_get_a_key": KEY_HELP,
+                "keyless_alternatives": "CAMS forecasts: opencharts-wms skill (composition_* WMS layers, "
+                "`wms.py info` for point values).",
+            }
+            _print(res, a.json, "\n".join(f"{k}: {v}" for k, v in res.items()))
+            return 0 if res["cds"] or res["ads"] else 4
+
+        if a.cmd == "search":
+            s = _http(
+                f"{STORES[a.store]['api']}/catalogue/v1/collections?q={quote(a.text)}&limit=100"
+            )
+            hits = search_results(s, a.text) or [
+                {"id": c["id"], "title": c.get("title"), "licence": c.get("license")}
+                for c in s.get("collections", [])
+            ]
+            _print(
+                hits, a.json, "\n".join(f"{h['id']:55} {h['title']}" for h in hits[:40])
+            )
+            return 0
+
+        if a.cmd == "describe":
+            coll = get_collection(a.store, a.dataset)
+            d = describe(coll, get_form(coll), a.store)
+            text = "\n".join(
+                [
+                    f"{d['title']} ({d['id']})",
+                    f"licence: {d['licence']}   DOI: {d['doi']}",
+                    f"period: {d['temporal']}",
+                ]
+                + [
+                    f"  {k}: "
+                    + (
+                        ", ".join(map(str, v.get("values", [])[:12]))
+                        + (" …" if v.get("n_values", 0) > 12 else "")
+                        if "values" in v
+                        else str(v.get("range"))
+                    )
+                    for k, v in d["inputs"].items()
+                ]
+                + [
+                    f"citation: {d['citation']}",
+                    f"attribution: {d['attribution']}",
+                    d["licence_note"],
+                ]
+            )
+            _print(d, a.json, text)
+            return 0
+
+        if a.cmd == "era5-point":
+            req = era5_point_request(
+                a.lat, a.lon, a.start, a.end, a.variable.split(","), a.format
+            )
+            dataset = "reanalysis-era5-single-levels-timeseries"
+        else:
+            req = json.loads(Path(a.request).read_text())
+            dataset = a.dataset
+
+        if a.cmd == "retrieve" or (a.cmd == "era5-point" and not a.dry_run):
+            if not credentials(a.store):
+                print(
+                    f"error: no {a.store.upper()} credentials (~/{STORES[a.store]['rc']}"
+                    f"{' or CDSAPI_URL/CDSAPI_KEY' if a.store == 'cds' else ''}). {KEY_HELP} "
+                    "Validate the request without a key: cds.py validate / era5-point --dry-run.",
+                    file=sys.stderr,
+                )
+                return 4
+
+        res = _validate_and_cost(a.store, dataset, req)
+        if (
+            a.cmd == "validate"
+            or (a.cmd == "era5-point" and a.dry_run)
+            or not res["valid"]
+        ):
+            text = "\n".join(
+                [
+                    f"dataset: {dataset}",
+                    "request: " + json.dumps(req),
+                    "valid"
+                    if res["valid"]
+                    else "INVALID:\n  " + "\n  ".join(res["errors"]),
+                    f"cost: {res.get('cost')}",
+                    f"attribution: {res['attribution']}",
+                ]
+            )
+            _print(res, a.json, text)
+            return 0 if res["valid"] else 2
+
+        out = (
+            a.output
+            or f"{dataset}.{'csv' if req.get('data_format') == 'csv' else 'nc'}"
+        )
+        retrieve(a.store, dataset, req, out)
+        res["output"] = out
+        _print(
+            res,
+            a.json,
+            f"saved {out}\nattribution: {res['attribution']}\nDOI: {res['doi']}",
+        )
+        return 0
+    except ImportError as e:
+        print(
+            f"error: {e}. Run with `uv run cds.py …` (installs earthkit-data[cds]).",
+            file=sys.stderr,
+        )
+        return 3
+    except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    except (
+        Exception
+    ) as e:  # earthkit/cdsapi errors: licence not accepted, queue failures
+        msg = str(e)
+        if re.search(r"(?i)licen[cs]e|terms", msg):
+            msg += " — accept the dataset licence on its web page (Download tab), then retry."
+        print(f"error: {msg}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
