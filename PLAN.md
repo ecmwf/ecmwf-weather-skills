@@ -1,6 +1,6 @@
 # ECMWF Weather Skill — Plan
 
-Status: **in progress** — M1–M4 done; M5 (`mars`) next.
+Status: **in progress** — M1–M5 done (all six skills); M6 (tooling, CI) next.
 Model: [vaisala-xweather/xweather-agent-skills](https://github.com/vaisala-xweather/xweather-agent-skills).
 Research: `docs/research/earthkit-components.md`, `docs/research/open-questions.md`.
 
@@ -129,7 +129,7 @@ AIFS 0–360 h by 6 at all runs. Retention ~2–3 days on data.ecmwf.int, AWS mi
 | ★ `ekplot.py` | earthkit | earthkit-plots | Quick map or point time series PNG |
 | `ecmwf_access.py` | all | stdlib | Which routes have credentials (no secrets printed) |
 | `cds.py` | cds-ads | stdlib (+earthkit-data[cds] for retrieve) | Check, search, describe, validate + cost, ERA5 point, retrieve |
-| `marsrequest.py` | mars | earthkit-data[mars] | Validate + submit |
+| `mars.py` | mars | stdlib (+earthkit-data[mars] for cost/retrieve) | Check, lint, estimate, monthly plan, server cost, retrieve |
 | `ptpoint.py` | polytope | earthkit-data[polytope] | Access check, point series, ensemble percentiles |
 | `wms.py` | opencharts-wms | stdlib (+Pillow via uv to composite) | Layers, times, GetMap image/URL, legend, GetFeatureInfo |
 | `opencharts.py` | opencharts-wms | stdlib | Search, options, download official charts |
@@ -162,7 +162,7 @@ OpenCharts images as an option; the clicked-point meteogram comes from Open Data
 2. M2 — opencharts-wms + flagship demo ✅ (wms.py, opencharts.py, webmap.py; verified in a browser)
 3. M3 — polytope ✅ (ptpoint.py: hourly point + 50-member ensemble percentiles, verified live)
 4. M4 — cds-ads ✅ (cds.py: check/search/describe/validate+costing keyless; retrieve via earthkit-data[cds])
-5. M5 — mars
+5. M5 — mars ✅ (mars.py: lint/estimate/plan offline, cost + retrieve via Web API, verified live)
 6. M6 — tooling & CI → v1.0.0
 
 ## 10. Open questions → best guesses

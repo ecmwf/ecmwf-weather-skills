@@ -1,6 +1,6 @@
 # ECMWF Weather — Agent Skills
 
-> **Status: pre-release.** five skills are implemented and tested; `mars` is a stub. See `PLAN.md` and `TODO.md`.
+> **Status: pre-release.** all six skills are implemented and tested. Packaging tooling and CI are next. See `PLAN.md` and `TODO.md`.
 
 Six [Agent Skills](https://agentskills.io) that teach coding agents how to find, request, decode and
 visualise ECMWF data — real-time IFS and AIFS forecasts, ERA5 reanalysis, CAMS air quality, the MARS

@@ -1,7 +1,7 @@
 ---
 name: mars
-description: Writes and runs ECMWF MARS archive requests for licensed and member-state users, via the ECMWF Web API (ecmwf-api-client) or the mars client on ECMWF systems. Use when a task mentions MARS, the full IFS archive, class/stream/type/expver/levtype keywords, retrieving past operational forecasts or ensemble members beyond what Open Data publishes, ~/.ecmwfapirc, tape versus disk retrieval cost, or optimising large archive requests. Falls back to Open Data or CDS when the user has no MARS access and explains what access would add.
-compatibility: Skill instructions are provider-neutral. Scripts need Python 3; request scripts use uv (PEP 723 inline dependencies, ecmwf-api-client) and network access to api.ecmwf.int.
+description: Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
+compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 license: Apache-2.0
 metadata:
   author: ECMWF
@@ -11,6 +11,64 @@ metadata:
 # ECMWF MARS archive
 
 ## Contents
-- Status — not implemented yet (see the repository PLAN.md)
+- Is MARS the right route?
+- Request workflow (lint → plan → cost → retrieve)
+- Efficiency rules (tape)
+- Licence and attribution
+- References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
-This skill is a placeholder. Use the `open-data` skill for forecasts in the meantime.
+Use ECMWF sources only — never substitute a third-party weather API.
+
+## Is MARS the right route?
+
+| Need | Better route |
+|---|---|
+| Latest forecast, last ~2–3 days, 0.25° | `open-data` skill (free, no queue) |
+| Point/area extraction from recent operational runs | `polytope` skill (seconds) |
+| ERA5 without an ECMWF licence | `cds-ads` skill (CDS, free key) |
+| Older operational runs, all ENS members, model levels, full resolution, research/experimental data | **MARS** |
+
+Check access first: `python3 scripts/mars.py check` (exit 4 = nothing configured; names only).
+Having `~/.ecmwfapirc` doesn't guarantee MARS rights — that depends on the account.
+
+## Request workflow
+
+Run the scripts; don't read them. Requests are JSON or MARS text files.
+
+```
+- [ ] 1. Write the request (keywords: references/keywords.md)
+- [ ] 2. python3 scripts/mars.py lint req.mars        # errors, warnings, size estimate, MARS text
+         fix every ERROR and re-run until clean; act on warnings (grid/area, splitting)
+- [ ] 3. python3 scripts/mars.py plan req.mars        # >1 month → one request per month
+- [ ] 4. Optional: uv run scripts/mars.py cost req.mars   # exact size, tape vs disk (queues for minutes)
+- [ ] 5. uv run scripts/mars.py retrieve req.mars -o out.grib   # per chunk, in date order
+- [ ] 6. Decode with the earthkit skill; give the licence line from lint
+```
+
+- If asked not to submit, stop after step 3. **Paste the MARS request text (from `lint`) in your
+  answer** — not just a file link — with the estimate and the plan.
+- Web API requests queue: expect minutes before a request starts, longer for tape. Use a long
+  timeout or run in the background; don't resubmit while one is queued.
+- Always interpolate when full resolution isn't needed: `grid=0.25/0.25` (+ `area=N/W/S/E`) cuts
+  size by orders of magnitude versus native O1280.
+
+## Efficiency rules
+
+Archived data sits on tape grouped by date (ERA5: by month). Retrieval is fast when a request
+reads each tape file once:
+
+1. One request per month: all days, times, steps, parameters and levels of that month together.
+2. Loop months in chronological order; never loop over parameters or levels outside the date loop.
+3. Ask for everything needed from a month in one go rather than re-reading it later.
+4. Keep each retrieval well below the 75 GB per-request cap (`lint` warns above 20 GB).
+
+`mars.py plan` produces exactly these monthly chunks.
+
+## Licence and attribution
+
+- Operational and most MARS data: licensed — `© <year> ECMWF`; use under the organisation's
+  ECMWF licence; check before redistributing.
+- ERA5 (`class=ea`): Copernicus, CC BY 4.0 — "Generated using Copernicus Climate Change Service
+  information <year>" + DOI 10.24381/cds.adbb2d47.
+
+`lint` prints the applicable line; end the answer with it.

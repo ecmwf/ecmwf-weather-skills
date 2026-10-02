@@ -1,0 +1,12 @@
+{
+  "id": "mars-access",
+  "prompt": "Can I access the ECMWF MARS archive from this machine? Don't print any keys and don't wait for a long-running test.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "mars"},
+    {"kind": "command", "pattern": "mars\\.py\\s+check"},
+    {"kind": "final", "pattern": "(?i)web api|ecmwfapirc"},
+    {"kind": "final_not", "pattern": "[0-9a-f]{32}"}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "mars-efficiency",
+  "prompt": "I need 10 years (2010-2019) of ERA5 hourly temperature on all pressure levels from MARS. How should I split the requests so retrieval is efficient? Give me the request for the first chunk.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "mars"},
+    {"kind": "command", "pattern": "mars\\.py\\s+(lint|estimate|plan)"},
+    {"kind": "final", "pattern": "(?i)class\\s*[=:]\\s*\"?ea"},
+    {"kind": "final", "pattern": "(?i)month"},
+    {"kind": "final", "pattern": "(?i)tape"}
+  ]
+}

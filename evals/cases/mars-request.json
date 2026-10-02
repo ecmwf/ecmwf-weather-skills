@@ -1,0 +1,14 @@
+{
+  "id": "mars-request",
+  "prompt": "Write a MARS request for ECMWF IFS HRES 2 m temperature and 10 m wind components, 00 UTC runs, steps 0 to 72 every 6 hours, for all of March 2024, interpolated to 0.25 degrees over Europe. Check it and estimate how big it is, but don't submit it.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "mars"},
+    {"kind": "command", "pattern": "mars\\.py\\s+(lint|estimate)"},
+    {"kind": "command_not", "pattern": "mars\\.py\\s+retrieve"},
+    {"kind": "final", "pattern": "(?i)class\\s*[=:]\\s*\"?od"},
+    {"kind": "final", "pattern": "0\\.25"},
+    {"kind": "final", "pattern": "(?i)\\d+(\\.\\d+)?\\s?(MB|GB|fields)"}
+  ]
+}
