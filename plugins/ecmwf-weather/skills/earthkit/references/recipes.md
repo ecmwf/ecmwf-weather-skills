@@ -1,4 +1,14 @@
-# earthkit recipes (1.x, verified 2026-10)
+# earthkit recipes (1.x)
+
+## Contents
+- Read and inspect — earthkit-data
+- Fetch — earthkit-data source extras
+- Nearest gridpoint — earthkit-geo
+- Regrid — earthkit-geo
+- Derived quantities — earthkit-meteo / thermofeel
+- Units — earthkit-utils
+- Aggregation — earthkit-transforms[all]
+- Plots — earthkit-plots
 
 Each recipe lists the minimal PEP 723 dependencies. Run with `uv run script.py`.
 

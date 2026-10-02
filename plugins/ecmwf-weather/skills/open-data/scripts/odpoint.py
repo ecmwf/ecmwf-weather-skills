@@ -204,7 +204,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="parallel: HTTP Range requests over --workers connections (~5x faster), decoded "
         "with earthkit-data; earthkit: earthkit-data's ecmwf-open-data source (sequential)",
     )
-    p.add_argument("--workers", type=int, default=8)
+    p.add_argument("--workers", type=int, default=oc.DEFAULT_WORKERS)
     fmt = p.add_mutually_exclusive_group()
     fmt.add_argument("--json", action="store_true")
     fmt.add_argument("--csv", action="store_true")

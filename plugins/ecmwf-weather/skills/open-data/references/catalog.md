@@ -8,7 +8,7 @@ lists exactly what a run contains. (This file will be regenerated weekly; see th
 | `--source` | URL | Notes |
 |---|---|---|
 | `ecmwf` (default) | https://data.ecmwf.int/forecasts | ~2–3 days retained; 500 simultaneous connections |
-| `aws` | https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com | archive since 2023-01-18, anonymous |
+| `aws` | https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com | archive starts 2023-01-18, anonymous |
 | `google` | https://storage.googleapis.com/ecmwf-open-data | mirror |
 | azure | https://ai4edataeuwest.blob.core.windows.net/ecmwf | needs a Planetary Computer SAS token; not supported by the stdlib script |
 

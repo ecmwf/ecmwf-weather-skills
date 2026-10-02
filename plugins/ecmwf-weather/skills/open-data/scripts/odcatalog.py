@@ -45,7 +45,18 @@ MODELS = {
     "aifs-ens": {"enfo": "pf", "waef": "pf"},
 }
 # Approximate delay between base time and the run appearing on the server.
+# Observed: a run's first files appear ~6.5 h after base time and the run completes ~1 h later.
 PUBLISH_DELAY = timedelta(hours=7)
+# Index requests are ~40 KB and answer in < 1 s; 30 s tolerates a slow portal.
+INDEX_TIMEOUT_S = 30
+# One GRIB field is <= ~1 MB; at the observed ~1-2 MB/s per connection 120 s leaves ample margin.
+RANGE_TIMEOUT_S = 120
+# Transient 5xx/timeouts usually clear on the 2nd try; 3 attempts with 2 s, 4 s backoff.
+RANGE_RETRIES = 3
+# Measured: 1 connection ~2 MB/s, 8 ~10 MB/s, 16 ~7.5 MB/s (server-side throttling) -> 8.
+DEFAULT_WORKERS = 8
+# data.ecmwf.int keeps ~12-14 runs (2-3 days); 72 h covers the whole window.
+MAX_BACK_HOURS = 72
 
 
 # --- schedule ---------------------------------------------------------------------------------
@@ -209,7 +220,7 @@ def steps_in_listing(html: str, stream: str, type_: str) -> list[int]:
 
 
 def _request(
-    url: str, method: str = "GET", headers: dict | None = None, timeout: int = 30
+    url: str, method: str = "GET", headers: dict | None = None, timeout: int = INDEX_TIMEOUT_S
 ):
     h = {"User-Agent": USER_AGENT, **(headers or {})}
     return urllib.request.urlopen(
@@ -230,17 +241,18 @@ def fetch_text(url: str) -> str:
         return r.read().decode()
 
 
-MAX_WORKERS = 16  # polite: data.ecmwf.int allows 500 simultaneous connections in total
+# Above 16 throughput drops (throttling) and it eats into the portal-wide 500-connection limit.
+MAX_WORKERS = 16
 
 
 def clamp_workers(n: int) -> int:
     return max(1, min(MAX_WORKERS, n))
 
 
-def fetch_range(url: str, start: int, end: int, retries: int = 3) -> bytes:
+def fetch_range(url: str, start: int, end: int, retries: int = RANGE_RETRIES) -> bytes:
     for attempt in range(retries):
         try:
-            with _request(url, headers={"Range": f"bytes={start}-{end}"}, timeout=120) as r:
+            with _request(url, headers={"Range": f"bytes={start}-{end}"}, timeout=RANGE_TIMEOUT_S) as r:
                 if r.status != 206:
                     raise RuntimeError(f"server ignored Range request for {url}")
                 return r.read()
@@ -251,7 +263,7 @@ def fetch_range(url: str, start: int, end: int, retries: int = 3) -> bytes:
     raise RuntimeError("unreachable")
 
 
-def download_ranges(jobs: list[tuple[str, int, int]], output, workers: int = 8,
+def download_ranges(jobs: list[tuple[str, int, int]], output, workers: int = DEFAULT_WORKERS,
                     fetch=fetch_range) -> int:
     """Download (url, start, end) byte ranges in parallel; write them in order. Returns bytes."""
     from concurrent.futures import ThreadPoolExecutor
@@ -277,7 +289,7 @@ def latest_run(
     step: int | None = None,
     exists=http_exists,
     source: str = "ecmwf",
-    max_back_hours: int = 72,
+    max_back_hours: int = MAX_BACK_HOURS,
 ) -> datetime | None:
     """Most recent run whose `step` (default: final step, i.e. complete run) is published."""
     now = now or datetime.now(UTC)
@@ -437,7 +449,7 @@ def main(argv=None) -> int:
             sp.add_argument("--number", help="ensemble members, e.g. 1,2,3")
         if name == "download":
             sp.add_argument("-o", "--output", required=True)
-            sp.add_argument("--workers", type=int, default=8,
+            sp.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
                             help="parallel connections (default 8, max 16)")
 
     a = p.parse_args(argv)

@@ -14,7 +14,7 @@ Agent Skills for ECMWF data. Plan: `PLAN.md`. Roadmap: `TODO.md`.
 - **Keep the two manifests in sync** — `name`, `version`, `description`, `author`, `homepage`,
   `license`, `keywords` must match in `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`;
   `metadata.version` in every `SKILL.md` matches too.
-- **SKILL.md frontmatter** follows the Agent Skills spec: `name` equals the directory name; version
+- **SKILL.md frontmatter** follows the Agent Skills spec and the authoring rules below; version
   under `metadata`. Descriptions must not contain `: ` (breaks YAML) — use an em dash.
 - **Provider-neutral content** — don't name a specific agent's tools; say what to do, not which tool.
 - **Each skill is self-contained** — repeat credential detection, Open Data fallback note, and
@@ -30,6 +30,46 @@ Agent Skills for ECMWF data. Plan: `PLAN.md`. Roadmap: `TODO.md`.
 - **Don't hardcode catalog counts** in prose (parameters, layers, streams change upstream).
 - **Trust live services over docs** — ECMWF docs lag (e.g. post-50r1 streams). Re-run the research
   step (`PLAN.md` §0) before each minor release.
+
+## Skill authoring — follow Anthropic's best practices
+
+Always follow https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
+(last reviewed **2026-10-02**). **Re-read it before each minor release and at least monthly**;
+when it changes, update this section, `scripts/check_skills.py`, and the skills, then bump the
+date above.
+
+Enforced by `python3 scripts/check_skills.py` (runs in the default `uv run pytest`):
+
+- `name` ≤ 64 chars, lowercase/digits/hyphens, equals the directory, no "anthropic"/"claude".
+- `description` ≤ 1024 chars, **third person** ("Finds…", not "Find…"/"I can…"), states what
+  the skill does **and** when to use it with concrete trigger terms; no `: `, no XML tags.
+- Every `SKILL.md` **starts with a short `## Contents` table of contents** listing its sections
+  and its reference files.
+- `SKILL.md` body < 500 lines; detail goes to `references/`, linked **one level deep** from
+  `SKILL.md` (references never link other references). References > 100 lines get their own
+  `## Contents`.
+- No time-sensitive wording ("since May 2026…") outside a final `## Old patterns` section.
+- Forward-slash paths only.
+
+Applied by review (not mechanically checkable):
+
+- **Concise** — assume the agent is smart; cut anything it already knows. Every paragraph must
+  justify its tokens.
+- **Degrees of freedom** — fragile operations (downloads, credentials, attribution) get exact
+  commands; open-ended tasks get guidance.
+- **Workflows** — multi-step tasks get a copyable checklist; quality-critical steps get a
+  validate → fix → repeat loop.
+- **Scripts** — say whether to *run* or *read* a script (default: "run them; don't read them");
+  scripts handle errors themselves with actionable messages; no unexplained constants (comment
+  why each tuning value has its value).
+- **One default, one escape hatch** — don't offer a menu of options.
+- **Consistent terminology** — e.g. always "run" (not cycle/forecast), "step", "field",
+  "gridpoint", "Open Data".
+- **Evaluation-driven** — write ≥ 3 eval cases for a skill *before* writing its text, then write
+  the minimum text to pass them. Test with **Haiku, Sonnet and Opus**
+  (`run_evals.py --model haiku|sonnet|opus`) as well as Codex.
+- **Observe navigation** — read eval transcripts for files the agent never opens (cut them) or
+  always opens (promote into `SKILL.md`).
 
 ## Testing (TDD)
 

@@ -1,6 +1,6 @@
 ---
 name: earthkit
-description: Read, process and plot ECMWF GRIB and NetCDF data with the earthkit Python components (earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, earthkit-transforms, earthkit-plots) — installing only the component each task needs. Use when a task has a GRIB or NetCDF file to inspect, convert to xarray or pandas, select fields by short name, level or step, extract a nearest gridpoint, regrid, compute wind speed, relative humidity, dewpoint or thermal-comfort indices, convert units, aggregate daily or over a country or polygon, draw a weather map, or draw a meteogram from a point forecast; or when GRIB fails to decode, eccodes is missing, or earthkit code written for 0.x breaks on 1.x.
+description: Reads, processes and plots ECMWF GRIB and NetCDF data with the earthkit Python components (earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, earthkit-transforms, earthkit-plots) — installing only the component each task needs. Use when a task has a GRIB or NetCDF file to inspect, convert to xarray or pandas, select fields by short name, level or step, extract a nearest gridpoint, regrid, compute wind speed, relative humidity, dewpoint or thermal-comfort indices, convert units, aggregate daily or over a country or polygon, draw a weather map, or draw a meteogram from a point forecast; or when GRIB fails to decode, eccodes is missing, or earthkit code written for 0.x breaks on 1.x.
 compatibility: Skill instructions are provider-neutral. Scripts use uv (PEP 723 inline dependencies) on Linux or macOS; earthkit ships eccodes as binary wheels, so no system install is needed. No Windows wheels — use WSL.
 license: Apache-2.0
 metadata:
@@ -9,6 +9,15 @@ metadata:
 ---
 
 # earthkit — decode, process, plot
+
+## Contents
+- Component per job (install only what the task needs)
+- Bundled scripts
+- Writing your own code
+- Key 1.x pitfalls
+- Fallback without earthkit
+- Attribution (required)
+- References — `references/recipes.md` (code per job), `references/pitfalls.md` (0.x → 1.x breakages)
 
 earthkit is ECMWF's Python toolkit. It is split into components; **install only what the task
 needs** and never the `earthkit` meta-package or `earthkit-data[all]` (≈230 MB, 100+ packages).
@@ -30,6 +39,8 @@ Do not use: `earthkit-regrid` (deprecated → earthkit-geo), `earthkit-maps` (�
 (< 1.0; the last two need earthkit-data < 1 and conflict).
 
 ## Bundled scripts
+
+Run them; don't read them.
 
 ```bash
 uv run scripts/ekinspect.py file.grib2 [--json]          # what's inside (earthkit-data only)
@@ -76,9 +87,9 @@ Only if uv/pip cannot install (no network to PyPI, Windows without WSL) or the u
 GRIB cannot be decoded with the standard library. Say so, and offer the install command for just
 the components needed. NetCDF from CDS can sometimes be read with an existing `xarray`/`netCDF4`.
 
-## Attribution is required
+## Attribution
 
-Figures and derived data from ECMWF sources keep the source licence. For Open Data:
+Required wherever results are shown. Figures and derived data from ECMWF sources keep the source licence. For Open Data:
 `Data: © <year> ECMWF, CC BY 4.0` (the scripts stamp it on every figure). For Copernicus
 (ERA5/CAMS): "Generated using Copernicus Climate Change Service / Atmosphere Monitoring Service
 information <year>". State modifications (regridded, interpolated, unit-converted).

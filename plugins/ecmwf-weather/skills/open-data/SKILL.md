@@ -1,7 +1,7 @@
 ---
 name: open-data
-description: Find, download and decode free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. This is the default route whenever no CDS, MARS or Polytope credentials are available.
-compatibility: Skill instructions are provider-neutral. scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
+description: Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. Default route whenever no CDS, MARS or Polytope credentials are available.
+compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
 license: Apache-2.0
 metadata:
   author: ECMWF
@@ -10,101 +10,104 @@ metadata:
 
 # ECMWF Open Data
 
-Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
-There is **no per-location JSON API** — for a point you download global fields and extract the
-nearest gridpoint. The bundled scripts do that with the minimum download.
+## Contents
+- Scripts — which one to run
+- Point forecast workflow
+- Facts to get right (models, runs, streams, parameters)
+- Dependencies — earthkit first, standard-library fallback
+- Credentials and better routes
+- Attribution (required)
+- Old patterns (pre-50r1 streams)
+- References — `references/catalog.md` (paths, products, .index, parameters), `references/attribution.md` (full notices, HTML snippet)
 
-## Which script
+Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
+There is **no per-location API**: a point forecast means downloading global fields and extracting
+the nearest gridpoint. The scripts do that with the minimum download.
+
+## Scripts
+
+Run them; don't read them. Paths are relative to this skill's directory; all accept `--help`
+and `--json`.
 
 | Need | Run |
 |---|---|
-| Forecast / meteogram at a place | `uv run scripts/odpoint.py --lat LAT --lon LON` |
-| Latest run, steps, URLs, available fields | `python3 scripts/odcatalog.py latest\|steps\|url\|fields` |
-| Size before downloading | `python3 scripts/odcatalog.py estimate --param … --step …` or `odpoint.py --estimate-only` |
-| Raw GRIB of selected fields only | `python3 scripts/odcatalog.py download --param … --step … -o out.grib2` |
-| Decode / plot / process a GRIB file | the `earthkit` skill |
+| Forecast or meteogram data at a place | `uv run scripts/odpoint.py --lat LAT --lon LON` |
+| Latest run, steps, URLs, fields in a run | `python3 scripts/odcatalog.py latest\|steps\|url\|fields` |
+| Size before downloading | `python3 scripts/odcatalog.py estimate --param 2t,tp --step 0-240` |
+| Raw GRIB of selected fields only | `python3 scripts/odcatalog.py download --param 2t --step 24 -o out.grib2` |
+| Decode, plot or process GRIB | the `earthkit` skill |
 
-Paths are relative to this skill's directory. Every script supports `--help` and `--json`.
+## Point forecast workflow
 
-## Point forecast (the common case)
-
-```bash
-uv run scripts/odpoint.py --lat 38.72 --lon -9.14                  # 10 days, latest IFS run
-uv run scripts/odpoint.py --lat 38.72 --lon -9.14 --steps 0-48 --json
-uv run scripts/odpoint.py --lat 38.72 --lon -9.14 --model aifs-single
+```
+- [ ] 1. Coordinates: geocode the place (ask the user if ambiguous)
+- [ ] 2. Steps: shortest range that answers the question, starting at 0 (0-48 for "tomorrow")
+- [ ] 3. Run: uv run scripts/odpoint.py --lat LAT --lon LON --steps 0-48 --json > point.json
+- [ ] 4. Check: "series" non-empty and gridpoint distance_km small (<20 km on land)
+- [ ] 5. Answer in the user's local time; relay "note" once and the attribution
 ```
 
-- Geocode place names yourself (you know coordinates of well-known places; otherwise ask the user).
-- Output: nearest gridpoint and its distance, then per valid time (UTC): 2 m temperature °C,
-  precipitation mm **since the previous step**, 10 m wind speed m/s and direction (from), MSLP hPa,
-  total cloud %. Convert times to the user's local time when answering.
-- Default 0–240 h on IFS ≈ 200 MB of downloads; use a shorter `--steps` when the question allows
-  (`0-48` for "tomorrow" ≈ 40 MB). Check with `--estimate-only` first if bandwidth matters.
-- **Downloads take time — roughly 10–20 s per 100 MB** with the default parallel fetcher (8
-  connections). Give the command a timeout of several minutes; don't thin steps to 12-hourly just
-  to go faster (it ruins meteograms). Always start step ranges at `0` so precipitation intervals
-  are complete (a first interval that doesn't start at 0 is reported as null).
-- To plot a meteogram: save `--json` output to a file, then use the `earthkit` skill's
-  `ekplot.py meteogram`.
-- If `data.ecmwf.int` is slow or refuses connections, retry once with `--source google`; the AWS
-  mirror may answer `503 Slow Down` under load.
-- Always relay the script's `note` (what credentials would improve) once, briefly, and the
-  attribution.
+- Output per valid time (UTC): `t2m_C`, `precip_mm` (since the previous step; `null` if unknown),
+  `wind_speed_ms`, `wind_dir_deg` (direction the wind blows from), `msl_hPa`, `tcc_pct`.
+- Size: 0–240 h ≈ 200 MB, 0–48 h ≈ 40 MB; ~10–20 s per 100 MB. Give the command a timeout of
+  several minutes. Don't thin steps to go faster — it ruins meteograms.
+- On download errors retry once with `--source google`. The AWS mirror may answer `503 Slow Down`.
+- Meteogram image: pass `point.json` to the `earthkit` skill's `ekplot.py meteogram`.
 
 ## Facts to get right
 
-- **Models**: `ifs` (default — IFS HRES/ENS, physics-based), `aifs-single`, `aifs-ens` (ECMWF's
-  machine-learning models). Default to IFS unless the user asks; mention AIFS as an option.
-- **Runs**: 00, 06, 12, 18 UTC. IFS 00/12z run to 360 h (3-hourly to 144 h, then 6-hourly);
-  IFS 06/18z run to 144 h. AIFS runs to 360 h in 6 h steps at every run. A 10-day request
-  therefore needs a 00z/12z IFS run — the scripts pick it automatically.
-- **Streams**: `oper` (HRES), `enfo` (ENS, 50 perturbed members), `wave`, `waef`. Since IFS Cycle
-  50r1 (13 May 2026) there is **no `scda`/`scwv`** and no ENS control (`cf`) for IFS; older archived
-  files on mirrors still use them.
-- **Availability**: a run appears ~6–8 h after its base time and is kept ~2–3 days on
-  data.ecmwf.int. Older runs: `--source aws` (archive since 2023-01-18). Portal limit: 500
-  simultaneous connections — use `--source aws|google` for bulk work.
-- **Parameters** (short names): `2t` 2 m temperature (K), `2d` dewpoint (K), `tp` total
-  precipitation (m, accumulated from step 0), `10u`/`10v` wind (m/s), `10fg` gusts, `msl` (Pa),
-  `tcc` (0–1), `sp`, `ssrd`, `mucape`, `ptype`, `sf`, `sd`. Pressure levels (`--levtype pl`): `t`,
-  `u`, `v`, `gh`, `r`, `q`, `w`, `vo`, `d`. List exactly what a run has with
-  `odcatalog.py fields --step 24`. Details: `references/catalog.md`.
-- **File layout**: `{root}/YYYYMMDD/HHz/{model}/0p25/{stream}/YYYYMMDDHH0000-{step}h-{stream}-{type}.grib2`
-  plus a JSON-lines `.index` (one line per field with `_offset`/`_length`) enabling HTTP Range
-  downloads of single fields. See `references/catalog.md`.
+- **Models**: `ifs` (default — IFS HRES/ENS), `aifs-single`, `aifs-ens` (ECMWF's machine-learning
+  models). Use IFS unless asked; mention AIFS as an option.
+- **Runs**: 00/06/12/18 UTC. IFS 00/12z reach 360 h (3-hourly to 144 h, then 6-hourly); IFS
+  06/18z reach 144 h. AIFS reaches 360 h in 6 h steps at every run. The scripts pick a run long
+  enough for the requested steps.
+- **Streams**: `oper` (HRES), `enfo` (ENS, 50 perturbed members), `wave`, `waef`.
+- **Availability**: a run appears ~6–8 h after base time; ~2–3 days are kept on data.ecmwf.int.
+  Older runs: `--source aws` (archive starts 2023-01-18). Portal limit: 500 simultaneous
+  connections.
+- **Parameters**: `2t`, `2d`, `tp` (m, accumulated from step 0), `10u`/`10v`, `10fg`, `msl` (Pa),
+  `tcc` (0–1), `ptype`, `sf`, `mucape`; pressure levels (`--levtype pl`) `t`, `u`, `v`, `gh`, `r`,
+  `q`. Exact list for a run: `odcatalog.py fields --step 24`. Table and file layout:
+  `references/catalog.md`.
 
 ## Dependencies — earthkit first
 
-Decoding and point extraction use earthkit components (≥ 1.0), each for its job: `earthkit-data`
-(fetch/decode), `earthkit-geo` (nearest point), `earthkit-meteo` (wind), `earthkit-utils` (units).
-`uv run` installs only these. **Never** install the `earthkit` meta-package or
-`earthkit-data[all]` for this.
+Decoding uses earthkit components (≥ 1.0), each for its job: `earthkit-data` (decode),
+`earthkit-geo` (nearest point), `earthkit-meteo` (wind), `earthkit-utils` (units). `uv run`
+installs only these. Never install the `earthkit` meta-package or `earthkit-data[all]`.
 
-Fall back to the standard library only if uv is unavailable and cannot be installed, the platform
-has no wheels (Windows — use WSL), installation fails, or the user declines. Then
-`odcatalog.py download` still fetches the exact GRIB fields, but nothing can decode them — say so,
-and offer `pip install 'earthkit-data[ecmwf-opendata]>=1.2' 'earthkit-geo>=1.1'
-'earthkit-meteo>=1.2' 'earthkit-utils>=1.0'`.
+Downloads use parallel HTTP Range requests (8 connections, ~5× faster than earthkit-data's
+sequential fetch); `--fetcher earthkit` uses earthkit-data's `ecmwf-open-data` source instead.
+
+Standard-library fallback — only if uv can't be installed, there are no wheels (Windows: use WSL),
+installation fails, or the user declines: `odcatalog.py download` still fetches the exact GRIB
+fields, but nothing can decode them. Say so and offer
+`pip install 'earthkit-data>=1.2' 'earthkit-geo>=1.1' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0'`.
 
 ## Credentials and better routes
 
-Open Data needs none. Before heavy downloads, check whether the user has better access and say
-what it would add — briefly, once:
+Open Data needs none. If the user has better access, say once what it would add:
 
-| Found | Means |
+| Found | Adds |
 |---|---|
-| `POLYTOPE_USER_KEY` or `~/.polytopeapirc` (or `~/.ecmwfapirc` for member-state users) | Point/area extraction server-side in KB — `polytope` skill |
+| `POLYTOPE_USER_KEY`, `~/.polytopeapirc` (or `~/.ecmwfapirc` for member-state users) | server-side point extraction in KB — `polytope` skill |
 | `CDSAPI_KEY` or `~/.cdsapirc` | ERA5 history and climate normals — `cds-ads` skill |
 | `~/.adsapirc` | CAMS air quality — `cds-ads` skill |
 | `ECMWF_API_KEY` or `~/.ecmwfapirc` | MARS archive (licensed) — `mars` skill |
 
-Never print key values.
+Check presence only; never print key values.
 
-## Attribution is required
+## Attribution
 
-ECMWF Open Data is CC-BY-4.0. Wherever the data or anything derived from it is shown:
+Required wherever the data or anything derived from it is shown:
 
-- Short (UI, chat answers, map corners): `Data: © <year> ECMWF, CC BY 4.0` linked to
-  https://creativecommons.org/licenses/by/4.0/
-- Full notice for services, apps, files and READMEs — `references/attribution.md`.
-- State if the data was modified (e.g. "interpolated to a point", "unit-converted").
+- Short form (chat answers, figures, map corners): `Data: © <year> ECMWF, CC BY 4.0`, linked to
+  https://creativecommons.org/licenses/by/4.0/ where possible.
+- Full notice for services, apps, files and READMEs: `references/attribution.md`.
+- State modifications ("nearest gridpoint", "converted to °C").
+
+## Old patterns
+
+IFS Cycle 50r1 (13 May 2026) changed the streams. Archived files from before that date (e.g. on
+the AWS mirror) use `scda`/`scwv` for 06/18z IFS runs, which then reached only 90 h, and IFS ENS
+had a control member `cf`. The scripts map stream names automatically from the run date.
