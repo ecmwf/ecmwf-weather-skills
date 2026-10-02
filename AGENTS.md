@@ -183,6 +183,11 @@ expectations are meaningful for it.
 - Descriptions route: if a skill's description mentions a term ("IFS ENS") but can't serve the
   task, it must point to the skill that can.
 - Agents drop attribution unless told to end the answer with it.
+- Grade concepts, not wording: a correct answer said "archived by month" instead of "tape", and
+  agents quote paths (`"$DIR/cds.py" check`) — the grader strips shell quotes before matching.
+
+**Current status** (2026-10-02): Codex 19/19 across all cases (after grader fixes); Claude Code
+not yet run — CLI login expired on the dev machine; Gemini needs `GEMINI_API_KEY`.
 
 **Read transcripts, not just verdicts.** A PASS can hide a struggling agent: the first
 `ek-meteogram` run passed but took 283 s, retried mirrors and thinned steps — which exposed a

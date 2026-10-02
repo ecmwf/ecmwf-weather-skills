@@ -4,10 +4,25 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "mars"},
-    {"kind": "command", "pattern": "mars\\.py\\s+(lint|estimate|plan)"},
-    {"kind": "final", "pattern": "(?i)class\\s*[=:]\\s*\"?ea"},
-    {"kind": "final", "pattern": "(?i)month"},
-    {"kind": "final", "pattern": "(?i)tape"}
+    {
+      "kind": "skill",
+      "name": "mars"
+    },
+    {
+      "kind": "command",
+      "pattern": "mars\\.py\\s+(lint|estimate|plan)"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)class\\s*[=:]\\s*\"?ea"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)month"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)tape|archived by month|chronolog"
+    }
   ]
 }

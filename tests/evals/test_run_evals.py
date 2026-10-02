@@ -146,6 +146,25 @@ def test_grade_all_kinds():
     assert [r["ok"] for r in results] == [True, True, True, True, False, True]
 
 
+def test_command_match_ignores_shell_quotes():
+    t = {
+        "skills": set(),
+        "commands": ['python3 "$SKILL_DIR/scripts/cds.py" check'],
+        "final": "",
+        "error": None,
+    }
+    assert re_.grade(t, [{"kind": "command", "pattern": r"cds\.py\s+check"}])[0]["ok"]
+
+
+def test_summary_line_counts_errors_separately():
+    rs = [
+        {"passed": True, "error": None},
+        {"passed": False, "error": "auth"},
+        {"passed": False, "error": None},
+    ]
+    assert re_.summary_line(rs) == "1/3 passed, 1 failed, 1 error (agent did not run)"
+
+
 def test_load_cases_valid():
     cases = re_.load_cases(ROOT / "evals" / "cases")
     assert cases, "no eval cases"

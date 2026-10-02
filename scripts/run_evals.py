@@ -97,7 +97,8 @@ def parse_transcript(agent: str, raw: str) -> dict:
 
 def grade(t: dict, expect: list[dict], workdir: Path | None = None) -> list[dict]:
     out = []
-    cmds = "\n".join(t["commands"])
+    # Agents quote paths ("$DIR/cds.py" check) — match on the command without shell quotes.
+    cmds = "\n".join(t["commands"]).replace('"', "").replace("'", "")
     for e in expect:
         k = e["kind"]
         if k == "skill":
@@ -116,6 +117,13 @@ def grade(t: dict, expect: list[dict], workdir: Path | None = None) -> list[dict
             raise ValueError(f"unknown expectation kind {k}")
         out.append({**e, "ok": ok})
     return out
+
+
+def summary_line(results: list[dict]) -> str:
+    passed = sum(r["passed"] for r in results)
+    errors = sum(1 for r in results if r.get("error"))
+    failed = len(results) - passed - errors
+    return f"{passed}/{len(results)} passed, {failed} failed, {errors} error (agent did not run)"
 
 
 def load_cases(path: Path) -> list[dict]:
@@ -269,7 +277,7 @@ def main(argv=None) -> int:
             )
     (outdir / "summary.json").write_text(json.dumps(summary, indent=2))
     n = sum(r["passed"] for r in summary)
-    print(f"\n{n}/{len(summary)} passed — {outdir}")
+    print(f"\n{summary_line(summary)} — {outdir}")
     return 0 if n == len(summary) else 1
 
 
