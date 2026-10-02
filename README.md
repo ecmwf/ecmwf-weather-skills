@@ -1,6 +1,6 @@
 # ECMWF Weather — Agent Skills
 
-> **Status: pre-release.** all six skills are implemented and tested. Packaging tooling and CI are next. See `PLAN.md` and `TODO.md`.
+> **Status: pre-release.** all six skills are implemented and tested; tooling and CI are in place. See `PLAN.md` and `TODO.md`.
 
 Six [Agent Skills](https://agentskills.io) that teach coding agents how to find, request, decode and
 visualise ECMWF data — real-time IFS and AIFS forecasts, ERA5 reanalysis, CAMS air quality, the MARS
@@ -83,9 +83,13 @@ Environment variables override files. Scripts never print secrets.
 ## Development
 
 ```bash
-uv run pytest                                    # offline unit tests
+uv run pytest                                    # offline unit tests + skill lint
 uv run --group earthkit pytest -m "earthkit or live"   # earthkit + live ECMWF tests
 python3 scripts/run_evals.py --agent codex       # fresh-agent skill evals
+python3 scripts/validate_packaging.py            # manifests and skill versions agree
+python3 scripts/regenerate_references.py --check # generated references up to date
+python3 scripts/build_dist.py                    # upload ZIPs in dist/
+git config core.hooksPath .githooks              # once per clone: pre-push checks
 ```
 
 Testing method: `AGENTS.md` → Testing.

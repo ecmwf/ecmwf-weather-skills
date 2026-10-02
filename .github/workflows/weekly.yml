@@ -1,0 +1,41 @@
+name: weekly
+on:
+  schedule:
+    - cron: "17 5 * * 1"   # Mondays 05:17 UTC
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Live tests against ECMWF services (no credentials)
+        run: uv run --group earthkit pytest -q -m live -k "not ptpoint and not mars"
+        env:
+          MIR_CACHE_PATH: ${{ runner.temp }}/mir
+      - name: Links
+        run: python3 scripts/check_links.py
+  refresh-references:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Regenerate references
+        run: python3 scripts/regenerate_references.py
+      - name: Bump patch version if anything changed
+        id: bump
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "version=$(python3 scripts/bump_version.py --level patch)" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Open pull request
+        if: steps.bump.outputs.version != ''
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: refresh-references
+          title: "Refresh generated references (v${{ steps.bump.outputs.version }})"
+          commit-message: "Refresh generated references from live ECMWF catalogues"
+          body: "Automated weekly regeneration (`scripts/regenerate_references.py`). Review the diff; earthkit components that reach 1.0 need a policy review."

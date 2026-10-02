@@ -17,7 +17,7 @@ metadata:
 - Key 1.x pitfalls
 - Fallback without earthkit
 - Attribution (required)
-- References — `references/recipes.md` (code per job), `references/pitfalls.md` (0.x → 1.x breakages)
+- References — `references/recipes.md` (code per job), `references/pitfalls.md` (0.x → 1.x breakages), `references/versions.md` (generated: latest versions, ≥ 1.0 eligibility)
 
 earthkit is ECMWF's Python toolkit. It is split into components; **install only what the task
 needs** and never the `earthkit` meta-package or `earthkit-data[all]` (≈230 MB, 100+ packages).

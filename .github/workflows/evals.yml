@@ -1,0 +1,29 @@
+name: skill-evals
+on:
+  workflow_dispatch:
+    inputs:
+      cases:
+        description: "space-separated case ids (empty = all)"
+        required: false
+      model:
+        description: "haiku | sonnet | opus"
+        default: sonnet
+jobs:
+  claude:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Run evals (fresh agent, plugin only)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EVAL_BARE: "1"
+        run: |
+          args=""; for c in ${{ inputs.cases }}; do args="$args --case $c"; done
+          python3 scripts/run_evals.py --model ${{ inputs.model }} $args
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: eval-runs, path: evals/runs/ }

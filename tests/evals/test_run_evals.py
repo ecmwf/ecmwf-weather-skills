@@ -159,3 +159,11 @@ def test_claude_command_isolated(tmp_path):
     assert cmd[0] == "claude" and "-p" in cmd
     assert "--plugin-dir" in cmd and str(re_.PLUGIN) in cmd
     assert cmd[cmd.index("--setting-sources") + 1] == "project"
+
+
+def test_claude_command_bare_in_ci(tmp_path, monkeypatch):
+    monkeypatch.setenv("EVAL_BARE", "1")
+    cmd = re_.agent_command("claude", "hello", tmp_path, {})
+    assert "--bare" in cmd
+    monkeypatch.delenv("EVAL_BARE")
+    assert "--bare" not in re_.agent_command("claude", "hello", tmp_path, {})

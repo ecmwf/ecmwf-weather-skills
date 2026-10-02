@@ -18,7 +18,7 @@ metadata:
 - Rules the server enforces
 - Access and tokens
 - Attribution (required)
-- References — `references/layers.md` (layer catalogue, styles, dimensions), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
+- References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
 

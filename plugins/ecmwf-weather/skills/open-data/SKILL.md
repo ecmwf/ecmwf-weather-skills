@@ -18,7 +18,7 @@ metadata:
 - Credentials and better routes
 - Attribution (required)
 - Old patterns (pre-50r1 streams)
-- References — `references/catalog.md` (paths, products, .index, parameters), `references/attribution.md` (full notices, HTML snippet)
+- References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
 There is **no per-location API**: a point forecast means downloading global fields and extracting

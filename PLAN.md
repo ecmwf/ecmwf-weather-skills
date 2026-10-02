@@ -1,6 +1,6 @@
 # ECMWF Weather Skill — Plan
 
-Status: **in progress** — M1–M5 done (all six skills); M6 (tooling, CI) next.
+Status: **M1–M6 done** — release candidate; v1.0.0 after the open items in TODO.md.
 Model: [vaisala-xweather/xweather-agent-skills](https://github.com/vaisala-xweather/xweather-agent-skills).
 Research: `docs/research/earthkit-components.md`, `docs/research/open-questions.md`.
 
@@ -163,7 +163,7 @@ OpenCharts images as an option; the clicked-point meteogram comes from Open Data
 3. M3 — polytope ✅ (ptpoint.py: hourly point + 50-member ensemble percentiles, verified live)
 4. M4 — cds-ads ✅ (cds.py: check/search/describe/validate+costing keyless; retrieve via earthkit-data[cds])
 5. M5 — mars ✅ (mars.py: lint/estimate/plan offline, cost + retrieve via Web API, verified live)
-6. M6 — tooling & CI → v1.0.0
+6. M6 — tooling & CI ✅ (validate_packaging, check_skills, bump_version, regenerate_references, check_links, build_dist, pre-push hook, workflows)
 
 ## 10. Open questions → best guesses
 

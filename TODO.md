@@ -27,9 +27,11 @@ See `PLAN.md` for context and milestones.
 - [x] M5 — `mars` skill
 - [ ] M5 — live-test `mars.py retrieve` end to end (cost verified live); check `levelist=all`
       level counts per class
-- [ ] M6 — tooling: `validate_packaging.py`, `check_skill_links.py`, `bump_version.py`,
-      `build_dist.py`, `regenerate_references.py`, pre-push hook, CI workflows (unit + weekly
-      live + evals with `--bare`)
+- [x] M6 — tooling: `validate_packaging.py`, `check_skills.py`, `check_links.py`,
+      `bump_version.py`, `build_dist.py`, `regenerate_references.py`, pre-push hook, CI workflows
+- [ ] Before v1.0.0: Claude Code eval run on Haiku, Sonnet and Opus; CI secrets
+      (`ANTHROPIC_API_KEY`); publish to github.com/ecmwf; remove the repo URL from
+      `check_links.py` IGNORE once public
 - [ ] Confirm with ECMWF: attribution strings and logo rules per data source
 - [ ] Confirm with ECMWF: public WMS token policy; ask for public surface layers (2t, tp)
 - [ ] Confirm with ECMWF: Polytope access model for non-member-state users

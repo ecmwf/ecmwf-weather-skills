@@ -77,7 +77,9 @@ def parse_transcript(agent: str, raw: str) -> dict:
                 t["final"] = item.get("text", "")
             elif ev.get("type") in ("error", "turn.failed"):
                 t["error"] = json.dumps(ev)[:300]
-    if agent == "gemini":  # one pretty-printed JSON document, possibly after banner lines
+    if (
+        agent == "gemini"
+    ):  # one pretty-printed JSON document, possibly after banner lines
         i = raw.find("{")
         try:
             doc = json.loads(raw[i:]) if i >= 0 else {}
@@ -143,6 +145,10 @@ def agent_command(
             "--max-budget-usd",
             str(case.get("max_budget_usd", 2)),
         ]
+        if (
+            os.environ.get("EVAL_BARE") == "1"
+        ):  # CI: strict isolation, needs ANTHROPIC_API_KEY
+            cmd.append("--bare")
     elif agent == "codex":
         cmd = [
             "codex",

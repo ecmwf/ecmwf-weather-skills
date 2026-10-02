@@ -31,6 +31,32 @@ Agent Skills for ECMWF data. Plan: `PLAN.md`. Roadmap: `TODO.md`.
 - **Trust live services over docs** — ECMWF docs lag (e.g. post-50r1 streams). Re-run the research
   step (`PLAN.md` §0) before each minor release.
 
+## Tooling
+
+| Command | Does |
+|---|---|
+| `python3 scripts/validate_packaging.py` | marketplace, both manifests and every SKILL.md agree (name, version, licence, displayName) |
+| `python3 scripts/check_skills.py` | best-practice lint of every skill (see next section) |
+| `python3 scripts/bump_version.py --level patch\|minor\|major` / `--set X.Y.Z` | bumps all version fields together; refuses if they already disagree |
+| `python3 scripts/regenerate_references.py [--check]` | rewrites the generated references from live catalogues |
+| `python3 scripts/check_links.py` | probes every URL in the skills (known non-browsable ones listed with reasons) |
+| `python3 scripts/build_dist.py` | `dist/ecmwf-weather-claude.zip` (no `bin/`) and `-openai.zip` (no SKILL.md `metadata:`) |
+| `python3 scripts/run_evals.py` | fresh-agent skill evals (see Testing) |
+
+- **Generated references — never hand-edit**: `open-data/references/fields.md`,
+  `opencharts-wms/references/layer-catalog.md`, `earthkit/references/versions.md`. Change the
+  renderer in `scripts/regenerate_references.py` instead. They omit volatile facts (valid times)
+  so they only change when a catalogue does.
+- **Pre-push hook**: `.githooks/pre-push` (packaging, lint, plugin validate, offline tests).
+  Enable once per clone yourself with `git config core.hooksPath .githooks` — agents must not
+  change git config.
+- **CI** (`.github/workflows/`): `tests.yml` on every push/PR (offline + earthkit fixtures);
+  `weekly.yml` (live tests without credentials, link check, reference refresh → PR with a patch
+  bump); `evals.yml` (manual, Claude Code `--bare` with `ANTHROPIC_API_KEY`, choose the model).
+- **Editing Python with scripts**: a formatter may reflow files after each write, so scripted
+  string replacements can silently match nothing. Re-read before editing, or assert the
+  replacement happened.
+
 ## Skill authoring — follow Anthropic's best practices
 
 Always follow https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
