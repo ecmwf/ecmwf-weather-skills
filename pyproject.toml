@@ -1,0 +1,28 @@
+# Development-only config (tests, evals). Not part of the shipped plugin.
+[project]
+name = "ecmwf-weather-skill-dev"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+# Mirrors the PEP 723 bundles declared in the skill scripts (keep in sync).
+earthkit = [
+    "earthkit-data[ecmwf-opendata]>=1.2",
+    "earthkit-geo>=1.1",
+    "earthkit-meteo>=1.2",
+    "earthkit-utils>=1.0",
+    "earthkit-plots>=1.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not live and not earthkit' -ra"
+markers = [
+    "live: hits real ECMWF services (run with -m live)",
+    "earthkit: needs earthkit components installed (run with --group earthkit -m earthkit)",
+]

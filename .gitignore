@@ -1,0 +1,14 @@
+.DS_Store
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+__MACOSX/
+dist/
+regen.log
+*.grib
+*.grib2
+*.nc
+.venv/
+evals/runs/
+!tests/fixtures/*.grib2

@@ -1,0 +1,13 @@
+{
+  "id": "ek-meteogram",
+  "prompt": "Make me a meteogram image for Reading, UK covering the next 3 days using the latest ECMWF forecast. Save it as reading.png.",
+  "timeout": 1200,
+  "max_budget_usd": 3,
+  "expect": [
+    {"kind": "skill", "name": "open-data"},
+    {"kind": "command", "pattern": "odpoint\\.py"},
+    {"kind": "command", "pattern": "ekplot\\.py.*meteogram"},
+    {"kind": "file", "pattern": "reading.png"},
+    {"kind": "final", "pattern": "(?i)ECMWF"}
+  ]
+}

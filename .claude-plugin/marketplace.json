@@ -1,0 +1,20 @@
+{
+  "name": "ecmwf",
+  "description": "ECMWF plugins for Claude Code, ChatGPT, and Codex — Open Data forecasts, Copernicus CDS/ADS, MARS, Polytope, OpenCharts/WMS maps, and earthkit processing",
+  "owner": {
+    "name": "ECMWF",
+    "url": "https://www.ecmwf.int"
+  },
+  "plugins": [
+    {
+      "name": "ecmwf-weather",
+      "displayName": "ECMWF Weather Data",
+      "description": "Find, request, decode and visualise ECMWF forecasts, reanalysis and atmospheric composition data — Open Data, CDS/ADS, MARS, Polytope, OpenCharts/WMS and earthkit",
+      "author": {
+        "name": "ECMWF",
+        "url": "https://www.ecmwf.int"
+      },
+      "source": "./plugins/ecmwf-weather"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "ecmwf-weather",
+  "displayName": "ECMWF Weather Data",
+  "description": "Find, request, decode and visualise ECMWF forecasts, reanalysis and atmospheric composition data — Open Data, CDS/ADS, MARS, Polytope, OpenCharts/WMS and earthkit.",
+  "version": "0.1.0",
+  "author": {
+    "name": "ECMWF",
+    "url": "https://www.ecmwf.int"
+  },
+  "homepage": "https://github.com/ecmwf/ecmwf-weather-skill",
+  "license": "Apache-2.0",
+  "keywords": [
+    "ecmwf",
+    "weather",
+    "forecast",
+    "ifs",
+    "aifs",
+    "open-data",
+    "era5",
+    "copernicus",
+    "cams",
+    "mars",
+    "polytope",
+    "wms",
+    "grib",
+    "earthkit"
+  ]
+}

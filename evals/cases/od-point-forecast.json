@@ -1,0 +1,14 @@
+{
+  "id": "od-point-forecast",
+  "prompt": "What will the weather be like in Lisbon over the next two days? Use ECMWF data.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {"kind": "skill", "name": "open-data"},
+    {"kind": "command", "pattern": "odpoint\\.py"},
+    {"kind": "command_not", "pattern": "pip install (earthkit(\\s|$)|.*earthkit-data\\[all\\])"},
+    {"kind": "final", "pattern": "°C|degC"},
+    {"kind": "final", "pattern": "(?i)ECMWF"},
+    {"kind": "final", "pattern": "CC[ -]BY"}
+  ]
+}

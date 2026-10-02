@@ -1,0 +1,12 @@
+{
+  "id": "od-latest-run",
+  "prompt": "Which is the most recent complete ECMWF IFS forecast run available as open data right now, and when should the next one appear?",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "open-data"},
+    {"kind": "command", "pattern": "odcatalog\\.py.*latest"},
+    {"kind": "final", "pattern": "(?i)(00|06|12|18) ?(UTC|Z)"},
+    {"kind": "final_not", "pattern": "scda"}
+  ]
+}

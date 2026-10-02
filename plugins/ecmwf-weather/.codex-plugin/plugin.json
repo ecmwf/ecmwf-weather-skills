@@ -1,0 +1,46 @@
+{
+  "name": "ecmwf-weather",
+  "version": "0.1.0",
+  "description": "Find, request, decode and visualise ECMWF forecasts, reanalysis and atmospheric composition data — Open Data, CDS/ADS, MARS, Polytope, OpenCharts/WMS and earthkit.",
+  "author": {
+    "name": "ECMWF",
+    "url": "https://www.ecmwf.int"
+  },
+  "homepage": "https://github.com/ecmwf/ecmwf-weather-skill",
+  "repository": "https://github.com/ecmwf/ecmwf-weather-skill",
+  "license": "Apache-2.0",
+  "keywords": [
+    "ecmwf",
+    "weather",
+    "forecast",
+    "ifs",
+    "aifs",
+    "open-data",
+    "era5",
+    "copernicus",
+    "cams",
+    "mars",
+    "polytope",
+    "wms",
+    "grib",
+    "earthkit"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ECMWF Weather Data",
+    "shortDescription": "ECMWF forecast, reanalysis and map tools",
+    "longDescription": "Reusable ECMWF skills for fetching IFS and AIFS forecasts from Open Data, ERA5 and CAMS from the Copernicus data stores, MARS archive requests, Polytope point and area extraction, OpenCharts and WMS map layers, and decoding and plotting GRIB with earthkit.",
+    "developerName": "ECMWF",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://www.ecmwf.int",
+    "defaultPrompt": [
+      "Get the latest ECMWF IFS forecast for my city.",
+      "Build a web map with ECMWF WMS layers and a clicked-point meteogram.",
+      "Download ERA5 temperature for a region and plot it."
+    ]
+  }
+}
