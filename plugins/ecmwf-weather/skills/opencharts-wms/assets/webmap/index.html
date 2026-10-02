@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ECMWF forecast map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map"></div>
+  <aside id="panel">
+    <h1>ECMWF forecast</h1>
+    <label>Layer <select id="layer"></select></label>
+    <label>Valid time <span id="time-label">…</span>
+      <input id="time" type="range" min="0" max="0" value="0">
+    </label>
+    <div class="buttons"><button type="button" id="prev">◀</button><button type="button" id="play">▶ Play</button><button type="button" id="next">▶</button></div>
+    <img id="legend" alt="legend">
+    <div id="point">Click the map for the value here and a 10-day meteogram.</div>
+    <img id="meteogram" alt="" hidden>
+    <p class="attribution" id="attribution"></p>
+  </aside>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

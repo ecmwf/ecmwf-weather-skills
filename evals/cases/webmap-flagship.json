@@ -1,0 +1,12 @@
+{
+  "id": "webmap-flagship",
+  "prompt": "Using the ECMWF skills, build me a web map in a folder called webmap that shows the latest ECMWF forecast layers with a time slider, and when I click a point shows a 10-day meteogram for that location. Don't start a long-running server; just build it and tell me how to run it.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {"kind": "skill", "name": "opencharts-wms"},
+    {"kind": "command", "pattern": "webmap\\.py"},
+    {"kind": "file", "pattern": "webmap/index.html"},
+    {"kind": "final", "pattern": "webmap\\.py\\s+serve|serve"}
+  ]
+}

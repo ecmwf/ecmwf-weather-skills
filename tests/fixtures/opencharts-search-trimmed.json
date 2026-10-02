@@ -1,0 +1,55 @@
+{
+ "results": [
+  {
+   "name": "medium-mslp-wind850",
+   "title": "Mean sea level pressure and 850 hPa wind speed",
+   "download-url": "https://charts.ecmwf.int/opencharts-api/v1/products/medium-mslp-wind850/",
+   "opencharts-url": "https://charts.ecmwf.int/products/medium-mslp-wind850",
+   "schema-url": "https://charts.ecmwf.int/opencharts-api/v1/schema/?package=openchart&product=medium-mslp-wind850",
+   "thumbnail-url": "https://charts.ecmwf.int/opencharts-api/backend/get-product-thumbnail/medium-mslp-wind850/?width=512&mode=expand",
+   "package": "opencharts",
+   "description": "These charts are the most recent from the ECMWF Ensemble Control Forecast (ENS Control).\n\nSelect desired base time and valid time using the drop down menu. Base times cover the past five days. The dro"
+  },
+  {
+   "name": "medium-z500-t850",
+   "title": "500 hPa geopotential height and 850 hPa\u00a0temperature",
+   "download-url": "https://charts.ecmwf.int/opencharts-api/v1/products/medium-z500-t850/",
+   "opencharts-url": "https://charts.ecmwf.int/products/medium-z500-t850",
+   "schema-url": "https://charts.ecmwf.int/opencharts-api/v1/schema/?package=openchart&product=medium-z500-t850",
+   "thumbnail-url": "https://charts.ecmwf.int/opencharts-api/backend/get-product-thumbnail/medium-z500-t850/?width=512&mode=expand",
+   "package": "opencharts",
+   "description": "These charts are the most recent from the ECMWF Ensemble Control Forecast (ENS Control).\n\nSelect desired base time and valid time using the drop down menu. Base times cover the past five days. The dro"
+  },
+  {
+   "name": "medium-2t-wind",
+   "title": "2 m temperature and 10 m wind",
+   "download-url": "https://charts.ecmwf.int/opencharts-api/v1/products/medium-2t-wind/",
+   "opencharts-url": "https://charts.ecmwf.int/products/medium-2t-wind",
+   "schema-url": "https://charts.ecmwf.int/opencharts-api/v1/schema/?package=openchart&product=medium-2t-wind",
+   "thumbnail-url": "https://charts.ecmwf.int/opencharts-api/backend/get-product-thumbnail/medium-2t-wind/?width=512&mode=expand",
+   "package": "opencharts",
+   "description": "These charts are the most recent from the ECMWF Ensemble Control Forecast (ENS Control).\n\n\u00a0Select desired base time and valid time using the drop down menu. Base times cover the past five days. The dr"
+  },
+  {
+   "name": "aifs_single_medium-2t-wind",
+   "title": "AIFS Single: 2 m temperature and 10 m wind",
+   "download-url": "https://charts.ecmwf.int/opencharts-api/v1/products/aifs_single_medium-2t-wind/",
+   "opencharts-url": "https://charts.ecmwf.int/products/aifs_single_medium-2t-wind",
+   "schema-url": "https://charts.ecmwf.int/opencharts-api/v1/schema/?package=openchart&product=aifs_single_medium-2t-wind",
+   "thumbnail-url": "https://charts.ecmwf.int/opencharts-api/backend/get-product-thumbnail/aifs_single_medium-2t-wind/?width=512&mode=expand",
+   "package": "opencharts",
+   "description": "These charts are the most recent from the [ECMWF AIFS Single.](https://confluence.ecmwf.int/display/FCST/Implementation+of+AIFS+Single+v2)\n\n  \n\n\u00a0Select desired base time and valid time using the drop "
+  },
+  {
+   "name": "aifs_single_medium-2t-dp",
+   "title": "AIFS Single: 2 m dewpoint temperature",
+   "download-url": "https://charts.ecmwf.int/opencharts-api/v1/products/aifs_single_medium-2t-dp/",
+   "opencharts-url": "https://charts.ecmwf.int/products/aifs_single_medium-2t-dp",
+   "schema-url": "https://charts.ecmwf.int/opencharts-api/v1/schema/?package=openchart&product=aifs_single_medium-2t-dp",
+   "thumbnail-url": "https://charts.ecmwf.int/opencharts-api/backend/get-product-thumbnail/aifs_single_medium-2t-dp/?width=512&mode=expand",
+   "package": "opencharts",
+   "description": "These charts are the most recent from the [ECMWF AIFS Single.](https://confluence.ecmwf.int/display/FCST/Implementation+of+AIFS+Single+v2)\n\n  \n\nSelect desired base time and valid time using the drop d"
+  }
+ ],
+ "total-products": 333
+}

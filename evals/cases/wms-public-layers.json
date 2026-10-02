@@ -1,0 +1,12 @@
+{
+  "id": "wms-public-layers",
+  "prompt": "Which ECMWF forecast map layers can I add to a web map without having an ECMWF account? Give me a few layer names with what they show and how far ahead they go.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "opencharts-wms"},
+    {"kind": "command", "pattern": "wms\\.py\\s+layers|GetCapabilities"},
+    {"kind": "final", "pattern": "msl_public|z500_public|t850_public"},
+    {"kind": "final", "pattern": "token=public|public token|no account"}
+  ]
+}

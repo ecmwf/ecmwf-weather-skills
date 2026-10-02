@@ -11,8 +11,11 @@ See `PLAN.md` for context and milestones.
       (earthkit-plots bar width/limits); share x-limits across panels
 - [ ] M1 polish — `odcatalog.py latest` could link the ECMWF dissemination schedule so agents
       don't cite guessed URLs
-- [ ] M2 — `opencharts-wms` skill + flagship web map demo (public WMS has no 2t/precip layers —
-      combine WMS MSLP/z500/t850 with Open Data point meteogram)
+- [x] M2 — `opencharts-wms` skill + flagship web map demo
+- [ ] M2 polish — meteogram click takes ~20 s after the first (decoding 300 MB GRIB per point);
+      keep a warm earthkit process or pre-extract a point index
+- [ ] M2 polish — `opencharts.py get --valid-time` validation; regenerate `layers.md` from
+      GetCapabilities weekly
 - [ ] M3 — `polytope` skill + point-forecast fallback wiring
 - [ ] M4 — `cds-ads` skill (ERA5, CAMS)
 - [ ] M5 — `mars` skill

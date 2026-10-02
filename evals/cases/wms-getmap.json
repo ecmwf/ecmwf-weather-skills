@@ -1,0 +1,28 @@
+{
+  "id": "wms-getmap",
+  "prompt": "Save a 1024x768 PNG of the ECMWF mean sea level pressure forecast over Europe valid tomorrow at 12 UTC as mslp.png, using ECMWF's web map service.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "opencharts-wms"
+    },
+    {
+      "kind": "command",
+      "pattern": "wms\\.py\\s+getmap"
+    },
+    {
+      "kind": "file",
+      "pattern": "mslp.png"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ECMWF"
+    },
+    {
+      "kind": "final",
+      "pattern": "CC[ -]BY|\u00a9"
+    }
+  ]
+}

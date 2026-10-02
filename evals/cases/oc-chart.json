@@ -1,0 +1,12 @@
+{
+  "id": "oc-chart",
+  "prompt": "Download the latest official ECMWF chart of 2 metre temperature and wind for Europe, 48 hours ahead, and save it as chart.png.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "opencharts-wms"},
+    {"kind": "command", "pattern": "opencharts\\.py"},
+    {"kind": "file", "pattern": "chart.png"},
+    {"kind": "final", "pattern": "CC[ -]BY|©"}
+  ]
+}
