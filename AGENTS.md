@@ -250,8 +250,9 @@ not on every edit. Record pass/fail per case in the PR description.
 6. **Commit** with a conventional-commit message (`feat(polytope): …`) and open a pull request
    against `main` using `.github/PULL_REQUEST_TEMPLATE.md` (it carries the ECMWF CLA).
 7. All changes reach `main` through a pull request; CI must be green before merge. `main` is
-   protected by a repository ruleset (PR required, no force-push or deletion); only admins and
-   maintainers can bypass it.
+   protected by the `protect-main` repository ruleset: PR required, the `make all` and
+   `make test-earthkit` CI checks must pass, no force-push or deletion; only admins and
+   maintainers can bypass it. `.github/CODEOWNERS` requests review from the maintainers.
 
 Agents NEVER commit, push, merge or open a PR without explicit user approval.
 

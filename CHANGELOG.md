@@ -18,6 +18,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 - Pull requests carry the ECMWF CLA declaration in place of CLA Assistant: the template ends
   with it and the `cla` workflow appends it to any description that lacks it.
 
+### Added
+
+- `.github/CODEOWNERS`; `main` requires a pull request with passing `tests` CI checks.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added

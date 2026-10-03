@@ -106,3 +106,9 @@ def test_github_actions_are_pinned_to_commit_shas():
         for ref in re.findall(r"uses:\s*(\S+)", wf.read_text()):
             pinned = re.fullmatch(r"[\w.-]+/[\w.-]+@[0-9a-f]{40}", ref)
             assert pinned, f"{wf.name}: {ref} is not pinned to a commit SHA"
+
+
+def test_codeowners_assigns_the_maintainer():
+    text = (ROOT / ".github" / "CODEOWNERS").read_text()
+    rules = [ln.split() for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+    assert ["*", "@tlmquintino"] in rules
