@@ -11,16 +11,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-03
+
+Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
+
+### Fixed
+
+- `mars.py lint` rejects keywords MARS does not have, with the correct one suggested
+  (`level` → `levelist`; `dataset`, `format`, `variable`, `product_type` carried over from CDS).
+- `mars.py lint` rejects model-level numbers on `levtype=pl`, warns when a two-date `date`
+  lacks `/to/` (retrieves only those two days) and when `class` is not a common archive
+  (operational IFS is `class=od`).
+- `mars.py lint` only says "split" above the 75 GB per-retrieval cap; a large single month
+  gets advice to shrink grid or area instead, matching the one-request-per-month rule.
+- `wms.py layers` prints the WMS endpoint (`…/wms/?token=public`) needed to use the layers.
+- Eval harness: commands are graded after expanding shell variables (`S=…/mars.py; $S lint`
+  was graded as not linting), and each case runs against a private copy of the plugin so
+  agents cannot write into the skills under test.
+
+### Added
+
+- `mars.py check` verifies the ECMWF Web API key in seconds (`who-am-i`) and reports the
+  account id, never the key.
+- `.github/CODEOWNERS`; `main` requires a pull request with passing `tests` CI checks.
+
 ### Changed
 
 - Repository renamed to `ecmwf/ecmwf-weather-skills` (the plugin name `ecmwf-weather` is
   unchanged).
 - Pull requests carry the ECMWF CLA declaration in place of CLA Assistant: the template ends
   with it and the `cla` workflow appends it to any description that lacks it.
-
-### Added
-
-- `.github/CODEOWNERS`; `main` requires a pull request with passing `tests` CI checks.
 
 ## [0.1.0] - 2026-10-03
 
@@ -57,5 +77,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.1...HEAD
+[0.1.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/ecmwf/ecmwf-weather-skills/releases/tag/0.1.0

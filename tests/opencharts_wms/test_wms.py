@@ -182,3 +182,11 @@ def test_live_getmap_png(tmp_path):
 def test_live_bad_layer_reports_exception(tmp_path):
     out = cli("getmap", "--layer", "nope", "--bbox", "-10,35,30,60", "-o", tmp_path / "x.png")
     assert out.returncode != 0 and "LayerNotDefined" in out.stderr
+
+
+def test_cli_layers_states_the_keyless_endpoint():
+    out = cli("layers", "--caps", FIXTURES / "wms-capabilities-trimmed.xml", "--public")
+    assert out.returncode == 0, out.stderr
+    assert "https://eccharts.ecmwf.int/wms/?token=public" in out.stdout
+    j = cli("layers", "--caps", FIXTURES / "wms-capabilities-trimmed.xml", "--json")
+    assert json.loads(j.stdout)["endpoint"] == "https://eccharts.ecmwf.int/wms/?token=public"

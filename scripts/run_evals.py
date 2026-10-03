@@ -94,8 +94,9 @@ def parse_transcript(agent: str, raw: str) -> dict:
 
 def grade(t: dict, expect: list[dict], workdir: Path | None = None) -> list[dict]:
     out = []
-    # Agents quote paths ("$DIR/cds.py" check) — match on the command without shell quotes.
-    cmds = "\n".join(t["commands"]).replace('"', "").replace("'", "")
+    # Agents quote paths ("$DIR/cds.py" check) and keep script paths in shell variables
+    # (S=.../mars.py; python3 $S lint) — match on the expanded command without quotes.
+    cmds = expand_shell_vars("\n".join(t["commands"])).replace('"', "").replace("'", "")
     for e in expect:
         k = e["kind"]
         if k == "skill":
@@ -116,6 +117,17 @@ def grade(t: dict, expect: list[dict], workdir: Path | None = None) -> list[dict
     return out
 
 
+_ASSIGN = re.compile(r"(?:^|[\s;&|])([A-Za-z_][A-Za-z0-9_]*)=(\"[^\"]*\"|'[^']*'|[^\s;&|]+)")
+
+
+def expand_shell_vars(text: str) -> str:
+    """Substitute $VAR / ${VAR} with values assigned earlier in the same commands."""
+    values = {name: val.strip("\"'") for name, val in _ASSIGN.findall(text)}
+    for name in sorted(values, key=len, reverse=True):
+        text = re.sub(r"\$\{" + name + r"\}|\$" + name + r"\b", lambda _m, n=name: values[n], text)
+    return text
+
+
 def summary_line(results: list[dict]) -> str:
     passed = sum(r["passed"] for r in results)
     errors = sum(1 for r in results if r.get("error"))
@@ -130,8 +142,21 @@ def load_cases(path: Path) -> list[dict]:
 # --- running ------------------------------------------------------------------------------------
 
 
+def plugin_copy(base: Path) -> Path:
+    """A private copy of the plugin for one case: agents sometimes write files next to the
+    scripts they run, and must never be able to modify the skills under test."""
+    dst = Path(base) / PLUGIN.name
+    shutil.copytree(PLUGIN, dst, ignore=shutil.ignore_patterns("__pycache__", ".cache", "*.pyc"))
+    return dst
+
+
 def agent_command(
-    agent: str, prompt: str, workdir: Path, case: dict, model: str | None = None
+    agent: str,
+    prompt: str,
+    workdir: Path,
+    case: dict,
+    model: str | None = None,
+    plugin: Path = PLUGIN,
 ) -> list[str]:
     if agent == "claude":
         cmd = [
@@ -139,7 +164,7 @@ def agent_command(
             "-p",
             prompt,
             "--plugin-dir",
-            str(PLUGIN),
+            str(plugin),
             "--setting-sources",
             "project",
             "--output-format",
@@ -174,22 +199,23 @@ def agent_command(
     return cmd
 
 
-def prepare_workdir(agent: str, case: dict) -> Path:
+def prepare_workdir(agent: str, case: dict, plugin: Path = PLUGIN) -> Path:
     wd = Path(tempfile.mkdtemp(prefix=f"ecmwf-eval-{case['id']}-"))
     for src, dst in case.get("setup", {}).get("copy", {}).items():
         shutil.copy(ROOT / src, wd / dst)
     if agent in ("codex", "gemini"):
         d = wd / (".agents/skills" if agent == "codex" else ".gemini/skills")
         d.mkdir(parents=True)
-        for s in SKILLS.iterdir():
+        for s in (plugin / "skills").iterdir():
             if (s / "SKILL.md").exists():
                 (d / s.name).symlink_to(s)
     return wd
 
 
 def run_case(agent: str, case: dict, outdir: Path, model: str | None, attempt: int) -> dict:
-    wd = prepare_workdir(agent, case)
-    cmd = agent_command(agent, case["prompt"], wd, case, model)
+    plugin = plugin_copy(Path(tempfile.mkdtemp(prefix="ecmwf-eval-plugin-")))
+    wd = prepare_workdir(agent, case, plugin)
+    cmd = agent_command(agent, case["prompt"], wd, case, model, plugin=plugin)
     t0 = time.time()
     try:
         p = subprocess.run(

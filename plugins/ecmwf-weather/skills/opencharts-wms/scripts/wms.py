@@ -437,10 +437,14 @@ def main(argv=None) -> int:
         token = resolve_token(a.token)
         if a.cmd == "layers":
             ls = [summarise(layer) for layer in filter_layers(_load_caps(a), a.search, a.public)]
+            # Users need the endpoint to add these layers anywhere; never echo a personal key.
+            shown = "public" if token == "public" else "<your ECMWF API key>"
+            endpoint = f"{BASE}?token={shown}"
             if a.json:
                 print(
                     json.dumps(
                         {
+                            "endpoint": endpoint,
                             "layers": ls,
                             "token": "public" if token == "public" else "key",
                         },
@@ -456,7 +460,10 @@ def main(argv=None) -> int:
                         else "static"
                     )
                     print(f"{s['name']:40} {s['title']}  [{rng}]")
-                print(f"\n{len(ls)} layer(s). Attribution: {attribution('')}")
+                print(f"\n{len(ls)} layer(s). WMS 1.3.0 endpoint: {endpoint}")
+                if token == "public":
+                    print("No ECMWF account needed for these layers (token=public).")
+                print(f"Attribution: {attribution('')}")
             return 0
 
         if a.cmd == "times":
