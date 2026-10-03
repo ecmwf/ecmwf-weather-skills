@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-03
+
 ### Added
 
 - `open-data` skill — latest run, steps, fields, size estimates and parallel Range downloads of
@@ -43,3 +45,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
+
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skill/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/ecmwf/ecmwf-weather-skill/releases/tag/0.1.0
