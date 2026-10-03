@@ -9,12 +9,16 @@
       "name": "mars"
     },
     {
-      "kind": "command",
-      "pattern": "mars\\.py\\s+(lint|estimate|plan)"
+      "kind": "final",
+      "pattern": "(?i)class\\s*[=:]\\s*\"?ea"
     },
     {
       "kind": "final",
-      "pattern": "(?i)class\\s*[=:]\\s*\"?ea"
+      "pattern": "levelist"
+    },
+    {
+      "kind": "final",
+      "pattern": "2010-?01-?01/to/2010-?01-?31"
     },
     {
       "kind": "final",
@@ -23,6 +27,11 @@
     {
       "kind": "final",
       "pattern": "(?i)tape|archived by month|chronolog"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)\\b(level|dataset|format)\\s*="
     }
-  ]
+  ],
+  "note": "Graded on the request in the answer (correct monthly range, class, levelist, no CDS keywords) rather than on running lint: the SKILL.md templates are lint-clean, and Haiku answers correctly from them without running lint."
 }

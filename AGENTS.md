@@ -227,8 +227,19 @@ expectations are meaningful for it.
 - Grade concepts, not wording: a correct answer said "archived by month" instead of "tape", and
   agents quote paths (`"$DIR/cds.py" check`) — the grader strips shell quotes before matching.
 
-**Current status** (2026-10-02): Codex 19/19 across all cases (after grader fixes); Claude Code
-not yet run — CLI login expired on the dev machine; Gemini needs `GEMINI_API_KEY`.
+- Haiku often answers from its own knowledge or tools before loading a skill: front-load the
+  trigger in the description ("load this skill first, before …") and put copy-ready, correct
+  templates in SKILL.md — Haiku rarely opens references.
+- Grade the outcome when a correct answer can come without running the expected script; grade
+  the process (`command`) only where the script is the only reliable way to be right.
+- Eval agents see skills synced to the user's Claude account (e.g. `dataviz`) unless `--bare`;
+  that is realistic competition for triggering, so descriptions must win against it.
+- Agents `cd` into skills and write files there: the harness runs each case on a private copy
+  of the plugin, and every skill says where files go.
+
+**Current status** (2026-10-03): Claude Code Opus 19/19 and Sonnet 19/19 (two full runs each);
+Haiku 16/19 on a full run with every case meeting the 2-of-3 rule on reruns; Codex 19/19.
+Gemini needs `GEMINI_API_KEY`.
 
 **Read transcripts, not just verdicts.** A PASS can hide a struggling agent: the first
 `ek-meteogram` run passed but took 283 s, retried mirrors and thinned steps — which exposed a

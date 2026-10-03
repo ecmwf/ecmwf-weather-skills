@@ -95,6 +95,13 @@ def check_skill(skill_dir: Path) -> list[str]:
         p.append("description must not contain XML tags")
 
     body_lines = body.splitlines()
+    # Agents often cd into the skill to run scripts and then write outputs there, polluting
+    # the installed plugin; every skill must say where files go.
+    if "never inside the skill directory" not in " ".join(body.split()):
+        p.append(
+            "SKILL.md must tell the agent to write files in the user's working directory, "
+            "'never inside the skill directory'"
+        )
     if len(body_lines) >= MAX_BODY_LINES:
         p.append(
             f"SKILL.md body is {len(body_lines)} lines (keep under {MAX_BODY_LINES}, i.e. 500)"

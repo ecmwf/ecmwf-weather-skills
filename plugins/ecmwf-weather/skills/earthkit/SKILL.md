@@ -1,11 +1,11 @@
 ---
 name: earthkit
-description: Reads, processes and plots ECMWF GRIB and NetCDF data with the earthkit Python components (earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, earthkit-transforms, earthkit-plots) — installing only the component each task needs. Use when a task has a GRIB or NetCDF file to inspect, convert to xarray or pandas, select fields by short name, level or step, extract a nearest gridpoint, regrid, compute wind speed, relative humidity, dewpoint or thermal-comfort indices, convert units, aggregate daily or over a country or polygon, draw a weather map, or draw a meteogram from a point forecast; or when GRIB fails to decode, eccodes is missing, or earthkit code written for 0.x breaks on 1.x.
+description: Handles any local GRIB (.grib, .grib2) or NetCDF (.nc) file — load this skill first, before trying xarray, cfgrib, eccodes, grib_ls or pip. Reads, inspects, processes and plots them with ECMWF's earthkit Python components (earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, earthkit-transforms, earthkit-plots), installing only what each task needs. Use for any GRIB or NetCDF file the user has — what's in it, which parameters, levels and steps, a map of a field from it, a meteogram, conversion to xarray or pandas, nearest gridpoint, regridding, wind speed, relative humidity, dewpoint, thermal-comfort indices, unit conversion, daily or country aggregation Also use when GRIB fails to decode, eccodes is missing, or earthkit 0.x code breaks on 1.x.
 compatibility: Skill instructions are provider-neutral. Scripts use uv (PEP 723 inline dependencies) on Linux or macOS; earthkit ships eccodes as binary wheels, so no system install is needed. No Windows wheels — use WSL.
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 <!--
@@ -48,7 +48,9 @@ Do not use: `earthkit-regrid` (deprecated → earthkit-geo), `earthkit-maps` (�
 
 ## Bundled scripts
 
-Run them; don't read them.
+Run them; don't read them. Run them from the user's working directory and write
+files there, never inside the skill directory. For a file the user gave you, start here — don't `pip install`
+cfgrib/cartopy or shell out to `grib_ls`; `uv run` brings exactly what is needed.
 
 ```bash
 uv run scripts/ekinspect.py file.grib2 [--json]          # what's inside (earthkit-data only)
