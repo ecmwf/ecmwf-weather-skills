@@ -31,7 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "ecmwf-weather"
 SKILLS = PLUGIN / "skills"
-KINDS = {"skill", "command", "command_not", "final", "final_not", "file"}
+KINDS = {"skill", "command", "command_not", "final", "final_not", "file", "image_size"}
 SKILL_PATH_RE = re.compile(r"skills/([a-z0-9-]+)/(?:SKILL\.md|scripts/|references/)")
 
 
@@ -111,6 +111,10 @@ def grade(t: dict, expect: list[dict], workdir: Path | None = None) -> list[dict
             ok = re.search(e["pattern"], t["final"]) is None
         elif k == "file":
             ok = workdir is not None and any(workdir.glob(e["pattern"]))
+        elif k == "image_size":
+            ok = workdir is not None and any(
+                _png_size(f) == tuple(e["size"]) for f in workdir.glob(e["pattern"])
+            )
         else:
             raise ValueError(f"unknown expectation kind {k}")
         out.append({**e, "ok": ok})
@@ -126,6 +130,16 @@ def expand_shell_vars(text: str) -> str:
     for name in sorted(values, key=len, reverse=True):
         text = re.sub(r"\$\{" + name + r"\}|\$" + name + r"\b", lambda _m, n=name: values[n], text)
     return text
+
+
+def _png_size(path: Path) -> tuple[int, int] | None:
+    """Width and height from a PNG header (no image library needed)."""
+    import struct
+
+    head = path.read_bytes()[:24]
+    if head[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    return struct.unpack(">II", head[16:24])
 
 
 def summary_line(results: list[dict]) -> str:

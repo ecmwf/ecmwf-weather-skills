@@ -14,7 +14,7 @@
     },
     {
       "kind": "command_not",
-      "pattern": "odpoint\\.py(?!.*--estimate-only)"
+      "pattern": "(python3?|uv run)\\s+\\S*odpoint\\.py(?!.*--estimate-only)"
     },
     {
       "kind": "final",

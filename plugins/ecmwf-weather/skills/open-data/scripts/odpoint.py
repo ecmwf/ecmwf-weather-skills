@@ -40,12 +40,14 @@ import json
 import os
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import odcatalog as oc  # stdlib sibling script (latest run, sizes, attribution)
 
 UTC = timezone.utc
+# A run is published ~7 h after base time and replaced 6 h later (up to ~13 h old).
+MAX_RUN_AGE_H = 14
 DEFAULT_PARAMS = ["2t", "tp", "10u", "10v", "msl", "tcc"]
 UNITS = {
     "t2m_C": "degC",
@@ -103,6 +105,59 @@ def access_note(nbytes: int, env=os.environ, home: Path | None = None) -> str:
         "With ECMWF Polytope access (member-state users or Destination Earth accounts) this "
         "would be a single point request of a few KB."
     )
+
+
+# --- local time and daily summaries (standard library) -------------------------------------------
+
+
+def _utc(iso: str) -> datetime:
+    return datetime.strptime(iso, "%Y-%m-%dT%H:%MZ").replace(tzinfo=UTC)
+
+
+def shape_output(
+    rows: list[dict],
+    tz: str | None = None,
+    from_now: bool = False,
+    daily: bool = False,
+    now: datetime | None = None,
+    next_hours: int | None = None,
+) -> dict:
+    """Optional local times, dropping past rows and per-local-day high/low/precipitation.
+
+    A precipitation interval counts for the day it ends in; days whose samples span less
+    than 18 h are marked partial. Daily values use all rows, including past hours of today.
+    """
+    from zoneinfo import ZoneInfo
+
+    zone = ZoneInfo(tz or "UTC")
+    rows = [dict(r) for r in rows]  # never modify the caller's rows
+    out: dict = {}
+    if tz:
+        for r in rows:
+            r["local_time"] = _utc(r["valid_time"]).astimezone(zone).isoformat(timespec="minutes")
+        out["timezone"] = tz
+    if daily:
+        by_day: dict = {}
+        for r in rows:
+            t = _utc(r["valid_time"]).astimezone(zone)
+            by_day.setdefault(t.date(), []).append((t, r))
+        out["daily"] = []
+        for d, items in sorted(by_day.items()):
+            temps = [r["t2m_C"] for _, r in items if r.get("t2m_C") is not None]
+            rain = [r["precip_mm"] for _, r in items if r.get("precip_mm") is not None]
+            span = (items[-1][0] - items[0][0]).total_seconds() / 3600
+            day = {"date": d.isoformat(), "partial": span < 18}
+            if temps:
+                day["high_C"], day["low_C"] = max(temps), min(temps)
+            if rain:
+                day["precip_mm"] = round(sum(rain), 1)
+            out["daily"].append(day)
+    now = now or datetime.now(UTC)
+    end = now + timedelta(hours=next_hours) if next_hours else None
+    if from_now or next_hours:
+        rows = [r for r in rows if _utc(r["valid_time"]) >= now]
+    out["series"] = [r for r in rows if end is None or _utc(r["valid_time"]) < end]
+    return out
 
 
 # --- earthkit-backed ------------------------------------------------------------------------------
@@ -209,6 +264,14 @@ def build_parser() -> argparse.ArgumentParser:
         "with earthkit-data; earthkit: earthkit-data's ecmwf-open-data source (sequential)",
     )
     p.add_argument("--workers", type=int, default=oc.DEFAULT_WORKERS)
+    p.add_argument(
+        "--tz", help="IANA time zone for local_time and daily grouping, e.g. Europe/Lisbon"
+    )
+    p.add_argument("--from-now", action="store_true", help="drop rows already in the past")
+    p.add_argument(
+        "--next-hours", type=int, help="exactly the next N hours from now (overrides --steps)"
+    )
+    p.add_argument("--daily", action="store_true", help="add per-day high/low/precipitation")
     fmt = p.add_mutually_exclusive_group()
     fmt.add_argument("--json", action="store_true")
     fmt.add_argument("--csv", action="store_true")
@@ -219,6 +282,8 @@ def main(argv=None) -> int:
     p = build_parser()
     a = p.parse_args(argv)
     params = a.params.split(",")
+    if a.next_hours:  # newest run can be ~13 h old: fetch enough lead time, trim afterwards
+        a.steps = f"0-{-(-(a.next_hours + MAX_RUN_AGE_H) // 6) * 6}"
 
     try:
         nbytes = 0
@@ -288,6 +353,7 @@ def main(argv=None) -> int:
         return 2
 
     res = point_series(fl, a.lat, a.lon)
+    res.update(shape_output(res["series"], a.tz, a.from_now, a.daily, next_hours=a.next_hours))
     res["model"] = a.model
     res["note"] = access_note(nbytes)
     if res["run"]:

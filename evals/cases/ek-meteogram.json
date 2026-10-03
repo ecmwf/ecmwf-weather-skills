@@ -5,12 +5,12 @@
   "max_budget_usd": 3,
   "expect": [
     {
-      "kind": "skill",
-      "name": "open-data"
+      "kind": "command",
+      "pattern": "skills/(open-data|polytope)/"
     },
     {
       "kind": "command",
-      "pattern": "odpoint\\.py"
+      "pattern": "odpoint\\.py|ptpoint\\.py"
     },
     {
       "kind": "command",
@@ -28,5 +28,6 @@
       "kind": "command_not",
       "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io"
     }
-  ]
+  ],
+  "note": "Either point route is correct: Open Data without credentials, Polytope (hourly, KB) with them."
 }

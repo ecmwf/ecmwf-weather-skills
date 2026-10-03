@@ -5,7 +5,7 @@ compatibility: Skill instructions are provider-neutral. Scripts use uv (PEP 723 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 <!--
@@ -55,11 +55,13 @@ cfgrib/cartopy or shell out to `grib_ls`; `uv run` brings exactly what is needed
 ```bash
 uv run scripts/ekinspect.py file.grib2 [--json]          # what's inside (earthkit-data only)
 uv run scripts/ekplot.py map file.grib2 --param 2t --step 24 --units celsius --domain Europe -o map.png
-uv run scripts/ekplot.py meteogram point.json -o meteogram.png   # from open-data odpoint.py --json
+uv run scripts/ekplot.py meteogram point.json -o meteogram.png   # from odpoint.py/ptpoint.py --json
 ```
 
-For a point forecast from Open Data use the `open-data` skill's `odpoint.py`, then
-`ekplot.py meteogram` — data and plotting stay in separate, smaller environments.
+Meteograms share one time axis (local time if the JSON was made with `--tz`), show
+precipitation as a rate in mm/h per interval, and ensembles as median plus 10-90 % range —
+use them as they are rather than re-plotting. For a point forecast use the `open-data` skill's
+`odpoint.py` (or `polytope`'s `ptpoint.py`), then `ekplot.py meteogram` — data and plotting stay in separate, smaller environments.
 
 ## Writing your own code
 

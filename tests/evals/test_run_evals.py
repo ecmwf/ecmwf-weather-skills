@@ -213,3 +213,32 @@ def test_each_case_uses_a_private_copy_of_the_plugin(tmp_path):
     assert not any(p.name == "__pycache__" for p in copy.rglob("*"))
     cmd = re_.agent_command("claude", "hi", tmp_path, {}, plugin=copy)
     assert cmd[cmd.index("--plugin-dir") + 1] == str(copy)
+
+
+def test_image_size_expectation(tmp_path):
+    import struct
+    import zlib
+
+    def png(w, h):
+        ihdr = struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)
+        chunk = b"IHDR" + ihdr
+        return (
+            b"\x89PNG\r\n\x1a\n"
+            + struct.pack(">I", 13)
+            + chunk
+            + struct.pack(">I", zlib.crc32(chunk))
+        )
+
+    (tmp_path / "ok.png").write_bytes(png(1024, 768))
+    (tmp_path / "bad.png").write_bytes(png(1023, 767))
+    t = {"skills": set(), "commands": [], "final": "", "error": None}
+    r = re_.grade(
+        t,
+        [
+            {"kind": "image_size", "pattern": "ok.png", "size": [1024, 768]},
+            {"kind": "image_size", "pattern": "bad.png", "size": [1024, 768]},
+            {"kind": "image_size", "pattern": "missing.png", "size": [1, 1]},
+        ],
+        tmp_path,
+    )
+    assert [x["ok"] for x in r] == [True, False, False]

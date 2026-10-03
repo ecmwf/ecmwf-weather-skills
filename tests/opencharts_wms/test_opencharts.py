@@ -95,3 +95,33 @@ def test_live_get_chart(tmp_path):
     )
     assert out.returncode == 0, out.stderr
     assert png.read_bytes()[:4] == b"\x89PNG" and "CC BY 4.0" in out.stdout
+
+
+def test_fetch_product_falls_back_to_a_run_that_has_the_step():
+    calls = []
+
+    def get(url):
+        calls.append(url)
+        if "base_time=2026-10-03T12" in url:
+            raise RuntimeError("HTTP 404: step 48 for this base_time is not available")
+        return {"data": {"link": {"href": "https://charts.ecmwf.int/content/x.png"}}}
+
+    resp, base = oc.fetch_product(
+        "medium-2t-wind",
+        ["2026-10-03T12:00:00Z", "2026-10-03T00:00:00Z"],
+        step=48,
+        projection="opencharts_europe",
+        get=get,
+    )
+    assert base == "2026-10-03T00:00:00Z" and len(calls) == 2
+    assert resp["data"]["link"]["href"].endswith(".png")
+
+
+def test_fetch_product_does_not_hide_other_errors():
+    def get(url):
+        raise RuntimeError("HTTP 400: projection not supported")
+
+    with pytest.raises(RuntimeError, match="projection"):
+        oc.fetch_product(
+            "p", ["2026-10-03T12:00:00Z", "2026-10-03T00:00:00Z"], step=48, projection="x", get=get
+        )

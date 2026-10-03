@@ -186,3 +186,54 @@ def test_ekplot_meteogram_png(tmp_path):
     out = uv("ekplot.py", "meteogram", j, "-o", png)
     assert out.returncode == 0, out.stderr
     assert png.read_bytes()[:4] == b"\x89PNG" and png.stat().st_size > 10_000
+
+
+MIXED = {
+    "run": "2026-10-03T00:00Z",
+    "model": "ifs",
+    "gridpoint": {"lat": 51.5, "lon": -1.0},
+    "units": {"t2m_C": "degC", "precip_mm": "mm since previous step"},
+    "series": [
+        {"step": s, "valid_time": f"2026-10-03T{s:02d}:00Z", "t2m_C": 10.0 + s, "precip_mm": mm}
+        for s, mm in ((0, 0.0), (1, 1.0), (2, 1.0), (3, 1.0), (6, 3.0), (12, 6.0))
+    ],
+}
+
+
+def test_precipitation_is_a_rate_over_each_interval():
+    m = load_script("earthkit", "ekplot")
+    bars = m.precip_bars(MIXED)
+    assert bars["widths_h"] == [1, 1, 1, 3, 6]
+    assert bars["rates"] == [1.0, 1.0, 1.0, 1.0, 1.0]  # 3 mm in 3 h == 1 mm in 1 h
+    assert bars["starts"][0] == "2026-10-03T00:00" and bars["starts"][-1] == "2026-10-03T06:00"
+    p = {x["key"]: x for x in m.meteogram_panels(MIXED)}
+    assert "mm/h" in p["precip_mm"]["title"] + p["precip_mm"]["units"]
+
+
+def test_precipitation_rate_band_for_ensembles():
+    m = load_script("earthkit", "ekplot")
+    bars = m.precip_bars(ENS_JSON)
+    assert bars["band"] is not None and len(bars["band"][0]) == len(bars["rates"])
+
+
+@pytest.mark.earthkit
+def test_meteogram_panels_share_one_time_axis(tmp_path):
+    m = load_script("earthkit", "ekplot")
+    fig = m.plot_meteogram(MIXED, str(tmp_path / "m.png"))
+    axes = [a for a in fig.axes if a.get_title(loc="left")]
+    assert len({tuple(round(v, 6) for v in a.get_xlim()) for a in axes}) == 1
+    labelled = [
+        a for a in axes if any(t.get_visible() and t.get_text() for t in a.get_xticklabels())
+    ]
+    assert labelled == [axes[-1]]  # dates only under the bottom panel
+    precip = next(a for a in axes if "Precipitation" in a.get_title(loc="left"))
+    widths = sorted({round(p.get_width() * 24, 3) for p in precip.patches})
+    assert widths == [1.0, 3.0, 6.0]  # bar width = interval length
+
+
+@pytest.mark.earthkit
+def test_meteogram_local_time_axis(tmp_path):
+    m = load_script("earthkit", "ekplot")
+    pj = {**MIXED, "timezone": "Europe/London"}
+    fig = m.plot_meteogram(pj, str(tmp_path / "m.png"))
+    assert "Europe/London" in fig.axes[-1].get_xlabel()

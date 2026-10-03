@@ -122,6 +122,32 @@ def product_url(
     return f"{API}/products/{name}/?{urlencode(q)}"
 
 
+# How many recent runs to try when the newest is still being produced.
+MAX_RUNS_TRIED = 3
+
+
+def fetch_product(
+    name: str,
+    base_times: list[str],
+    step: int | None,
+    projection: str | None,
+    fmt: str = "png",
+    get=None,
+) -> tuple[dict, str]:
+    """Newest run that already has `step`: a run is listed as soon as its first steps exist,
+    so for hours after each run starts, later steps are only in the previous run."""
+    get = get or _get_json
+    last: Exception | None = None
+    for base in base_times[:MAX_RUNS_TRIED]:
+        try:
+            return get(product_url(name, base, step, None, projection, fmt)), base
+        except RuntimeError as e:
+            if "not available" not in str(e):
+                raise
+            last = e
+    raise RuntimeError(f"step {step} not available in the latest runs: {last}")
+
+
 def image_link(resp: dict) -> tuple[str, dict]:
     if "data" not in resp:
         raise RuntimeError(f"OpenCharts error: {resp.get('error') or resp}")
@@ -200,9 +226,14 @@ def main(argv=None) -> int:
             validate_choice("base time", a.base_time, opts["base_times"])
         if a.step is not None:
             validate_choice("step", a.step, opts["steps"])
-        resp = _get_json(
-            product_url(a.product, a.base_time, a.step, a.valid_time, a.projection, a.format)
-        )
+        if a.base_time or a.valid_time:
+            resp = _get_json(
+                product_url(a.product, a.base_time, a.step, a.valid_time, a.projection, a.format)
+            )
+        else:
+            resp, _base = fetch_product(
+                a.product, opts["base_times"], a.step, a.projection, a.format
+            )
         link, _meta = image_link(resp)
         Path(a.output).write_bytes(_get_bytes(link))
         desc = resp["data"].get("attributes", {}).get("description", "")

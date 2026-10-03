@@ -4,9 +4,21 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "open-data"},
-    {"kind": "command", "pattern": "odcatalog\\.py.*estimate|--estimate-only"},
-    {"kind": "command_not", "pattern": "odcatalog\\.py\\s+download|odpoint\\.py(?!.*--estimate-only)"},
-    {"kind": "final", "pattern": "\\d+(\\.\\d+)?\\s?(MB|GB)"}
+    {
+      "kind": "skill",
+      "name": "open-data"
+    },
+    {
+      "kind": "command",
+      "pattern": "odcatalog\\.py.*estimate|--estimate-only"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "odcatalog\\.py\\s+download|(python3?|uv run)\\s+\\S*odpoint\\.py(?!.*--estimate-only)"
+    },
+    {
+      "kind": "final",
+      "pattern": "\\d+(\\.\\d+)?\\s?(MB|GB)"
+    }
   ]
 }

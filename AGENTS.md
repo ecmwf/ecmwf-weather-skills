@@ -237,8 +237,15 @@ expectations are meaningful for it.
 - Agents `cd` into skills and write files there: the harness runs each case on a private copy
   of the plugin, and every skill says where files go.
 
-**Current status** (2026-10-03): Claude Code Opus 19/19 and Sonnet 19/19 (two full runs each);
-Haiku 16/19 on a full run with every case meeting the 2-of-3 rule on reruns; Codex 19/19.
+- Passing is not enough: count the ad-hoc code capable models write around the tools
+  (`cat > x.py`, `python3 - <<`, `uv run --with`). Every recurring workaround is a missing
+  script feature — add it, then re-measure.
+- Strong and weak models differ most in recovering from tool gaps; fix the tools so weaker
+  models get the same result without compensating.
+
+**Current status** (2026-10-03): Claude Code Opus 19/19, Sonnet 19/19, Haiku meets the 2-of-3
+rule on every case; Codex GPT-6.1-Sol, GPT-6-Astra/Sol/Luna, GPT-5.6-Terra/Sol/Luna 19/19
+(GPT-6-Sol 18/19 on one run, grader fixed). `gpt-5.6-astra` does not exist in Codex.
 Gemini needs `GEMINI_API_KEY`.
 
 **Read transcripts, not just verdicts.** A PASS can hide a struggling agent: the first

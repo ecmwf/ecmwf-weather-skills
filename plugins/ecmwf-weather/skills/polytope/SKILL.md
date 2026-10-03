@@ -5,7 +5,7 @@ compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — eart
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 <!--
@@ -49,7 +49,7 @@ files there, never inside the skill directory.
 
 ```
 - [ ] 1. Coordinates for the place (ask if ambiguous)
-- [ ] 2. uv run scripts/ptpoint.py --lat LAT --lon LON --steps 0-48 --json > point.json
+- [ ] 2. uv run scripts/ptpoint.py --lat LAT --lon LON --next-hours 48 --tz ZONE --json > point.json
          (add --ensemble for uncertainty: 50 members -> p10/p50/p90 of 2 m temperature, precipitation)
 - [ ] 3. Check "series" is non-empty; exit 4 -> open-data skill; exit 2 -> read the error
 - [ ] 4. Optional image: the earthkit skill's ekplot.py meteogram point.json -o meteogram.png
@@ -61,7 +61,12 @@ files there, never inside the skill directory.
 - Output (UTC, hourly to 90 h, then 3-hourly/6-hourly): `t2m_C`, `precip_mm` (since previous
   step), `wind_speed_ms`, `wind_dir_deg`, `msl_hPa`, `tcc_pct`; ensemble adds `*_p10/_p50/_p90`
   and `members`.
-- The script picks the latest available 00/12 UTC run; `--date YYYYMMDD --time 0000|1200` pins one.
+- `--next-hours N` returns exactly the next N hours from now (the run started hours ago, so
+  `--steps 0-N` covers less); `--tz ZONE` adds `local_time`; `--from-now` drops past rows; `--daily` adds per-local-day high,
+  low and precipitation — for `--ensemble` as p10/p50/p90 of each member's daily value, which
+  is the right way to state "likely range per day". Don't aggregate yourself.
+- The script picks the latest run covering the range (06/18 UTC runs reach 144 h, 00/12 UTC
+  240 h+); `--date YYYYMMDD --time HHMM` pins one.
 
 ## Other features
 

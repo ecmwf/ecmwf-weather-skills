@@ -23,6 +23,14 @@
     {
       "kind": "final",
       "pattern": "CC[ -]BY|\u00a9"
+    },
+    {
+      "kind": "image_size",
+      "pattern": "mslp.png",
+      "size": [
+        1024,
+        768
+      ]
     }
   ]
 }
