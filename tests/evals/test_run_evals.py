@@ -189,3 +189,27 @@ def test_claude_command_bare_in_ci(tmp_path, monkeypatch):
     assert "--bare" in cmd
     monkeypatch.delenv("EVAL_BARE")
     assert "--bare" not in re_.agent_command("claude", "hello", tmp_path, {})
+
+
+def test_command_match_sees_through_shell_variables():
+    cmd = (
+        "cat > r.mars <<EOF\nretrieve\nEOF\n"
+        "S=/x/skills/mars/scripts/mars.py; python3 $S lint r.mars"
+    )
+    cmd2 = 'S="/x/skills/mars/scripts/mars.py"\npython3 "${S}" plan r.mars'
+    for c in (cmd, cmd2):
+        t = {"skills": set(), "commands": [c], "final": "", "error": None}
+        assert re_.grade(t, [{"kind": "command", "pattern": r"mars\.py\s+(lint|plan)"}])[0]["ok"], c
+
+
+def test_expand_shell_vars_leaves_unknown_variables():
+    assert re_.expand_shell_vars("echo $HOME") == "echo $HOME"
+
+
+def test_each_case_uses_a_private_copy_of_the_plugin(tmp_path):
+    copy = re_.plugin_copy(tmp_path)
+    assert (copy / "skills" / "open-data" / "SKILL.md").exists()
+    assert re_.PLUGIN not in copy.parents and copy != re_.PLUGIN
+    assert not any(p.name == "__pycache__" for p in copy.rglob("*"))
+    cmd = re_.agent_command("claude", "hi", tmp_path, {}, plugin=copy)
+    assert cmd[cmd.index("--plugin-dir") + 1] == str(copy)

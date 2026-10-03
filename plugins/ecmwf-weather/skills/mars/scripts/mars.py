@@ -37,15 +37,82 @@ from pathlib import Path
 
 REQUIRED = ("class", "stream", "type", "levtype", "param", "date", "time")
 FORECAST_TYPES = {"fc", "pf", "cf", "em", "es", "ep", "fcmean", "fcmax", "fcmin"}
+# MARS retrieve keywords accepted by lint. Anything else is almost always a mistake carried
+# over from CDS or another API (dataset=, format=, level=, variable=, product_type=).
+KNOWN = set(REQUIRED) | {
+    "expver",
+    "levelist",
+    "step",
+    "number",
+    "grid",
+    "area",
+    "target",
+    "domain",
+    "origin",
+    "hdate",
+    "fcmonth",
+    "fcperiod",
+    "method",
+    "system",
+    "anoffset",
+    "frequency",
+    "direction",
+    "resol",
+    "accuracy",
+    "packing",
+    "interpolation",
+    "rotation",
+    "frame",
+    "repres",
+    "use",
+    "database",
+    "fieldset",
+    "obstype",
+    "reportype",
+    "range",
+    "quantile",
+    "channel",
+    "ident",
+    "instrument",
+    "diagnostic",
+    "iteration",
+    "refdate",
+    "product",
+    "section",
+    "padding",
+    "truncation",
+    "intgrid",
+    "gaussian",
+    "bitmap",
+}
+# Common wrong keywords and what MARS calls them.
+SUGGEST = {
+    "level": "levelist",
+    "levels": "levelist",
+    "variable": "param",
+    "parameter": "param",
+    "dataset": "class (and stream/type)",
+    "product_type": "type",
+    "format": "nothing — MARS returns GRIB; set grid/area for interpolation",
+    "data_format": "nothing — MARS returns GRIB",
+    "year": "date",
+    "month": "date",
+    "day": "date",
+    "steps": "step",
+}
 # Number of levels when levelist=all (approximate; depends on class and cycle).
 ALL_LEVELS = {("ea", "pl"): 37, ("ea", "ml"): 137, ("od", "pl"): 25, ("od", "ml"): 137}
 # Native grid points when no `grid` is given: IFS HRES O1280, ERA5 N320 (reduced Gaussian).
 NATIVE_POINTS = {"od": 6_599_680, "ea": 542_080}
 # GRIB2 with 16-bit packing ≈ 2 bytes per point (CCSDS compression is often ~2x smaller).
 BYTES_PER_POINT = 2
-# One retrieval is capped at 75 GB server-side (MARS client log); warn well before that.
+# One retrieval is capped at 75 GB server-side (MARS client log); flag large ones early.
 WARN_BYTES = 20 * 1024**3
+CAP_BYTES = 75 * 1024**3
 ERA5_CLASSES = {"ea", "e5", "ep", "rr"}
+# Archives most requests target; other classes exist (reanalyses, projects) but a mistaken
+# class silently retrieves the wrong dataset, so lint asks the user to confirm them.
+COMMON_CLASSES = {"od", "ea", "ai", "rd", "e5", "ep", "rr", "ei", "mc", "ce", "s2", "ti"}
 
 
 # --- parse / format -------------------------------------------------------------------------------
@@ -165,6 +232,10 @@ def lint(req: dict) -> dict:
     for k in REQUIRED:
         if k not in req:
             errs.append(f"missing required keyword '{k}'")
+    for k in req:
+        if k not in KNOWN:
+            hint = f" — use {SUGGEST[k]}" if k in SUGGEST else ""
+            errs.append(f"unknown MARS keyword '{k}'{hint}")
     if req.get("levtype") in ("pl", "ml", "pt", "pv") and "levelist" not in req:
         errs.append(f"levtype={req.get('levtype')} needs 'levelist' (e.g. 1000/850/500 or all)")
     if req.get("type") == "pf" and "number" not in req:
@@ -183,6 +254,27 @@ def lint(req: dict) -> dict:
             errs.append("area must be north/west/south/east, e.g. 72/-25/30/45")
         elif a[0] < a[2]:
             errs.append(f"area north {a[0]} is below south {a[2]} — order is north/west/south/east")
+    dates = str(req.get("date", "")).split("/")
+    if len(dates) == 2 and all(_parse_day(d) for d in dates) and dates[0] != dates[1]:
+        warns.append(
+            f"date={req['date']} lists only these two days — for the whole period use "
+            f"date={dates[0]}/to/{dates[1]}"
+        )
+    if req.get("levtype") == "pl" and "levelist" in req and str(req["levelist"]).lower() != "all":
+        try:
+            levels = [float(x) for x in expand(req["levelist"])]
+        except ValueError:
+            levels = []
+        if levels and len(levels) > ALL_LEVELS[("ea", "pl")]:
+            errs.append(
+                f"levtype=pl with {len(levels)} levels — pressure levels are hPa values "
+                "(1000/850/500 or levelist=all); 1/to/137 are model levels: use levtype=ml"
+            )
+    if req.get("class") not in COMMON_CLASSES:
+        warns.append(
+            f"class={req.get('class')} is not a common archive — operational IFS (HRES/ENS) is "
+            "class=od, ERA5 class=ea, AIFS class=ai, research experiments class=rd; check it"
+        )
     if "expver" not in req:
         warns.append("no 'expver' — defaults to 1 (operational/final data)")
     if _months(req) > 1:
@@ -192,8 +284,16 @@ def lint(req: dict) -> dict:
             "month, looping months in date order"
         )
     e = estimate(req)
-    if e["bytes"] > WARN_BYTES:
-        warns.append(f"estimated {e['size']} — split the request (limit per retrieval is 75 GB)")
+    if e["bytes"] > CAP_BYTES:
+        warns.append(
+            f"estimated {e['size']} — above the 75 GB per-retrieval cap: split the request "
+            "(fewer parameters or levels per request, still one month each)"
+        )
+    elif e["bytes"] > WARN_BYTES:
+        warns.append(
+            f"estimated {e['size']} — large but under the 75 GB cap; reduce with a coarser "
+            "grid or an area if the full domain isn't needed"
+        )
     if not req.get("grid") and req.get("class") == "od":
         warns.append(
             "no 'grid' — native O1280 (~9 km) fields are large; "
@@ -247,6 +347,47 @@ def credentials(env=os.environ, home: Path | None = None, which=shutil.which) ->
         web = None
     client = env.get("MARS_CLIENT_COMMAND") or which("mars")
     return {"webapi": web, "mars_client": client}
+
+
+def _webapi_settings(env, home: Path) -> dict | None:
+    if all(env.get(k) for k in ("ECMWF_API_KEY", "ECMWF_API_URL", "ECMWF_API_EMAIL")):
+        return {
+            "url": env["ECMWF_API_URL"],
+            "key": env["ECMWF_API_KEY"],
+            "email": env["ECMWF_API_EMAIL"],
+        }
+    rc = Path(env["ECMWF_API_RC_FILE"]) if env.get("ECMWF_API_RC_FILE") else home / ".ecmwfapirc"
+    return json.loads(rc.read_text()) if rc.exists() else None
+
+
+def _http_json(url: str, headers: dict) -> tuple[int, dict]:
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=30) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, {}
+
+
+def verify_webapi(env=os.environ, home: Path | None = None, fetch=_http_json) -> dict:
+    """Seconds-fast key check (Web API who-am-i). Reports the account id, never the key.
+
+    A valid key proves the machine can use the Web API; MARS rights for a given class/stream
+    still depend on the account and only `mars.py cost` on a real request proves those.
+    """
+    cfg = _webapi_settings(env, home or Path.home())
+    if not cfg or fetch is None:
+        return {"verified": None}
+    headers = {"X-ECMWF-KEY": cfg["key"], "From": cfg["email"], "Accept": "application/json"}
+    try:
+        status, body = fetch(cfg["url"].rstrip("/") + "/who-am-i", headers)
+    except OSError as e:
+        return {"verified": False, "error": f"Web API unreachable: {e}"}
+    if status == 200:
+        return {"verified": True, "account": body.get("uid")}
+    return {"verified": False, "error": f"Web API rejected the key (HTTP {status})"}
 
 
 def licence_note(req: dict) -> str:
@@ -315,13 +456,17 @@ def main(argv=None) -> int:
 
     if a.cmd == "check":
         c = credentials()
+        if c["webapi"]:
+            c.update(verify_webapi())
         c["how"] = (
-            "Web API key: https://api.ecmwf.int/v1/key/ -> ~/.ecmwfapirc. "
-            "MARS access itself depends on your account "
-            "(Member/Co-operating State users, licensed users). Verify with "
-            "`uv run mars.py cost` on a tiny request — the Web API queue can take several minutes."
+            "Web API key: https://api.ecmwf.int/v1/key/ -> ~/.ecmwfapirc. A verified key means "
+            "the Web API accepts you; MARS rights per dataset depend on the account "
+            "(Member/Co-operating State or licensed users) — `uv run mars.py cost` on a tiny "
+            "request proves them, but queues for minutes."
         )
         print(json.dumps(c, indent=2) if a.json else "\n".join(f"{k}: {v}" for k, v in c.items()))
+        if c.get("verified") is False:
+            return 4
         return 0 if (c["webapi"] or c["mars_client"]) else 4
 
     try:

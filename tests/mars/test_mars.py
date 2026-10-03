@@ -215,3 +215,77 @@ def test_cli_check_without_credentials(tmp_path):
         env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
     )
     assert out.returncode == 4 and json.loads(out.stdout)["webapi"] is None
+
+
+def test_lint_flags_unknown_keywords_with_suggestions():
+    req = {**HRES, "level": "500", "dataset": "era5", "format": "grib"}
+    errs = "\n".join(mars.lint(req)["errors"])
+    assert "'level'" in errs and "levelist" in errs
+    assert "'dataset'" in errs and "'format'" in errs
+
+
+def test_lint_flags_the_typical_hand_written_era5_request():
+    text = """retrieve, class=ea, dataset=era5, date=2010-01-01/to/2010-01-31,
+      time=00/to/23/by/1, levtype=pl, level=1000/850, param=130, grid=0.25/0.25, format=grib"""
+    errs = "\n".join(mars.lint(mars.parse_request(text))["errors"])
+    for word in ("'stream'", "'type'", "'level'", "'dataset'", "'format'"):
+        assert word in errs, word
+
+
+def test_verify_webapi_reports_account_not_key(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text(
+        json.dumps({"url": "https://api.ecmwf.int/v1", "key": "s3cr3tkey", "email": "a@b.int"})
+    )
+    seen = {}
+
+    def fetch(url, headers):
+        seen.update(url=url, headers=headers)
+        return 200, {"uid": "abc", "full_name": "A B", "email": "a@b.int"}
+
+    r = mars.verify_webapi(env={}, home=tmp_path, fetch=fetch)
+    assert seen["url"] == "https://api.ecmwf.int/v1/who-am-i"
+    assert r == {"verified": True, "account": "abc"}
+    assert "s3cr3tkey" not in json.dumps(r)
+
+
+def test_verify_webapi_rejected_and_missing(tmp_path):
+    assert mars.verify_webapi(env={}, home=tmp_path, fetch=None) == {"verified": None}
+    (tmp_path / ".ecmwfapirc").write_text('{"url": "u", "key": "k", "email": "e"}')
+    r = mars.verify_webapi(env={}, home=tmp_path, fetch=lambda u, h: (403, {}))
+    assert r["verified"] is False and "403" in r["error"]
+
+
+def test_lint_warns_on_uncommon_class_for_operational_streams():
+    w = "\n".join(mars.lint({**HRES, "class": "oi"})["warnings"])
+    assert "class=oi" in w and "class=od" in w
+    assert not any("class=" in x for x in mars.lint(HRES)["warnings"])
+
+
+def test_lint_warns_two_dates_without_to():
+    w = "\n".join(mars.lint({**HRES, "date": "2024-03-01/2024-03-31"})["warnings"])
+    assert "2024-03-01/to/2024-03-31" in w
+
+
+def test_lint_rejects_model_level_numbers_on_pressure_levels():
+    errs = "\n".join(mars.lint({**HRES, "levtype": "pl", "levelist": "1/to/137"})["errors"])
+    assert "levtype=ml" in errs
+    assert mars.lint({**HRES, "levtype": "pl", "levelist": "1000/850/500/1"})["errors"] == []
+
+
+def test_large_month_is_flagged_but_not_split_below_the_cap():
+    era5 = {
+        "class": "ea",
+        "stream": "oper",
+        "type": "an",
+        "expver": "1",
+        "levtype": "pl",
+        "levelist": "all",
+        "param": "t",
+        "date": "2010-01-01/to/2010-01-31",
+        "time": "00/to/23/by/1",
+        "grid": "0.25/0.25",
+    }
+    w = "\n".join(mars.lint(era5)["warnings"])
+    assert "GB" in w and "split" not in w and ("grid" in w or "area" in w)
+    huge = {**era5, "param": "t/u/v"}
+    assert any("split" in x for x in mars.lint(huge)["warnings"])

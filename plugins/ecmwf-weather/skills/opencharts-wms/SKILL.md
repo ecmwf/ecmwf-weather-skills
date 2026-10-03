@@ -5,7 +5,7 @@ compatibility: wms.py, opencharts.py and webmap.py need only Python 3 (standard 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 <!--
