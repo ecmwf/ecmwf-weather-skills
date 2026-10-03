@@ -26,7 +26,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 API = "https://charts.ecmwf.int/opencharts-api/v1"
-USER_AGENT = "ecmwf-weather-skill/0.1 (+https://github.com/ecmwf/ecmwf-weather-skill)"
+USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-skills)"
 # Chart rendering on first request can take ~10-20 s; images are 1-2 MB.
 TIMEOUT_S = 90
 

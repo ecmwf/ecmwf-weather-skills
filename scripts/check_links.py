@@ -31,7 +31,7 @@ IGNORE = {
     "https://ai4edataeuwest.blob.core.windows.net/ecmwf": (
         "Azure mirror needs a SAS token (documented)"
     ),
-    "https://github.com/ecmwf/ecmwf-weather-skill": "this repository — 404 until published",
+    "https://github.com/ecmwf/ecmwf-weather-skills": "this repository — 404 until published",
 }
 IGNORE_HOSTS = ("http://127.0.0.1", "http://localhost")
 # Hosts that need credentials or only accept API calls; reachability (any HTTP answer) is enough.
@@ -65,7 +65,7 @@ def collect(skills: Path = SKILLS) -> list[str]:
 
 
 def probe(url: str) -> tuple[str, int | str]:
-    req = urllib.request.Request(url, headers={"User-Agent": "ecmwf-weather-skill-linkcheck/0.1"})
+    req = urllib.request.Request(url, headers={"User-Agent": "ecmwf-weather-skills-linkcheck/0.1"})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
             return url, r.status

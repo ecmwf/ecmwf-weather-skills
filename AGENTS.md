@@ -249,7 +249,9 @@ not on every edit. Record pass/fail per case in the PR description.
 5. **Gate** — `make all` green; `make evals` when skill text or script CLIs changed.
 6. **Commit** with a conventional-commit message (`feat(polytope): …`) and open a pull request
    against `main` using `.github/PULL_REQUEST_TEMPLATE.md` (it carries the ECMWF CLA).
-7. All changes reach `main` through a pull request; CI must be green before merge.
+7. All changes reach `main` through a pull request; CI must be green before merge. `main` is
+   protected by a repository ruleset (PR required, no force-push or deletion); only admins and
+   maintainers can bypass it.
 
 Agents NEVER commit, push, merge or open a PR without explicit user approval.
 
@@ -287,5 +289,8 @@ Follows ecmwf/codex `Legal/Open-Sourcing-Software.md` and `Legal/Copyright-And-L
   Files that cannot carry a comment (JSON, fixtures, images) are covered in `REUSE.toml`.
   `make lint` runs `reuse lint`.
 - Third-party code keeps its own header and licence; nothing incompatible with Apache 2.0.
-- External contributions require the ECMWF Contributor Licence Agreement (in the PR template).
+- **CLA declaration in every PR** (replaces CLA Assistant): the last section of
+  `.github/PULL_REQUEST_TEMPLATE.md` is the single source of the declaration;
+  `.github/workflows/cla.yml` runs `scripts/ensure_cla.py` on every opened/edited PR and appends
+  it when missing or altered. Never remove or reword it in a PR description.
 - Spelling: "licence" (noun), "license" (verb).

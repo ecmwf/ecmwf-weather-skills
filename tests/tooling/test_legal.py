@@ -63,13 +63,23 @@ def test_no_legacy_licences_mentioned():
             assert not any(b in text for b in LEGACY), p
 
 
-def test_pr_template_presents_the_ecmwf_cla():
+DECLARATION = (
+    "By submitting this pull request, I confirm that my contribution is made under\n"
+    "the terms of the [Apache License 2.0](LICENSE) and that I have the right to\n"
+    "submit it under this licence. I agree to the terms of the\n"
+    f"[ECMWF Contributor Licence Agreement]({CLA_URL})."
+)
+
+
+def test_pr_template_ends_with_the_ecmwf_cla_declaration():
     t = (ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text()
-    assert CLA_URL in t
-    assert "CONTRIBUTOR LICENCE AGREEMENT FOR ECMWF SOFTWARE" in t
-    assert "International Chamber of Commerce" in t  # full text, not just a link
-    assert re.search(r"- \[ \] I agree to the .*Contributor Licence Agreement", t)
+    assert t.rstrip().endswith("## Contributor Licence Agreement\n\n" + DECLARATION)
     assert "make all" in t
+
+
+def test_cla_link_points_at_the_existing_codex_file():
+    # Other ECMWF repos link a lowercase file name that does not exist in ecmwf/codex.
+    assert CLA_URL.endswith("/Legal/Contributor-License-Agreement.md")
 
 
 def test_contributing_security_and_conduct_exist():

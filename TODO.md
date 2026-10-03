@@ -18,7 +18,7 @@ Accepted, open work only. Finished work is recorded in `CHANGELOG.md`; design in
 - [ ] Plugin icon in `plugins/ecmwf-weather/assets/` (needs ECMWF communications approval)
 - [ ] Open-sourcing checklist (ecmwf/codex `Legal/Open-Sourcing-Software.md`): Head of
       Development approval, IPR / sensitive-information audit, `open-source-audit` and security
-      audits filed in `ecmwf/repo-audits`, CLA Assistant enabled on the repository
+      audits filed in `ecmwf/repo-audits`; then switch the repository to public
 - [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow; remove the repository URL from
       `check_links.py` IGNORE once public
 

@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Puts the ECMWF Contributor Licence Agreement declaration (from
+# .github/PULL_REQUEST_TEMPLATE.md) into every pull request description, including PRs
+# opened through the API or `gh pr create --body`, which skip the template. This replaces
+# CLA Assistant: submitting the PR with the declaration is the agreement.
+#
+# Security: pull_request_target runs with a write token, so this job checks out the BASE
+# branch only and never executes code from the pull request.
+name: cla
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  declaration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - name: Append the CLA declaration if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr view "$PR" --repo "$REPO" --json body --jq .body > "$RUNNER_TEMP/body.md"
+          set +e
+          python3 scripts/ensure_cla.py "$RUNNER_TEMP/body.md" > "$RUNNER_TEMP/new.md"
+          rc=$?
+          set -e
+          if [ "$rc" = 10 ]; then
+            gh pr edit "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/new.md"
+            echo "CLA declaration added to the description."
+          elif [ "$rc" != 0 ]; then
+            exit "$rc"
+          fi

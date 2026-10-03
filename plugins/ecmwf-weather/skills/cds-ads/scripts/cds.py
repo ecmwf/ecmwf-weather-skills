@@ -62,7 +62,7 @@ KEY_HELP = (
     "each dataset's licence once on its web page (Download tab)."
 )
 NON_REQUEST_WIDGETS = {"geo_group", "licences", "global"}
-USER_AGENT = "ecmwf-weather-skill/0.1 (+https://github.com/ecmwf/ecmwf-weather-skill)"
+USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-skills)"
 TIMEOUT_S = 60  # catalogue documents are < 100 KB
 
 

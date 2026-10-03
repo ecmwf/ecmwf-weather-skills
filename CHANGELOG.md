@@ -11,6 +11,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Changed
+
+- Repository renamed to `ecmwf/ecmwf-weather-skills` (the plugin name `ecmwf-weather` is
+  unchanged).
+- Pull requests carry the ECMWF CLA declaration in place of CLA Assistant: the template ends
+  with it and the `cla` workflow appends it to any description that lacks it.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added
@@ -46,5 +53,5 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skill/compare/0.1.0...HEAD
-[0.1.0]: https://github.com/ecmwf/ecmwf-weather-skill/releases/tag/0.1.0
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/ecmwf/ecmwf-weather-skills/releases/tag/0.1.0

@@ -46,7 +46,7 @@ BASE = "https://eccharts.ecmwf.int/wms/"
 NS = {"w": "http://www.opengis.net/wms", "xlink": "http://www.w3.org/1999/xlink"}
 # Layers without a time dimension; sending TIME with them makes the server return an exception.
 STATIC_LAYERS = {"background", "foreground", "grid", "rivers", "boundaries"}
-USER_AGENT = "ecmwf-weather-skill/0.1 (+https://github.com/ecmwf/ecmwf-weather-skill)"
+USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-skills)"
 # GetCapabilities is ~600 KB; maps render server-side in a few seconds.
 TIMEOUT_S = 60
 # Half-width of the 3x3-pixel box used for GetFeatureInfo around the query point (degrees).

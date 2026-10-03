@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts 
 SPDX-License-Identifier: Apache-2.0
 -->
 
-[![license](https://img.shields.io/github/license/ecmwf/ecmwf-weather-skill)](https://www.apache.org/licenses/LICENSE-2.0.html)
-[![tests](https://img.shields.io/github/actions/workflow/status/ecmwf/ecmwf-weather-skill/tests.yml?label=tests)](https://github.com/ecmwf/ecmwf-weather-skill/actions)
+[![license](https://img.shields.io/github/license/ecmwf/ecmwf-weather-skills)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![tests](https://img.shields.io/github/actions/workflow/status/ecmwf/ecmwf-weather-skills/tests.yml?label=tests)](https://github.com/ecmwf/ecmwf-weather-skills/actions)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-blue)](https://agentskills.io)
 [![maturity](https://github.com/ecmwf/codex/raw/refs/heads/main/Project%20Maturity/emerging_badge.svg)](https://github.com/ecmwf/codex/raw/refs/heads/main/Project%20Maturity#emerging)
 
@@ -73,7 +73,7 @@ Scripts and references per skill: [`docs/skills.md`](docs/skills.md).
 ### Claude Code
 
 ```
-/plugin marketplace add ecmwf/ecmwf-weather-skill
+/plugin marketplace add ecmwf/ecmwf-weather-skills
 /plugin install ecmwf-weather@ecmwf
 /reload-plugins
 ```
@@ -81,16 +81,16 @@ Scripts and references per skill: [`docs/skills.md`](docs/skills.md).
 ### OpenAI Codex
 
 ```
-codex plugin marketplace add ecmwf/ecmwf-weather-skill
+codex plugin marketplace add ecmwf/ecmwf-weather-skills
 codex plugin add ecmwf-weather@ecmwf
 ```
 
 ### Other skills-compatible agents
 
 ```bash
-git clone https://github.com/ecmwf/ecmwf-weather-skill.git
+git clone https://github.com/ecmwf/ecmwf-weather-skills.git
 mkdir -p ~/.agents/skills
-ln -s "$PWD"/ecmwf-weather-skill/plugins/ecmwf-weather/skills/* ~/.agents/skills/
+ln -s "$PWD"/ecmwf-weather-skills/plugins/ecmwf-weather/skills/* ~/.agents/skills/
 ```
 
 Use whichever skills directory your client documents — see <https://agentskills.io/clients>.
@@ -169,7 +169,7 @@ How the three test layers and the agent evals work: [`AGENTS.md`](AGENTS.md#test
 ## Support and community
 
 This software is provided on a **best-effort** basis; no operational support is provided. For
-questions, bug reports or feature requests, [open a GitHub issue](https://github.com/ecmwf/ecmwf-weather-skill/issues)
+questions, bug reports or feature requests, [open a GitHub issue](https://github.com/ecmwf/ecmwf-weather-skills/issues)
 or a pull request. Questions about ECMWF data and services themselves go to the
 [ECMWF Support Portal](https://support.ecmwf.int). Security issues: see [SECURITY.md](SECURITY.md).
 

@@ -33,7 +33,7 @@ import urllib.request
 from datetime import date, datetime, timedelta, timezone
 
 UTC = timezone.utc
-USER_AGENT = "ecmwf-weather-skill/0.1 (+https://github.com/ecmwf/ecmwf-weather-skill)"
+USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-skills)"
 
 ROOTS = {
     "ecmwf": "https://data.ecmwf.int/forecasts",

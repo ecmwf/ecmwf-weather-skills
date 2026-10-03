@@ -6,8 +6,8 @@
     "name": "ECMWF",
     "url": "https://www.ecmwf.int"
   },
-  "homepage": "https://github.com/ecmwf/ecmwf-weather-skill",
-  "repository": "https://github.com/ecmwf/ecmwf-weather-skill",
+  "homepage": "https://github.com/ecmwf/ecmwf-weather-skills",
+  "repository": "https://github.com/ecmwf/ecmwf-weather-skills",
   "license": "Apache-2.0",
   "keywords": [
     "ecmwf",

@@ -20,8 +20,8 @@ must come with **tests and documentation**.
 ## Quick start
 
 ```bash
-git clone https://github.com/ecmwf/ecmwf-weather-skill.git
-cd ecmwf-weather-skill
+git clone https://github.com/ecmwf/ecmwf-weather-skills.git
+cd ecmwf-weather-skills
 make setup        # dev environment + pre-push hook
 make all          # the gate: lint + check + offline tests — must be green before committing
 make help         # every target
@@ -55,9 +55,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contributor Licence Agreement
 
-External contributors agree to the
-[ECMWF Contributor Licence Agreement](https://github.com/ecmwf/codex/blob/main/Legal/Contributor-License-Agreement.md)
-by ticking the box in the pull request template. Add yourself to `CONTRIBUTORS`.
+Every pull request ends with the ECMWF CLA declaration — by submitting it you agree to the
+[ECMWF Contributor Licence Agreement](https://github.com/ecmwf/codex/blob/main/Legal/Contributor-License-Agreement.md).
+The pull request template contains it, and the `cla` workflow adds it to any description that
+lacks it (e.g. PRs opened from the command line). Add yourself to `CONTRIBUTORS`.
+
+`main` is protected: every change goes through a pull request; only admins and maintainers can
+bypass this.
 
 ## Support
 

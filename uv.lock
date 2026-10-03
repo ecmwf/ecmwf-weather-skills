@@ -1158,7 +1158,7 @@ wheels = [
 ]
 
 [[package]]
-name = "ecmwf-weather-skill-dev"
+name = "ecmwf-weather-skills-dev"
 version = "0.0.0"
 source = { virtual = "." }
 

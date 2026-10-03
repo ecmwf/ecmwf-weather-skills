@@ -33,7 +33,7 @@ to show — for developers, end users and scientists.
 
 | Topic | Decision |
 |---|---|
-| Ownership | ECMWF-affiliated, `github.com/ecmwf/ecmwf-weather-skill`, Apache-2.0 |
+| Ownership | ECMWF-affiliated, `github.com/ecmwf/ecmwf-weather-skills`, Apache-2.0 |
 | Plugin / marketplace | `ecmwf-weather` (permanent) @ `ecmwf` |
 | Clients | Claude Code, Codex/ChatGPT, generic Agent Skills |
 | Access routes | Open Data, CDS/ERA5, ADS/CAMS, MARS, OpenCharts/WMS, Polytope |

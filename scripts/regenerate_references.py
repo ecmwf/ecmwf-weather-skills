@@ -30,7 +30,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "plugins" / "ecmwf-weather" / "skills"
 PARAMDB = "https://codes.ecmwf.int/parameter-database/api/v1"
-UA = {"User-Agent": "ecmwf-weather-skill-regen/0.1"}
+UA = {"User-Agent": "ecmwf-weather-skills-regen/0.1"}
 EARTHKIT = [
     "earthkit-data",
     "earthkit-geo",
