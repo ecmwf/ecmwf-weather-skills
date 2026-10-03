@@ -5,7 +5,7 @@ compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scri
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 <!--
@@ -53,12 +53,16 @@ say so.
 
 ```
 - [ ] 1. Coordinates: geocode the place (ask the user if ambiguous)
-- [ ] 2. Steps: shortest range that answers the question, starting at 0 (0-48 for "tomorrow")
-- [ ] 3. Run: uv run scripts/odpoint.py --lat LAT --lon LON --steps 0-48 --json > point.json
+- [ ] 2. Window: --next-hours N for "the next N hours/days" (or --steps 0-END from the run start)
+- [ ] 3. Run: uv run scripts/odpoint.py --lat LAT --lon LON --next-hours 48 --tz ZONE --json > point.json
 - [ ] 4. Check: "series" non-empty and gridpoint distance_km small (<20 km on land)
 - [ ] 5. Answer in the user's local time; relay "note" once and the attribution
 ```
 
+- `--next-hours N` returns exactly the next N hours (runs start up to ~13 h before now, so
+  `--steps 0-24` would cover less); `--tz Europe/Lisbon` adds `local_time` to every row;
+  `--from-now` drops past rows; `--daily` adds per-local-day high, low and precipitation — use these
+  instead of converting or aggregating yourself.
 - Output per valid time (UTC): `t2m_C`, `precip_mm` (since the previous step; `null` if unknown),
   `wind_speed_ms`, `wind_dir_deg` (direction the wind blows from), `msl_hPa`, `tcc_pct`.
 - Size: 0–240 h ≈ 200 MB, 0–48 h ≈ 40 MB; ~10–20 s per 100 MB. Give the command a timeout of

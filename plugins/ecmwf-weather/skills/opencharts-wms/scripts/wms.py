@@ -51,6 +51,7 @@ USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-
 TIMEOUT_S = 60
 # Half-width of the 3x3-pixel box used for GetFeatureInfo around the query point (degrees).
 INFO_HALF_BOX_DEG = 0.01
+ASPECT_MARGIN = 1e-7
 MERC_R = 20037508.342789244  # half the EPSG:3857 world width in metres
 
 
@@ -178,14 +179,41 @@ def _lonlat_to_3857(lon: float, lat: float) -> tuple[float, float]:
     return x, y
 
 
-def _bbox_param(bbox, crs: str) -> str:
+def _fit_aspect(x0: float, y0: float, x1: float, y1: float, aspect: float | None):
+    """Widen the box (about its centre) so width/height equals the image's aspect ratio.
+
+    The server preserves the map's aspect ratio, so a box that doesn't match the requested
+    pixel shape comes back as a smaller image than asked for.
+    """
+    if not aspect:
+        return x0, y0, x1, y1
+    w, h = x1 - x0, y1 - y0
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    if w / h < aspect:
+        w = h * aspect
+    else:
+        h = w / aspect
+    # The server returns the full image only if the box is not even marginally taller than the
+    # image; floating-point rounding makes that happen about half the time, costing a pixel per
+    # side. Widen by 1 part in 10^7 (~0.5 m across Europe) so the ratio is never below aspect.
+    w *= 1 + ASPECT_MARGIN
+    return cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2
+
+
+def _bbox_param(bbox, crs: str, aspect: float | None = None) -> str:
     w, s, e, n = bbox
     if crs == "EPSG:4326":  # WMS 1.3.0 axis order for EPSG:4326 is lat,lon
-        return f"{s:g},{w:g},{n:g},{e:g}"
+        w, s, e, n = _fit_aspect(w, s, e, n, aspect)
+        return f"{s:.6g},{w:.6g},{n:.6g},{e:.6g}"
     if crs in ("EPSG:3857", "EPSG:900913"):
         x0, y0 = _lonlat_to_3857(w, s)
         x1, y1 = _lonlat_to_3857(e, n)
-        return f"{x0:.2f},{y0:.2f},{x1:.2f},{y1:.2f}"
+        x0, y0, x1, y1 = _fit_aspect(x0, y0, x1, y1, aspect)
+        # 6 decimals (rounding to cm already costs a pixel), rounded outwards so the box
+        # always contains the requested area.
+        lo = [math.floor(v * 1e6) / 1e6 for v in (x0, y0)]
+        hi = [math.ceil(v * 1e6) / 1e6 for v in (x1, y1)]
+        return f"{lo[0]:.6f},{lo[1]:.6f},{hi[0]:.6f},{hi[1]:.6f}"
     raise ValueError(f"unsupported CRS {crs}; use EPSG:3857 or EPSG:4326")
 
 
@@ -211,7 +239,7 @@ def getmap_url(
         "layers": layer,
         "styles": style,
         "crs": crs,
-        "bbox": _bbox_param(bbox, crs),
+        "bbox": _bbox_param(bbox, crs, width / height),
         "width": width,
         "height": height,
         "format": "image/png",

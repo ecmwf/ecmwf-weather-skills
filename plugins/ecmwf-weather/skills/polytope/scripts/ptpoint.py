@@ -48,6 +48,8 @@ ENS_PARAMS = "167/228"
 # Operational runs are usable ~7 h after base time; Polytope keeps roughly the last 2 days.
 AVAILABLE_AFTER = timedelta(hours=7)
 MAX_CANDIDATES = 4
+# IFS HRES 06/18 UTC runs reach 144 h (since IFS Cycle 50r1); 00/12 UTC runs reach 360 h.
+SHORT_RUN_HOURS = 144
 QUANTILES = (10, 50, 90)
 UNITS = {
     "t2m_C": "degC",
@@ -109,13 +111,16 @@ def build_request(
     return r
 
 
-def candidate_runs(now: datetime | None = None) -> list[tuple[str, str]]:
+def candidate_runs(now: datetime | None = None, end_step: int = 240) -> list[tuple[str, str]]:
+    """Runs to try, latest first. 06/18 UTC runs (to SHORT_RUN_HOURS) count when they cover
+    the requested range — they are up to 6 h fresher than the 00/12 UTC runs."""
     now = (now or datetime.now(UTC)) - AVAILABLE_AFTER
-    t = now.replace(minute=0, second=0, microsecond=0, hour=0 if now.hour < 12 else 12)
+    every = 6 if end_step <= SHORT_RUN_HOURS else 12
+    t = now.replace(minute=0, second=0, microsecond=0, hour=now.hour - now.hour % every)
     out = []
     for _ in range(MAX_CANDIDATES):
         out.append((t.strftime("%Y%m%d"), t.strftime("%H00")))
-        t -= timedelta(hours=12)
+        t -= timedelta(hours=every)
     return out
 
 
@@ -200,6 +205,119 @@ def attribution(d: dict, year: int | None = None) -> dict:
     }
 
 
+# --- local time and daily summaries (standard library) ------------------------------------------
+
+
+def _utc(iso: str) -> datetime:
+    return datetime.strptime(iso, "%Y-%m-%dT%H:%MZ").replace(tzinfo=UTC)
+
+
+def add_local_time(rows: list[dict], tz: str) -> list[dict]:
+    from zoneinfo import ZoneInfo
+
+    zone = ZoneInfo(tz)
+    for r in rows:
+        r["local_time"] = _utc(r["valid_time"]).astimezone(zone).isoformat(timespec="minutes")
+    return rows
+
+
+def drop_past(rows: list[dict], now: datetime | None = None) -> list[dict]:
+    now = now or datetime.now(UTC)
+    return [r for r in rows if _utc(r["valid_time"]) >= now]
+
+
+def daily_summary(p: dict, tz: str = "UTC") -> list[dict]:
+    """Per local calendar day: high/low 2 m temperature (°C) and precipitation total (mm).
+
+    Ensembles give p10/p50/p90 of each member's daily high, low and total — the spread of
+    the days, not of individual hours. A precipitation interval counts for the day it ends
+    in. Days whose samples span less than 18 h are marked partial.
+    """
+    from zoneinfo import ZoneInfo
+
+    zone = ZoneInfo(tz)
+    days = [_utc(t).astimezone(zone).date() for t in p["times"]]
+    hours = [_utc(t).astimezone(zone) for t in p["times"]]
+    per_member: dict[int, dict] = {}
+    for n, m in p["members"].items():
+        temps = [v - 273.15 for v in m["2t"]] if "2t" in m else None
+        rain = _deaccumulate_mm(m["tp"]) if "tp" in m else None
+        out: dict = {}
+        for i, d in enumerate(days):
+            e = out.setdefault(d, {"t": [], "tp": 0.0, "h": []})
+            e["h"].append(hours[i])
+            if temps:
+                e["t"].append(temps[i])
+            if rain and i > 0:
+                e["tp"] += rain[i]
+        per_member[n] = out
+    ensemble = list(p["members"]) != [0]
+    result = []
+    for d in sorted(set(days)):
+        first = per_member[next(iter(per_member))][d]
+        span_h = (max(first["h"]) - min(first["h"])).total_seconds() / 3600
+        row: dict = {"date": d.isoformat(), "partial": span_h < 18}
+        highs = [max(m[d]["t"]) for m in per_member.values() if m[d]["t"]]
+        lows = [min(m[d]["t"]) for m in per_member.values() if m[d]["t"]]
+        rain = [round(m[d]["tp"], 2) for m in per_member.values()]
+        if ensemble:
+            for name, vals in (("high_C", highs), ("low_C", lows), ("precip_mm", rain)):
+                if vals:
+                    for q in QUANTILES:
+                        row[f"{name}_p{q}"] = round(_percentile(vals, q), 1)
+            row["members"] = len(per_member)
+        else:
+            if highs:
+                row["high_C"], row["low_C"] = round(highs[0], 1), round(lows[0], 1)
+            row["precip_mm"] = round(rain[0], 1)
+        result.append(row)
+    return result
+
+
+# A run is published ~7 h after its base time and replaced 6 h later, so the newest run can
+# be up to ~13 h old; request this much extra lead time for "the next N hours".
+MAX_RUN_AGE_H = 14
+
+
+def steps_for_next_hours(hours: int) -> int:
+    return -(-(hours + MAX_RUN_AGE_H) // 6) * 6
+
+
+def window(rows: list[dict], now: datetime | None = None, hours: int | None = None) -> list[dict]:
+    """Rows from now (inclusive) to now + hours (exclusive)."""
+    now = now or datetime.now(UTC)
+    end = now + timedelta(hours=hours) if hours else None
+    return [
+        r
+        for r in rows
+        if _utc(r["valid_time"]) >= now and (end is None or _utc(r["valid_time"]) < end)
+    ]
+
+
+def shape_output(
+    rows: list[dict],
+    p: dict,
+    tz: str | None = None,
+    from_now: bool = False,
+    daily: bool = False,
+    now: datetime | None = None,
+    next_hours: int | None = None,
+) -> dict:
+    """Optional local times, dropping past rows and per-day summaries for the JSON output."""
+    out: dict = {}
+    rows = [dict(r) for r in rows]  # never modify the caller's rows
+    if tz:
+        add_local_time(rows, tz)
+        out["timezone"] = tz
+    if next_hours:
+        out["series"] = window(rows, now, next_hours)
+    else:
+        out["series"] = drop_past(rows, now) if from_now else rows
+    if daily:
+        out["daily"] = daily_summary(p, tz or "UTC")
+    return out
+
+
 # --- earthkit-backed ------------------------------------------------------------------------------
 
 
@@ -262,7 +380,7 @@ def fetch(req: dict) -> tuple[dict, int]:
 
 
 def fetch_latest(lat, lon, end_step, ensemble, date=None, time=None) -> tuple[dict, int]:
-    runs = [(date, time)] if date else candidate_runs()
+    runs = [(date, time)] if date else candidate_runs(end_step=end_step)
     last = None
     for d, t in runs:
         try:
@@ -317,6 +435,18 @@ def main(argv=None) -> int:
     ap.add_argument("--ensemble", action="store_true", help="50 ENS members -> p10/p50/p90")
     ap.add_argument("--date", help="YYYYMMDD (default: latest available run)")
     ap.add_argument("--time", help="0000 or 1200")
+    ap.add_argument(
+        "--tz", help="IANA time zone for local_time and daily grouping, e.g. Europe/London"
+    )
+    ap.add_argument("--from-now", action="store_true", help="drop rows already in the past")
+    ap.add_argument(
+        "--next-hours", type=int, help="exactly the next N hours from now (overrides --steps)"
+    )
+    ap.add_argument(
+        "--daily",
+        action="store_true",
+        help="add per-day high/low/precipitation (ensemble: p10/p50/p90)",
+    )
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
@@ -334,6 +464,8 @@ def main(argv=None) -> int:
         return 4
     try:
         end = int(a.steps.split("-")[-1])
+        if a.next_hours:
+            end = steps_for_next_hours(a.next_hours)
         d, nbytes = fetch_latest(a.lat, a.lon, end, a.ensemble, a.date, a.time)
         p = parse_covjson(d)
         rows = series(p)
@@ -352,13 +484,14 @@ def main(argv=None) -> int:
         "gridpoint": p["gridpoint"],
         "run": p["run"],
         "units": units,
-        "series": rows,
+        **shape_output(rows, p, a.tz, a.from_now, a.daily, next_hours=a.next_hours),
         "note": size_note(nbytes),
         "attribution": attribution(d),
     }
     if a.json:
         print(json.dumps(res, indent=2))
         return 0
+    rows = res["series"]
     gp = p["gridpoint"]
     model = f"IFS ENS ({rows[0].get('members')} members)" if a.ensemble else "IFS HRES"
     print(f"ECMWF {model} run {p['run']} — gridpoint {gp['lat']}, {gp['lon']}")

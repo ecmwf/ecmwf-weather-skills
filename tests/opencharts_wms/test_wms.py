@@ -89,15 +89,20 @@ def test_getmap_url_epsg3857_converts_lonlat_bbox():
     assert url.startswith("https://eccharts.ecmwf.int/wms/?")
     assert p["token"] == "public" and p["request"] == "GetMap" and p["version"] == "1.3.0"
     assert p["crs"] == "EPSG:3857" and p["layers"] == "msl_public"
-    minx, miny, maxx, maxy = map(float, p["bbox"].split(","))
+    # Pure lon/lat -> EPSG:3857 conversion (the URL additionally fits the aspect ratio).
+    minx, miny, maxx, maxy = map(float, wms._bbox_param((-10, 35, 30, 60), "EPSG:3857").split(","))
     assert round(minx) == -1113195 and round(maxx) == 3339585
     assert 4163881 < miny < 4163882 and maxy > miny
     assert p["time"] == "2026-10-03T12:00:00Z" and p["transparent"] == "true"
 
 
 def test_getmap_url_epsg4326_uses_lat_lon_axis_order():
-    p = q(wms.getmap_url("msl_public", bbox=(-10, 35, 30, 60), crs="EPSG:4326"))
-    assert p["bbox"] == "35,-10,60,30"
+    assert wms._bbox_param((-10, 35, 30, 60), "EPSG:4326") == "35,-10,60,30"
+    s, w, n, e = map(
+        float,
+        q(wms.getmap_url("msl_public", bbox=(-10, 35, 30, 60), crs="EPSG:4326"))["bbox"].split(","),
+    )
+    assert s < n and w < e  # lat first, then lon
 
 
 def test_static_layers_never_get_time():
@@ -190,3 +195,48 @@ def test_cli_layers_states_the_keyless_endpoint():
     assert "https://eccharts.ecmwf.int/wms/?token=public" in out.stdout
     j = cli("layers", "--caps", FIXTURES / "wms-capabilities-trimmed.xml", "--json")
     assert json.loads(j.stdout)["endpoint"] == "https://eccharts.ecmwf.int/wms/?token=public"
+
+
+def test_getmap_bbox_is_widened_to_the_requested_aspect_ratio():
+    # The server keeps the map's aspect ratio, so a box that doesn't match width/height
+    # comes back as a smaller image; the request must match the requested pixel shape.
+    p = q(wms.getmap_url("msl_public", bbox=(-10, 35, 30, 60), width=1024, height=768))
+    x0, y0, x1, y1 = map(float, p["bbox"].split(","))
+    ratio = (x1 - x0) / (y1 - y0)
+    assert 1024 / 768 <= ratio < 1024 / 768 * (1 + 1e-6)  # never taller than the image
+    ox0, oy0 = wms._lonlat_to_3857(-10, 35)
+    ox1, oy1 = wms._lonlat_to_3857(30, 60)
+    assert x0 <= ox0 and y0 <= oy0 and x1 >= ox1 and y1 >= oy1  # contains the requested area
+
+
+def test_getmap_4326_aspect_ratio():
+    p = q(
+        wms.getmap_url("msl_public", bbox=(-10, 35, 30, 60), width=800, height=800, crs="EPSG:4326")
+    )
+    s, w, n, e = map(float, p["bbox"].split(","))
+    assert abs((e - w) - (n - s)) < 1e-9 and w <= -10 and e >= 30 and s <= 35 and n >= 60
+
+
+@pytest.mark.live
+def test_live_getmap_returns_exactly_the_requested_size(tmp_path):
+    import struct
+
+    # Rounding makes about half of all boxes a hair too tall; the server then drops a pixel.
+    for i, bbox in enumerate(["-10,35,30,60", "-15,33,35,65", "0,40,20,55", "-30,20,60,75"]):
+        png = tmp_path / f"s{i}.png"
+        out = cli(
+            "getmap",
+            "--layer",
+            "msl_public",
+            "--bbox",
+            bbox,
+            "--width",
+            "1024",
+            "--height",
+            "768",
+            "--no-background",
+            "-o",
+            png,
+        )
+        assert out.returncode == 0, out.stderr
+        assert struct.unpack(">II", png.read_bytes()[16:24]) == (1024, 768), bbox

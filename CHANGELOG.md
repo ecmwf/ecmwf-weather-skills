@@ -11,6 +11,32 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-03
+
+Fixes from the Codex evaluation across seven models (GPT-6.1-Sol, GPT-6-Astra, GPT-6-Sol,
+GPT-6-Luna, GPT-5.6-Terra, GPT-5.6-Sol, GPT-5.6-Luna): all pass 19/19. Capable models were
+compensating for tool gaps with their own code; the fixes below halve that.
+
+### Added
+
+- `odpoint.py` / `ptpoint.py`: `--next-hours N` (exactly the next N hours — runs start up to
+  ~13 h before now), `--tz` (local times), `--from-now`, `--daily` (per-local-day high, low and
+  precipitation; for ensembles p10/p50/p90 of each member's daily values).
+- Eval harness: `image_size` expectation; `wms-getmap` checks the PNG is the size asked for.
+
+### Fixed
+
+- `ekplot.py meteogram`: one shared time axis for all panels (local time with `--tz` data);
+  precipitation drawn as a rate in mm/h with bars spanning their interval (1/3/6-hourly totals
+  were overlapping, mis-sized and not comparable); higher-contrast ensemble median.
+- `ptpoint.py` uses the 06/18 UTC runs when the range fits (≤ 144 h) — up to 6 h fresher.
+- `wms.py getmap` returns exactly the requested pixel size: the box is fitted to the image's
+  aspect ratio (the server shrinks mismatched requests) with enough precision and margin.
+- `opencharts.py get` falls back to the previous run when the newest is still being produced
+  and lacks the requested step (failed for hours after every run started).
+- Eval rules match executed commands, not file names in searches; either point script counts
+  for the meteogram case.
+
 ## [0.1.2] - 2026-10-03
 
 Skill-text fixes from the Claude Code evaluation. Sonnet and Opus pass all 19 eval cases twice in
@@ -105,7 +131,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.2...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.3...HEAD
+[0.1.3]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/ecmwf/ecmwf-weather-skills/releases/tag/0.1.0
