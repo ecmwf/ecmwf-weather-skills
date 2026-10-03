@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["earthkit-plots>=1.0", "earthkit-data>=1.2"]
@@ -8,7 +13,8 @@
   map        one field from a GRIB/NetCDF file on a map
   meteogram  multi-panel time series from point-forecast JSON (open-data skill's odpoint.py --json)
 
-  uv run ekplot.py map forecast.grib2 --param 2t --step 24 --units celsius --domain Europe -o t2m.png
+  uv run ekplot.py map forecast.grib2 --param 2t --step 24 --units celsius \\
+      --domain Europe -o t2m.png
   uv run ekplot.py meteogram lisbon.json -o lisbon.png
 
 Every figure carries the ECMWF CC-BY-4.0 attribution line.
@@ -51,9 +57,7 @@ def meteogram_panels(point: dict) -> list[dict]:
                     "title": title,
                     "kind": kind,
                     "units": point["units"][key],
-                    "values": [
-                        float("nan") if r[key] is None else r[key] for r in rows
-                    ],
+                    "values": [float("nan") if r[key] is None else r[key] for r in rows],
                 }
             )
             lo, hi = f"{key}_p10", f"{key}_p90"  # ensemble output (polytope ptpoint.py --ensemble)
@@ -65,9 +69,7 @@ def meteogram_panels(point: dict) -> list[dict]:
 def _times(point):
     import numpy as np
 
-    return np.array(
-        [r["valid_time"].rstrip("Z") for r in point["series"]], dtype="datetime64[m]"
-    )
+    return np.array([r["valid_time"].rstrip("Z") for r in point["series"]], dtype="datetime64[m]")
 
 
 def plot_meteogram(point: dict, output: str) -> None:
@@ -76,9 +78,7 @@ def plot_meteogram(point: dict, output: str) -> None:
 
     panels = meteogram_panels(point)
     if not panels:
-        raise ValueError(
-            "no plottable series in JSON (expected odpoint.py --json output)"
-        )
+        raise ValueError("no plottable series in JSON (expected odpoint.py --json output)")
     t = _times(point)
     fig = ekp.Figure(rows=len(panels), columns=1, figsize=(9, 2.3 * len(panels)))
     for p in panels:

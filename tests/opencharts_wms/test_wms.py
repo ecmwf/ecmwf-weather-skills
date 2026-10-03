@@ -1,10 +1,13 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import subprocess
 import sys
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-
 from conftest import FIXTURES, SKILLS, load_script
 
 wms = load_script("opencharts-wms", "wms")
@@ -20,7 +23,7 @@ def q(url):
 
 
 def test_parse_capabilities_layers():
-    layers = {l["name"]: l for l in wms.parse_capabilities(CAPS)}
+    layers = {layer["name"]: layer for layer in wms.parse_capabilities(CAPS)}
     assert set(layers) == {
         "msl_public",
         "t850_public",
@@ -54,7 +57,7 @@ def test_expand_time_mixed_list_and_intervals():
 
 
 def test_layer_summary_reports_forecast_range():
-    msl = [l for l in wms.parse_capabilities(CAPS) if l["name"] == "msl_public"][0]
+    msl = next(layer for layer in wms.parse_capabilities(CAPS) if layer["name"] == "msl_public")
     s = wms.summarise(msl)
     assert s["first_time"] < s["default_time"] <= s["last_time"]
     assert s["forecast_hours_ahead"] > 200
@@ -62,8 +65,8 @@ def test_layer_summary_reports_forecast_range():
 
 def test_filter_layers():
     layers = wms.parse_capabilities(CAPS)
-    assert [l["name"] for l in wms.filter_layers(layers, "pressure")] == ["msl_public"]
-    assert all("public" in l["name"] for l in wms.filter_layers(layers, public=True))
+    assert [layer["name"] for layer in wms.filter_layers(layers, "pressure")] == ["msl_public"]
+    assert all("public" in layer["name"] for layer in wms.filter_layers(layers, public=True))
 
 
 def test_closest_time():
@@ -84,9 +87,7 @@ def test_getmap_url_epsg3857_converts_lonlat_bbox():
     )
     p = q(url)
     assert url.startswith("https://eccharts.ecmwf.int/wms/?")
-    assert (
-        p["token"] == "public" and p["request"] == "GetMap" and p["version"] == "1.3.0"
-    )
+    assert p["token"] == "public" and p["request"] == "GetMap" and p["version"] == "1.3.0"
     assert p["crs"] == "EPSG:3857" and p["layers"] == "msl_public"
     minx, miny, maxx, maxy = map(float, p["bbox"].split(","))
     assert round(minx) == -1113195 and round(maxx) == 3339585
@@ -100,11 +101,7 @@ def test_getmap_url_epsg4326_uses_lat_lon_axis_order():
 
 
 def test_static_layers_never_get_time():
-    p = q(
-        wms.getmap_url(
-            "background", bbox=(-10, 35, 30, 60), time="2026-10-03T12:00:00Z"
-        )
-    )
+    p = q(wms.getmap_url("background", bbox=(-10, 35, 30, 60), time="2026-10-03T12:00:00Z"))
     assert "time" not in p
 
 
@@ -112,12 +109,7 @@ def test_private_token_is_redacted_for_display():
     url = wms.getmap_url("msl", bbox=(0, 0, 1, 1), token="abcdef123456")
     assert "abcdef123456" in url
     assert "abcdef123456" not in wms.redact(url) and "token=***" in wms.redact(url)
-    assert (
-        wms.redact(wms.getmap_url("msl_public", bbox=(0, 0, 1, 1))).count(
-            "token=public"
-        )
-        == 1
-    )
+    assert wms.redact(wms.getmap_url("msl_public", bbox=(0, 0, 1, 1))).count("token=public") == 1
 
 
 def test_legend_and_featureinfo_urls():
@@ -128,16 +120,20 @@ def test_legend_and_featureinfo_urls():
 
 
 def test_exception_detection():
-    body = b"<?xml version='1.0'?><ServiceExceptionReport><ServiceException code=\"LayerNotDefined\"><![CDATA[\nlayer 'x' not found\n]]></ServiceException></ServiceExceptionReport>"
-    assert (
-        wms.service_exception("text/xml", body)
-        == "LayerNotDefined: layer 'x' not found"
+    body = (
+        b"<?xml version='1.0'?><ServiceExceptionReport>"
+        b"<ServiceException code=\"LayerNotDefined\"><![CDATA[\nlayer 'x' not found\n]]>"
+        b"</ServiceException></ServiceExceptionReport>"
     )
+    assert wms.service_exception("text/xml", body) == "LayerNotDefined: layer 'x' not found"
     assert wms.service_exception("image/png", b"\x89PNG") is None
 
 
 def test_parse_featureinfo():
-    body = '{ "Probes": [ { "Name": "msl_public", "Grid point latitude": 45.0264, "Grid point longitude": 0, "Value": { "Unit": "Pa", "Data": 102730 } } ]}'
+    body = (
+        '{ "Probes": [ { "Name": "msl_public", "Grid point latitude": 45.0264, '
+        '"Grid point longitude": 0, "Value": { "Unit": "Pa", "Data": 102730 } } ]}'
+    )
     assert wms.parse_featureinfo(body) == [
         {"layer": "msl_public", "value": 102730, "unit": "Pa", "lat": 45.0264, "lon": 0}
     ]
@@ -164,7 +160,7 @@ def test_cli_layers_from_file_json():
         "--json",
     )
     assert out.returncode == 0, out.stderr
-    names = [l["name"] for l in json.loads(out.stdout)["layers"]]
+    names = [layer["name"] for layer in json.loads(out.stdout)["layers"]]
     assert names == ["t850_public", "z500_mean_public", "msl_public"]
 
 
@@ -184,7 +180,5 @@ def test_live_getmap_png(tmp_path):
 
 @pytest.mark.live
 def test_live_bad_layer_reports_exception(tmp_path):
-    out = cli(
-        "getmap", "--layer", "nope", "--bbox", "-10,35,30,60", "-o", tmp_path / "x.png"
-    )
+    out = cli("getmap", "--layer", "nope", "--bbox", "-10,35,30,60", "-o", tmp_path / "x.png")
     assert out.returncode != 0 and "LayerNotDefined" in out.stderr

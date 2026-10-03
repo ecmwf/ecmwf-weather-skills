@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
@@ -124,9 +129,7 @@ def _norm_lon(lon: float) -> float:
 def parse_covjson(d: dict) -> dict:
     covs = d["coverages"]
     axes = covs[0]["domain"]["axes"]
-    run = datetime.strptime(
-        covs[0]["mars:metadata"]["Forecast date"], "%Y-%m-%dT%H:%M:%SZ"
-    )
+    run = datetime.strptime(covs[0]["mars:metadata"]["Forecast date"], "%Y-%m-%dT%H:%M:%SZ")
     members = {}
     for c in covs:
         n = int(c["mars:metadata"].get("number", 0))
@@ -140,10 +143,7 @@ def parse_covjson(d: dict) -> dict:
         },
         "times": [t.replace(":00:00Z", ":00Z") for t in times],
         "steps": [
-            int(
-                (datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ") - run).total_seconds()
-                // 3600
-            )
+            int((datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ") - run).total_seconds() // 3600)
             for t in times
         ],
         "members": members,
@@ -208,54 +208,46 @@ def series(p: dict) -> list[dict]:
     from earthkit.meteo import wind
     from earthkit.utils.units import convert_units
 
-    rows = [{"step": s, "valid_time": t} for s, t in zip(p["steps"], p["times"])]
+    rows = [{"step": s, "valid_time": t} for s, t in zip(p["steps"], p["times"], strict=True)]
     mem = p["members"]
     if list(mem) == [0]:  # deterministic
         m = mem[0]
         if "2t" in m:
             for r, v in zip(
-                rows, convert_units(np.array(m["2t"]), "degC", source_units="K")
+                rows, convert_units(np.array(m["2t"]), "degC", source_units="K"), strict=True
             ):
                 r["t2m_C"] = round(float(v), 1)
         if "tp" in m:
-            for r, v in zip(rows, _deaccumulate_mm(m["tp"])):
+            for r, v in zip(rows, _deaccumulate_mm(m["tp"]), strict=True):
                 r["precip_mm"] = v
         if "10u" in m and "10v" in m:
             u, v = np.array(m["10u"]), np.array(m["10v"])
-            for r, s, dd in zip(
-                rows, wind.speed(u, v), wind.direction(u, v, convention="meteo")
-            ):
+            speeds, dirs = wind.speed(u, v), wind.direction(u, v, convention="meteo")
+            for r, s, dd in zip(rows, speeds, dirs, strict=True):
                 r["wind_speed_ms"], r["wind_dir_deg"] = (
                     round(float(s), 1),
                     round(float(dd), 1),
                 )
         if "msl" in m:
             for r, v in zip(
-                rows, convert_units(np.array(m["msl"]), "hPa", source_units="Pa")
+                rows, convert_units(np.array(m["msl"]), "hPa", source_units="Pa"), strict=True
             ):
                 r["msl_hPa"] = round(float(v), 1)
         if "tcc" in m:
-            for r, v in zip(rows, m["tcc"]):
+            for r, v in zip(rows, m["tcc"], strict=True):
                 r["tcc_pct"] = round(float(v) * 100.0, 1)
         return rows
 
     names = sorted(mem)
-    t2 = [
-        list(convert_units(np.array(mem[n]["2t"]), "degC", source_units="K"))
-        for n in names
-    ]
-    tp = (
-        [_deaccumulate_mm(mem[n]["tp"]) for n in names]
-        if "tp" in mem[names[0]]
-        else None
-    )
-    for i, (r, q) in enumerate(zip(rows, quantiles(t2))):
-        r.update({f"t2m_C_p{k}": round(v, 1) for k, v in zip(QUANTILES, q)})
+    t2 = [list(convert_units(np.array(mem[n]["2t"]), "degC", source_units="K")) for n in names]
+    tp = [_deaccumulate_mm(mem[n]["tp"]) for n in names] if "tp" in mem[names[0]] else None
+    for r, q in zip(rows, quantiles(t2), strict=True):
+        r.update({f"t2m_C_p{k}": round(v, 1) for k, v in zip(QUANTILES, q, strict=True)})
         r["t2m_C"] = r["t2m_C_p50"]
         r["members"] = len(names)
     if tp:
-        for r, q in zip(rows, quantiles(tp)):
-            r.update({f"precip_mm_p{k}": round(v, 2) for k, v in zip(QUANTILES, q)})
+        for r, q in zip(rows, quantiles(tp), strict=True):
+            r.update({f"precip_mm_p{k}": round(v, 2) for k, v in zip(QUANTILES, q, strict=True)})
             r["precip_mm"] = r["precip_mm_p50"]
     return rows
 
@@ -269,9 +261,7 @@ def fetch(req: dict) -> tuple[dict, int]:
     return json.loads(raw), len(raw)
 
 
-def fetch_latest(
-    lat, lon, end_step, ensemble, date=None, time=None
-) -> tuple[dict, int]:
+def fetch_latest(lat, lon, end_step, ensemble, date=None, time=None) -> tuple[dict, int]:
     runs = [(date, time)] if date else candidate_runs()
     last = None
     for d, t in runs:
@@ -311,14 +301,8 @@ def check(as_json: bool) -> int:
                 hint="run with `uv run ptpoint.py --check` to test access",
             )
         except Exception as e:
-            res.update(
-                polytope=False, verified=False, error=str(e).splitlines()[-1][:300]
-            )
-    print(
-        json.dumps(res, indent=2)
-        if as_json
-        else "\n".join(f"{k}: {v}" for k, v in res.items())
-    )
+            res.update(polytope=False, verified=False, error=str(e).splitlines()[-1][:300])
+    print(json.dumps(res, indent=2) if as_json else "\n".join(f"{k}: {v}" for k, v in res.items()))
     return 0 if res["polytope"] else 4
 
 
@@ -326,15 +310,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument(
-        "--check", action="store_true", help="report access (never prints keys)"
-    )
+    ap.add_argument("--check", action="store_true", help="report access (never prints keys)")
     ap.add_argument("--lat", type=float)
     ap.add_argument("--lon", type=float)
     ap.add_argument("--steps", default="0-240", help="0-END hours, e.g. 0-24, 0-120")
-    ap.add_argument(
-        "--ensemble", action="store_true", help="50 ENS members -> p10/p50/p90"
-    )
+    ap.add_argument("--ensemble", action="store_true", help="50 ENS members -> p10/p50/p90")
     ap.add_argument("--date", help="YYYYMMDD (default: latest available run)")
     ap.add_argument("--time", help="0000 or 1200")
     ap.add_argument("--json", action="store_true")
@@ -346,7 +326,8 @@ def main(argv=None) -> int:
         ap.error("--lat and --lon are required (or use --check)")
     if not credentials():
         print(
-            "error: no Polytope credentials (POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc). "
+            "error: no Polytope credentials "
+            "(POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc). "
             "Use the open-data skill: uv run <open-data>/scripts/odpoint.py --lat LAT --lon LON",
             file=sys.stderr,
         )
@@ -379,19 +360,14 @@ def main(argv=None) -> int:
         print(json.dumps(res, indent=2))
         return 0
     gp = p["gridpoint"]
-    print(
-        f"ECMWF {'IFS ENS (' + str(rows[0].get('members')) + ' members)' if a.ensemble else 'IFS HRES'} "
-        f"run {p['run']} — gridpoint {gp['lat']}, {gp['lon']}"
-    )
+    model = f"IFS ENS ({rows[0].get('members')} members)" if a.ensemble else "IFS HRES"
+    print(f"ECMWF {model} run {p['run']} — gridpoint {gp['lat']}, {gp['lon']}")
     cols = [c for c in rows[0] if c not in ("step", "valid_time", "members")]
     print("valid_time         " + "  ".join(f"{c:>12}" for c in cols))
     for r in rows:
-        print(
-            f"{r['valid_time']:<18} " + "  ".join(f"{r.get(c, ''):>12}" for c in cols)
-        )
-    print(
-        f"Note: {res['note']}\nAttribution: {res['attribution']['short']} — {res['attribution']['note']}"
-    )
+        print(f"{r['valid_time']:<18} " + "  ".join(f"{r.get(c, ''):>12}" for c in cols))
+    attr = res["attribution"]
+    print(f"Note: {res['note']}\nAttribution: {attr['short']} — {attr['note']}")
     return 0
 
 

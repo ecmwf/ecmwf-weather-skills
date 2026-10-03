@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["pillow>=10"]
@@ -11,7 +16,8 @@ Standard library only, except Pillow for compositing a map image with background
   python3 wms.py layers --public                       # what can I use without an account
   python3 wms.py layers --search temperature --json
   python3 wms.py times --layer msl_public
-  python3 wms.py getmap --layer msl_public --bbox -15,33,35,65 --time 2026-10-03T12:00:00Z --url-only
+  python3 wms.py getmap --layer msl_public --bbox -15,33,35,65 \\
+      --time 2026-10-03T12:00:00Z --url-only
   uv run  wms.py getmap --layer msl_public --bbox -15,33,35,65 --valid +24 -o mslp.png
   python3 wms.py info --layer msl_public --lat 51.5 --lon -0.1
   python3 wms.py legend --layer t850_public
@@ -59,32 +65,30 @@ def _text(el, path):
 def parse_capabilities(xml_text: str) -> list[dict]:
     root = ET.fromstring(xml_text)
     out = []
-    for l in root.iter(f"{{{NS['w']}}}Layer"):
-        name = _text(l, "w:Name")
+    for layer in root.iter(f"{{{NS['w']}}}Layer"):
+        name = _text(layer, "w:Name")
         if not name:
             continue
         time = None
-        for d in l.findall("w:Dimension", NS):
+        for d in layer.findall("w:Dimension", NS):
             if d.get("name") == "time":
                 time = {"default": d.get("default"), "values": (d.text or "").strip()}
         styles = []
-        for st in l.findall("w:Style", NS):
+        for st in layer.findall("w:Style", NS):
             lg = st.find("w:LegendURL/w:OnlineResource", NS)
             styles.append(
                 {
                     "name": _text(st, "w:Name"),
                     "title": _text(st, "w:Title"),
-                    "legend": lg.get(f"{{{NS['xlink']}}}href")
-                    if lg is not None
-                    else None,
+                    "legend": lg.get(f"{{{NS['xlink']}}}href") if lg is not None else None,
                 }
             )
         out.append(
             {
                 "name": name,
-                "title": _text(l, "w:Title"),
-                "abstract": _text(l, "w:Abstract"),
-                "queryable": l.get("queryable") == "1",
+                "title": _text(layer, "w:Title"),
+                "abstract": _text(layer, "w:Abstract"),
+                "queryable": layer.get("queryable") == "1",
                 "styles": styles,
                 "time": time,
             }
@@ -149,13 +153,13 @@ def filter_layers(
     layers: list[dict], search: str | None = None, public: bool = False
 ) -> list[dict]:
     res = []
-    for l in layers:
-        if public and not l["name"].endswith("_public"):
+    for layer in layers:
+        if public and not layer["name"].endswith("_public"):
             continue
-        hay = " ".join(filter(None, [l["name"], l["title"], l["abstract"]])).lower()
+        hay = " ".join(filter(None, [layer["name"], layer["title"], layer["abstract"]])).lower()
         if search and search.lower() not in hay:
             continue
-        res.append(l)
+        res.append(layer)
     return res
 
 
@@ -170,12 +174,7 @@ def closest_time(times: list[str], target: str) -> str:
 def _lonlat_to_3857(lon: float, lat: float) -> tuple[float, float]:
     lat = max(min(lat, 85.0511), -85.0511)  # Web Mercator limit
     x = lon * MERC_R / 180.0
-    y = (
-        math.log(math.tan((90.0 + lat) * math.pi / 360.0))
-        / (math.pi / 180.0)
-        * MERC_R
-        / 180.0
-    )
+    y = math.log(math.tan((90.0 + lat) * math.pi / 360.0)) / (math.pi / 180.0) * MERC_R / 180.0
     return x, y
 
 
@@ -298,9 +297,7 @@ def parse_featureinfo(text: str) -> list[dict]:
 
 def fetch(url: str) -> tuple[str, bytes]:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(
-        req, timeout=TIMEOUT_S
-    ) as r:  # follows the 302 to /streaming/
+    with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:  # follows the 302 to /streaming/
         return r.headers.get("Content-Type", ""), r.read()
 
 
@@ -351,9 +348,7 @@ def resolve_time(valid: str | None, time: str | None) -> str | None:
     return None
 
 
-ATTRIBUTION = (
-    "Map data: © {year} ECMWF, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
-)
+ATTRIBUTION = "Map data: © {year} ECMWF, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
 
 
 def attribution(layer: str) -> str:
@@ -365,18 +360,22 @@ def attribution(layer: str) -> str:
 
 # --- CLI --------------------------------------------------------------------------------------
 
+
 def _join_negative_values(argv: list[str]) -> list[str]:
     """Accept `--bbox -10,35,30,60` (argparse would read -10,... as an option)."""
     out, i = [], 0
     while i < len(argv):
-        if argv[i] in ("--bbox", "--lon", "--lat") and i + 1 < len(argv) and re.match(r"-\d", argv[i + 1]):
+        if (
+            argv[i] in ("--bbox", "--lon", "--lat")
+            and i + 1 < len(argv)
+            and re.match(r"-\d", argv[i + 1])
+        ):
             out.append(f"{argv[i]}={argv[i + 1]}")
             i += 2
         else:
             out.append(argv[i])
             i += 1
     return out
-
 
 
 def _load_caps(a) -> list[dict]:
@@ -396,18 +395,14 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     def common(sp):
-        sp.add_argument(
-            "--token", help="'public' (default) or 'key' to use your ECMWF API key"
-        )
+        sp.add_argument("--token", help="'public' (default) or 'key' to use your ECMWF API key")
         sp.add_argument("--json", action="store_true")
 
     sp = sub.add_parser("layers", help="list layers")
     common(sp)
     sp.add_argument("--caps", help="read GetCapabilities XML from a file")
     sp.add_argument("--search")
-    sp.add_argument(
-        "--public", action="store_true", help="only the *_public met layers"
-    )
+    sp.add_argument("--public", action="store_true", help="only the *_public met layers")
     sp = sub.add_parser("times", help="valid times of a layer")
     common(sp)
     sp.add_argument("--caps")
@@ -416,17 +411,13 @@ def main(argv=None) -> int:
     common(sp)
     sp.add_argument("--layer", required=True)
     sp.add_argument("--style", default="")
-    sp.add_argument(
-        "--bbox", required=True, help="W,S,E,N in degrees, e.g. -15,33,35,65"
-    )
+    sp.add_argument("--bbox", required=True, help="W,S,E,N in degrees, e.g. -15,33,35,65")
     sp.add_argument("--crs", default="EPSG:3857", choices=["EPSG:3857", "EPSG:4326"])
     sp.add_argument("--width", type=int, default=1024)
     sp.add_argument("--height", type=int, default=768)
     sp.add_argument("--time", help="valid time ISO8601, e.g. 2026-10-03T12:00:00Z")
     sp.add_argument("--valid", help="valid time relative to now in hours, e.g. +24")
-    sp.add_argument(
-        "--no-background", action="store_true", help="only the transparent data layer"
-    )
+    sp.add_argument("--no-background", action="store_true", help="only the transparent data layer")
     sp.add_argument("--url-only", action="store_true")
     sp.add_argument("-o", "--output")
     sp = sub.add_parser("legend")
@@ -445,9 +436,7 @@ def main(argv=None) -> int:
     try:
         token = resolve_token(a.token)
         if a.cmd == "layers":
-            ls = [
-                summarise(l) for l in filter_layers(_load_caps(a), a.search, a.public)
-            ]
+            ls = [summarise(layer) for layer in filter_layers(_load_caps(a), a.search, a.public)]
             if a.json:
                 print(
                     json.dumps(
@@ -461,7 +450,8 @@ def main(argv=None) -> int:
             else:
                 for s in ls:
                     rng = (
-                        f"valid {s['first_time']} .. {s['last_time']} (+{s['forecast_hours_ahead']} h)"
+                        f"valid {s['first_time']} .. {s['last_time']} "
+                        f"(+{s['forecast_hours_ahead']} h)"
                         if "first_time" in s
                         else "static"
                     )
@@ -470,11 +460,9 @@ def main(argv=None) -> int:
             return 0
 
         if a.cmd == "times":
-            layer = next((l for l in _load_caps(a) if l["name"] == a.layer), None)
+            layer = next((c for c in _load_caps(a) if c["name"] == a.layer), None)
             if layer is None:
-                raise ValueError(
-                    f"layer {a.layer!r} not found — list layers with `wms.py layers`"
-                )
+                raise ValueError(f"layer {a.layer!r} not found — list layers with `wms.py layers`")
             times = expand_time(layer["time"]["values"]) if layer["time"] else []
             data = {
                 "layer": a.layer,
@@ -491,14 +479,10 @@ def main(argv=None) -> int:
         if a.cmd == "getmap":
             bbox = tuple(float(x) for x in a.bbox.split(","))
             time = resolve_time(a.valid, a.time)
-            url = getmap_url(
-                a.layer, bbox, a.width, a.height, time, a.style, a.crs, token
-            )
+            url = getmap_url(a.layer, bbox, a.width, a.height, time, a.style, a.crs, token)
             if a.url_only or not a.output:
                 print(
-                    json.dumps(
-                        {"url": redact(url), "attribution": attribution(a.layer)}
-                    )
+                    json.dumps({"url": redact(url), "attribution": attribution(a.layer)})
                     if a.json
                     else redact(url)
                 )
@@ -530,7 +514,10 @@ def main(argv=None) -> int:
                     )
                     img = composite([bg, img, fg])
                 except ImportError:
-                    note = " (Pillow missing: data layer only — run with `uv run` for background and coastlines)"
+                    note = (
+                        " (Pillow missing: data layer only — "
+                        "run with `uv run` for background and coastlines)"
+                    )
             Path(a.output).write_bytes(img)
             print(
                 f"saved {a.output}{note}\nURL: {redact(url)}\nAttribution: {attribution(a.layer)}"
@@ -553,13 +540,10 @@ def main(argv=None) -> int:
                 raise RuntimeError(f"WMS error — {err}")
             vals = parse_featureinfo(body.decode())
             print(
-                json.dumps(
-                    {"values": vals, "attribution": attribution(a.layer)}, indent=2
-                )
+                json.dumps({"values": vals, "attribution": attribution(a.layer)}, indent=2)
                 if a.json
                 else "\n".join(
-                    f"{v['layer']}: {v['value']} {v['unit']} at {v['lat']},{v['lon']}"
-                    for v in vals
+                    f"{v['layer']}: {v['value']} {v['unit']} at {v['lat']},{v['lon']}" for v in vals
                 )
             )
             return 0

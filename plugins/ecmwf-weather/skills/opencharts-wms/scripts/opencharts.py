@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """ECMWF OpenCharts — find and download official ECMWF forecast charts (PNG/PDF). Stdlib only.
 
   python3 opencharts.py search "2 m temperature"           # product names
@@ -50,9 +55,7 @@ def _get_bytes(url: str) -> bytes:
 # --- catalogue --------------------------------------------------------------------------------
 
 
-def search(
-    products: list[dict], text: str = "", model: str | None = None
-) -> list[dict]:
+def search(products: list[dict], text: str = "", model: str | None = None) -> list[dict]:
     """All words of `text` must appear in name+title; best (shortest-name) matches first."""
     words = [w.lower() for w in text.replace("metre", "m").split()]
     out = []
@@ -75,10 +78,7 @@ def search(
 
 def parse_schema(schema: dict) -> dict:
     path = next(k for k in schema["paths"] if k.startswith("/products/"))
-    params = {
-        p["name"]: p["schema"]
-        for p in schema["paths"][path]["get"].get("parameters", [])
-    }
+    params = {p["name"]: p["schema"] for p in schema["paths"][path]["get"].get("parameters", [])}
 
     def enum(n):
         return params.get(n, {}).get("enum", [])
@@ -152,9 +152,7 @@ def main(argv=None) -> int:
     sp.add_argument("--json", action="store_true")
     sp = sub.add_parser("get")
     sp.add_argument("product")
-    sp.add_argument(
-        "--base-time", help="ISO, e.g. 2026-10-02T00:00:00Z (default: latest)"
-    )
+    sp.add_argument("--base-time", help="ISO, e.g. 2026-10-02T00:00:00Z (default: latest)")
     sp.add_argument("--step", type=int, help="hours after base time")
     sp.add_argument("--valid-time", help="ISO valid time (instead of --step)")
     sp.add_argument("--projection", default="opencharts_europe")
@@ -179,21 +177,16 @@ def main(argv=None) -> int:
             else:
                 for p in hits[:40]:
                     print(f"{p['name']:45} {p['title']}")
-                print(
-                    f"\n{len(hits)} product(s). Options: opencharts.py options <name>"
-                )
+                print(f"\n{len(hits)} product(s). Options: opencharts.py options <name>")
             return 0
 
-        opts = parse_schema(
-            _get_json(f"{API}/schema/?package=openchart&product={a.product}")
-        )
+        opts = parse_schema(_get_json(f"{API}/schema/?package=openchart&product={a.product}"))
         if a.cmd == "options":
             if a.json:
                 print(json.dumps(opts, indent=2))
             else:
-                print(
-                    f"base times : {', '.join(opts['base_times'][:4])} … ({len(opts['base_times'])})"
-                )
+                base_times = opts["base_times"]
+                print(f"base times : {', '.join(base_times[:4])} … ({len(base_times)})")
                 print(
                     f"steps      : {opts['steps'][0]}..{opts['steps'][-1]} ({len(opts['steps'])})"
                 )
@@ -208,11 +201,9 @@ def main(argv=None) -> int:
         if a.step is not None:
             validate_choice("step", a.step, opts["steps"])
         resp = _get_json(
-            product_url(
-                a.product, a.base_time, a.step, a.valid_time, a.projection, a.format
-            )
+            product_url(a.product, a.base_time, a.step, a.valid_time, a.projection, a.format)
         )
-        link, meta = image_link(resp)
+        link, _meta = image_link(resp)
         Path(a.output).write_bytes(_get_bytes(link))
         desc = resp["data"].get("attributes", {}).get("description", "")
         print(f"saved {a.output}\n{desc}\nAttribution: {attribution()}")

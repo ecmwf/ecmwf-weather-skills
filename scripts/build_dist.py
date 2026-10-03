@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Build upload archives in dist/.
 
   python3 scripts/build_dist.py
@@ -29,11 +34,7 @@ def _zip(src: Path, out: Path, skip_bin: bool, strip_meta: bool) -> Path:
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted(src.rglob("*")):
             rel = f.relative_to(src.parent).as_posix()
-            if (
-                f.is_dir()
-                or EXCLUDE.search(rel)
-                or (skip_bin and f"/{PLUGIN}/bin/" in f"/{rel}")
-            ):
+            if f.is_dir() or EXCLUDE.search(rel) or (skip_bin and f"/{PLUGIN}/bin/" in f"/{rel}"):
                 continue
             if strip_meta and f.name == "SKILL.md":
                 z.writestr(rel, _strip_metadata(f.read_text()))

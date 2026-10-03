@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
@@ -38,8 +43,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import odcatalog as oc  # noqa: E402  (stdlib sibling: latest run, sizes, attribution)
+import odcatalog as oc  # stdlib sibling script (latest run, sizes, attribution)
 
 UTC = timezone.utc
 DEFAULT_PARAMS = ["2t", "tp", "10u", "10v", "msl", "tcc"]
@@ -225,18 +229,12 @@ def main(argv=None) -> int:
             nbytes = os.path.getsize(a.file)
         else:
             if a.date:
-                run = datetime.strptime(a.date, "%Y%m%d").replace(
-                    hour=a.time or 0, tzinfo=UTC
-                )
+                run = datetime.strptime(a.date, "%Y%m%d").replace(hour=a.time or 0, tzinfo=UTC)
             else:
-                run = oc.latest_run(
-                    a.model, "oper", step=oc.max_step(a.steps), source=a.source
-                )
+                run = oc.latest_run(a.model, "oper", step=oc.max_step(a.steps), source=a.source)
                 if run is None:
                     raise RuntimeError("no published run found in the last 72 h")
-            steps = oc._parse_steps(
-                a.steps, oc.steps_for(a.model, "oper", run.hour, run.date())
-            )
+            steps = oc._parse_steps(a.steps, oc.steps_for(a.model, "oper", run.hour, run.date()))
             per_step = []
             for s in steps:
                 idx_url = oc.file_url(run, a.model, "oper", s, source=a.source, ext="index")
@@ -270,11 +268,11 @@ def main(argv=None) -> int:
                 else:
                     import earthkit.data as ekd
 
-                    tmp = tempfile.NamedTemporaryFile(suffix=".grib2", delete=False)
-                    tmp.close()
-                    atexit.register(os.unlink, tmp.name)
-                    oc.download_ranges(oc.range_jobs(per_step), tmp.name, workers=a.workers)
-                    fl = ekd.from_source("file", tmp.name).to_fieldlist()
+                    fd, tmp_path = tempfile.mkstemp(suffix=".grib2")
+                    os.close(fd)
+                    atexit.register(os.unlink, tmp_path)
+                    oc.download_ranges(oc.range_jobs(per_step), tmp_path, workers=a.workers)
+                    fl = ekd.from_source("file", tmp_path).to_fieldlist()
                 len(fl)  # force download/decode inside the redirect
     except ImportError as e:
         print(
@@ -315,10 +313,7 @@ def main(argv=None) -> int:
         cols = list(res["units"])
         print("valid_time         " + "  ".join(f"{c:>13}" for c in cols))
         for r in res["series"]:
-            print(
-                f"{r['valid_time']:<18} "
-                + "  ".join(f"{r.get(c, ''):>13}" for c in cols)
-            )
+            print(f"{r['valid_time']:<18} " + "  ".join(f"{r.get(c, ''):>13}" for c in cols))
         print(f"Note: {res['note']}")
         print(f"Attribution: {res['attribution']['short']}")
     return 0

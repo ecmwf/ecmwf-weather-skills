@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Run skill evals: a fresh, context-free agent with only this plugin loaded.
 
   python3 scripts/run_evals.py                         # all cases, Claude Code
@@ -64,22 +69,14 @@ def parse_transcript(agent: str, raw: str) -> dict:
                     t["error"] = t["final"] or "api_error"
         elif agent == "codex":
             item = ev.get("item", {})
-            if (
-                ev.get("type") == "item.completed"
-                and item.get("type") == "command_execution"
-            ):
+            if ev.get("type") == "item.completed" and item.get("type") == "command_execution":
                 t["commands"].append(item.get("command", ""))
                 t["skills"] |= _skills_from_text(item.get("command", ""))
-            elif (
-                ev.get("type") == "item.completed"
-                and item.get("type") == "agent_message"
-            ):
+            elif ev.get("type") == "item.completed" and item.get("type") == "agent_message":
                 t["final"] = item.get("text", "")
             elif ev.get("type") in ("error", "turn.failed"):
                 t["error"] = json.dumps(ev)[:300]
-    if (
-        agent == "gemini"
-    ):  # one pretty-printed JSON document, possibly after banner lines
+    if agent == "gemini":  # one pretty-printed JSON document, possibly after banner lines
         i = raw.find("{")
         try:
             doc = json.loads(raw[i:]) if i >= 0 else {}
@@ -153,9 +150,7 @@ def agent_command(
             "--max-budget-usd",
             str(case.get("max_budget_usd", 2)),
         ]
-        if (
-            os.environ.get("EVAL_BARE") == "1"
-        ):  # CI: strict isolation, needs ANTHROPIC_API_KEY
+        if os.environ.get("EVAL_BARE") == "1":  # CI: strict isolation, needs ANTHROPIC_API_KEY
             cmd.append("--bare")
     elif agent == "codex":
         cmd = [
@@ -192,9 +187,7 @@ def prepare_workdir(agent: str, case: dict) -> Path:
     return wd
 
 
-def run_case(
-    agent: str, case: dict, outdir: Path, model: str | None, attempt: int
-) -> dict:
+def run_case(agent: str, case: dict, outdir: Path, model: str | None, attempt: int) -> dict:
     wd = prepare_workdir(agent, case)
     cmd = agent_command(agent, case["prompt"], wd, case, model)
     t0 = time.time()
@@ -210,9 +203,7 @@ def run_case(
         raw, err, rc = p.stdout, p.stderr, p.returncode
     except subprocess.TimeoutExpired as e:
         raw, err, rc = (
-            (e.stdout or b"").decode()
-            if isinstance(e.stdout, bytes)
-            else (e.stdout or ""),
+            (e.stdout or b"").decode() if isinstance(e.stdout, bytes) else (e.stdout or ""),
             "TIMEOUT",
             -1,
         )

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # Development-only config (tests, evals). Not part of the shipped plugin.
 [project]
 name = "ecmwf-weather-skill-dev"
@@ -19,8 +23,25 @@ earthkit = [
 [tool.uv]
 package = false
 
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# Markdown code blocks in skill references are kept deliberately compact (agent token budget);
+# ruff is for the Python sources only.
+extend-exclude = ["evals/runs", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Repo tooling and every skill's scripts are importable by name in tests (they are standalone
+# scripts, not packages; at runtime Python puts each script's own directory on sys.path).
+pythonpath = [
+    "tests",
+    "scripts",
+    "plugins/ecmwf-weather/skills/open-data/scripts",
+]
 addopts = "-m 'not live and not earthkit' -ra"
 markers = [
     "live: hits real ECMWF services (run with -m live)",

@@ -1,14 +1,16 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import shutil
 import subprocess
-import sys
 import threading
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 import pytest
-
 from conftest import SKILLS, load_script
 
 wm = load_script("opencharts-wms", "webmap")
@@ -57,9 +59,7 @@ def test_service_commands_cache_run_then_extract(tmp_path):
             Path(cmd[cmd.index("-o") + 1]).write_bytes(b"\x89PNG")
         return ""
 
-    svc = wm.MeteogramService(
-        tmp_path / ".cache", runner=runner, latest=lambda: "2026100200"
-    )
+    svc = wm.MeteogramService(tmp_path / ".cache", runner=runner, latest=lambda: "2026100200")
     png = svc.meteogram(38.72, -9.14)
     assert png.read_bytes() == b"\x89PNG"
     flat = [" ".join(map(str, c)) for c in calls]
@@ -92,13 +92,9 @@ def test_server_routes(tmp_path):
     try:
         assert b"leaflet" in urllib.request.urlopen(base + "/").read().lower()
         r = urllib.request.urlopen(base + "/api/meteogram.png?lat=38.7&lon=-9.1")
-        assert r.headers["Content-Type"] == "image/png" and r.read().startswith(
-            b"\x89PNG"
-        )
+        assert r.headers["Content-Type"] == "image/png" and r.read().startswith(b"\x89PNG")
         assert (
-            json.loads(
-                urllib.request.urlopen(base + "/api/point.json?lat=1&lon=2").read()
-            )["lat"]
+            json.loads(urllib.request.urlopen(base + "/api/point.json?lat=1&lon=2").read())["lat"]
             == 1
         )
         with pytest.raises(urllib.error.HTTPError) as e:
@@ -119,14 +115,15 @@ def test_app_js_time_parsing_with_node():
         + """
 ;const out = {
   times: expandTime('2026-10-03T00:00:00Z,2026-10-03T06:00:00Z/2026-10-03T18:00:00Z/PT6H'),
-  closest: closestTime(['2026-10-03T06:00:00Z','2026-10-03T12:00:00Z'], new Date('2026-10-03T10:00:00Z')),
+  closest: closestTime(
+    ['2026-10-03T06:00:00Z','2026-10-03T12:00:00Z'],
+    new Date('2026-10-03T10:00:00Z'),
+  ),
 };
 console.log(JSON.stringify(out));
 """
     )
-    res = subprocess.run(
-        ["node", "-e", script], capture_output=True, text=True, timeout=30
-    )
+    res = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
     assert res.returncode == 0, res.stderr
     out = json.loads(res.stdout)
     assert out["times"] == [

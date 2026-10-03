@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # ecCharts WMS layers
 
 List the live catalogue with `python3 scripts/wms.py layers [--public] [--search TEXT] --json`;

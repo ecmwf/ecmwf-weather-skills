@@ -1,6 +1,37 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # ECMWF Weather — agent conventions
 
-Agent Skills for ECMWF data. Plan: `PLAN.md`. Roadmap: `TODO.md`.
+This file (`AGENTS.md`) is the canonical agent-instructions document. `CLAUDE.md` is a symlink
+to it for cross-tool compatibility — edit `AGENTS.md`. The rules apply to humans too.
+
+Agent Skills for ECMWF data. Design: `PLAN.md`. Open work: `TODO.md`. Done work: `CHANGELOG.md`.
+
+## Guidelines
+
+- **CRITICAL: never suppress warnings, lint errors or test failures** with annotations
+  (`# noqa`, `# type: ignore`, `pytest.skip` to dodge a failure, per-file ignores, raising
+  limits in config) unless the suppression is itself the correct semantic choice. If a lint
+  fires, fix the code. If a test fails, fix the bug. Quick workarounds that hide problems are
+  prohibited.
+- **CRITICAL: proper solutions over quick fixes.** Understand the root cause and fix it:
+  - do not skip platforms or configurations to avoid fixing a failure;
+  - do not remove or weaken tests or eval expectations to make them pass (relax an eval only
+    when the answer was correct and the grader was too literal — record why);
+  - do not add TODO/FIXME/HACK comments instead of doing the work now;
+  - if the fix spans several files, change them all; if unsure the fix is proper, ask.
+- **Plan before work.** Before changing anything, state how the result will be verified,
+  which tests come first (TDD), the behaviour expected (behaviour-driven), and summarise the
+  design and plan. Ask questions to resolve ambiguity — asking is encouraged.
+- **No process-ephemeral references** in code, comments, docs, commit messages or plans.
+  Banned: workflow ordinals ("Phase 2", "Round 1", "M3", "Step 4"), tracker ordinals
+  ("sub-task 4", "issue #94" inside code), review buckets ("Critical #1"), history phrases
+  ("after review feedback", "fixed in commit abc123"). Name what the thing **is** or **does**
+  ("the parallel Range fetcher", not "the M1 speed-up"). Git history records chronology.
+- **`make all` is the gate.** Run it before every commit; it must be green.
 
 ## Layout
 
@@ -31,28 +62,38 @@ Agent Skills for ECMWF data. Plan: `PLAN.md`. Roadmap: `TODO.md`.
 - **Trust live services over docs** — ECMWF docs lag (e.g. post-50r1 streams). Re-run the research
   step (`PLAN.md` §0) before each minor release.
 
-## Tooling
+## Build / lint / test
 
-| Command | Does |
+The top-level `Makefile` is the single entry point; `make help` lists every target. The
+Makefile wraps the scripts below, so there is one source of truth for each command.
+
+| Target | Does |
 |---|---|
-| `python3 scripts/validate_packaging.py` | marketplace, both manifests and every SKILL.md agree (name, version, licence, displayName) |
-| `python3 scripts/check_skills.py` | best-practice lint of every skill (see next section) |
-| `python3 scripts/bump_version.py --level patch\|minor\|major` / `--set X.Y.Z` | bumps all version fields together; refuses if they already disagree |
-| `python3 scripts/regenerate_references.py [--check]` | rewrites the generated references from live catalogues |
-| `python3 scripts/check_links.py` | probes every URL in the skills (known non-browsable ones listed with reasons) |
-| `python3 scripts/build_dist.py` | `dist/ecmwf-weather-claude.zip` (no `bin/`) and `-openai.zip` (no SKILL.md `metadata:`) |
-| `python3 scripts/run_evals.py` | fresh-agent skill evals (see Testing) |
+| `make all` | **the gate**: `lint` + `check` + `test` |
+| `make lint` | skill best-practice lint (`check_skills.py`), `ruff check`, `ruff format --check`, `reuse lint` |
+| `make check` | manifests/versions agree (`validate_packaging.py`), `docs/skills.md` up to date, `claude plugin validate` |
+| `make test` / `test-earthkit` / `test-live` / `test-all` | offline / earthkit fixtures / live ECMWF / all |
+| `make evals AGENT=… MODEL=… CASES="…"` | fresh-agent skill evals (see Testing) |
+| `make fmt` | apply ruff formatting and safe fixes |
+| `make docs` | regenerate `docs/skills.md` from every SKILL.md |
+| `make references` / `references-check` | regenerate / drift-check references from live catalogues |
+| `make links` | probe every URL in the skills |
+| `make dist` | `dist/ecmwf-weather-claude.zip` (no `bin/`) and `-openai.zip` (no SKILL.md `metadata:`) |
+| `make version` / `make version X.Y.Z` / `version-check` | print / set everywhere / verify the version |
+| `make clean` | remove build outputs, caches, eval transcripts — never sources |
+| `make setup` | `uv sync` and the pre-push hook (a human action: it changes git config) |
 
-- **Generated references — never hand-edit**: `open-data/references/fields.md`,
+- **Generated files — never hand-edit**: `docs/skills.md` (`make docs`), `open-data/references/fields.md`,
   `opencharts-wms/references/layer-catalog.md`, `earthkit/references/versions.md`. Change the
   renderer in `scripts/regenerate_references.py` instead. They omit volatile facts (valid times)
   so they only change when a catalogue does.
-- **Pre-push hook**: `.githooks/pre-push` (packaging, lint, plugin validate, offline tests).
-  Enable once per clone yourself with `git config core.hooksPath .githooks` — agents must not
-  change git config.
-- **CI** (`.github/workflows/`): `tests.yml` on every push/PR (offline + earthkit fixtures);
-  `weekly.yml` (live tests without credentials, link check, reference refresh → PR with a patch
-  bump); `evals.yml` (manual, Claude Code `--bare` with `ANTHROPIC_API_KEY`, choose the model).
+- **Pre-push hook**: `.githooks/pre-push` runs `make all`. Enable once per clone with
+  `make setup` — agents must not change git config.
+- **CI** (`.github/workflows/`) calls the same `make` targets: `tests.yml` (`make all`,
+  `make test-earthkit`) on every push and PR; `weekly.yml` (live tests, `make links`,
+  `make references` → PR with a MICRO bump); `evals.yml` (manual, Claude Code `--bare` with
+  `ANTHROPIC_API_KEY`, choose the model). Third-party actions are pinned to full commit SHAs
+  with the release in a comment; update both together.
 - **Editing Python with scripts**: a formatter may reflow files after each write, so scripted
   string replacements can silently match nothing. Re-read before editing, or assert the
   replacement happened.
@@ -196,3 +237,55 @@ precipitation bug and a slow fetcher. Check `seconds`, the command list
 
 Evals cost money and take minutes — run them when `SKILL.md`, `references/` or script CLIs change,
 not on every edit. Record pass/fail per case in the PR description.
+
+## Development workflow
+
+1. **Pick work** from `TODO.md` (accepted, open items).
+2. **Plan** — verification, tests first, behaviour, questions, plan summary (see Guidelines).
+3. **Branch** off `main`: `<type>/<kebab-summary>`, `type` ∈ `feat`, `fix`, `docs`, `chore`,
+   `refactor`, `test`, `ci`, `perf`, `build`, `security`.
+4. **Develop** test-first; skill text changes start with eval cases. Record every user-facing
+   change in `CHANGELOG.md` under `[Unreleased]` as you go.
+5. **Gate** — `make all` green; `make evals` when skill text or script CLIs changed.
+6. **Commit** with a conventional-commit message (`feat(polytope): …`) and open a pull request
+   against `main` using `.github/PULL_REQUEST_TEMPLATE.md` (it carries the ECMWF CLA).
+7. All changes reach `main` through a pull request; CI must be green before merge.
+
+Agents NEVER commit, push, merge or open a PR without explicit user approval.
+
+## Version control and releases
+
+- Semantic Versioning `MAJOR.MINOR.MICRO`. **Never bump MAJOR unless the user says so.**
+  MINOR for new features or skills, MICRO for fixes and documentation.
+- **Never prefix tags or releases with `v`** (`0.2.0`, not `v0.2.0`).
+- The version lives in both plugin manifests and every `SKILL.md`; change it only with
+  `make version X.Y.Z` and verify with `make version-check`.
+- Release: `[Unreleased]` complete → `make version X.Y.Z` → move the entries under
+  `## [X.Y.Z] - YYYY-MM-DD` → `make all` and `make test-all` → commit → `git tag X.Y.Z` on a
+  clean tree → push the tag and create the GitHub release. Stop and warn if anything is
+  uncommitted.
+
+## Tracking work done
+
+`CHANGELOG.md` `[Unreleased]` is the single backward-looking record — user-facing, concise.
+Design decisions go in `PLAN.md`; open work in `TODO.md`. No separate status files.
+
+## Licensing (ECMWF open-source rules)
+
+Follows ecmwf/codex `Legal/Open-Sourcing-Software.md` and `Legal/Copyright-And-Licensing.md`.
+
+- `LICENSE` is the unmodified Apache 2.0 text plus ECMWF's intergovernmental notice at the tail;
+  `LICENSES/Apache-2.0.txt` is the pristine text for REUSE. Never edit either.
+- `NOTICE` carries ECMWF's copyright and the intergovernmental notice (plus any third-party
+  attributions). `CONTRIBUTORS` lists every contributor (`git shortlog -s -e --no-merges HEAD`).
+- **Every new file starts with the SPDX header** in its comment syntax (after the YAML
+  frontmatter in `SKILL.md`, after the shebang in scripts):
+  ```
+  SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+  SPDX-License-Identifier: Apache-2.0
+  ```
+  Files that cannot carry a comment (JSON, fixtures, images) are covered in `REUSE.toml`.
+  `make lint` runs `reuse lint`.
+- Third-party code keeps its own header and licence; nothing incompatible with Apache 2.0.
+- External contributions require the ECMWF Contributor Licence Agreement (in the PR template).
+- Spelling: "licence" (noun), "license" (verb).

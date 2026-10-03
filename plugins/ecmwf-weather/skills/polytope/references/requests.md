@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Polytope requests
 
 Verified against polytope.ecmwf.int; published docs and notebooks contain errors noted below.

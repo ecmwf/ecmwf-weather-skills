@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Lint skills against Anthropic's skill-authoring best practices.
 
 https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
@@ -30,7 +35,8 @@ RESERVED = ("anthropic", "claude")
 FIRST_PERSON = re.compile(r"^(I|We|You|My|Our)\b", re.I)
 TIME_SENSITIVE = re.compile(
     r"\b(since|before|after|until|as of)\s+(\d{1,2}\s+)?(January|February|March|April|May|June|"
-    r"July|August|September|October|November|December)\b|\b(since|before|after|until|as of)\s+20\d\d",
+    r"July|August|September|October|November|December)\b"
+    r"|\b(since|before|after|until|as of)\s+20\d\d",
     re.I,
 )
 REF_LINK = re.compile(r"references/([A-Za-z0-9_.-]+\.md)")
@@ -71,10 +77,8 @@ def check_skill(skill_dir: Path) -> list[str]:
     fm, body = parse_frontmatter(text)
     name, desc = fm.get("name", ""), fm.get("description", "")
 
-    if not re.fullmatch(r"[a-z0-9-]{1,%d}" % MAX_NAME, name):
-        p.append(
-            f"name {name!r} must be 1-{MAX_NAME} lowercase letters, digits, hyphens"
-        )
+    if not re.fullmatch(rf"[a-z0-9-]{{1,{MAX_NAME}}}", name):
+        p.append(f"name {name!r} must be 1-{MAX_NAME} lowercase letters, digits, hyphens")
     if name != skill_dir.name:
         p.append(f"name {name!r} must match directory {skill_dir.name!r}")
     if any(r in name for r in RESERVED):
@@ -84,13 +88,9 @@ def check_skill(skill_dir: Path) -> list[str]:
     if len(desc) > MAX_DESC:
         p.append(f"description is {len(desc)} chars (max {MAX_DESC}, i.e. 1024)")
     if desc and not _third_person(desc):
-        p.append(
-            "description must be written in third person (e.g. 'Finds…', not 'Find…')"
-        )
+        p.append("description must be written in third person (e.g. 'Finds…', not 'Find…')")
     if ": " in desc:
-        p.append(
-            "description contains ': ' which breaks the YAML scalar — use an em dash"
-        )
+        p.append("description contains ': ' which breaks the YAML scalar — use an em dash")
     if "<" in desc and ">" in desc:
         p.append("description must not contain XML tags")
 
@@ -113,15 +113,11 @@ def check_skill(skill_dir: Path) -> list[str]:
             p.append(f"references/{r} is not linked from SKILL.md")
         rtext = (refs_dir / r).read_text()
         if REF_LINK.search(rtext):
-            p.append(
-                f"references/{r} links other references — keep references one level deep"
-            )
+            p.append(f"references/{r} links other references — keep references one level deep")
         if len(rtext.splitlines()) > REF_TOC_LINES and not re.search(
             r"^## Contents\s*$", rtext, re.M
         ):
-            p.append(
-                f"references/{r} is over {REF_TOC_LINES} lines and needs a table of contents"
-            )
+            p.append(f"references/{r} is over {REF_TOC_LINES} lines and needs a table of contents")
     for missing in linked - set(refs):
         p.append(f"SKILL.md links references/{missing} which does not exist")
 

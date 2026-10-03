@@ -1,10 +1,13 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import subprocess
 import sys
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-
 from conftest import FIXTURES, SKILLS, load_script
 
 oc = load_script("opencharts-wms", "opencharts")
@@ -22,9 +25,7 @@ def test_search_matches_name_and_title_all_words():
 
 
 def test_search_model_filter():
-    hits = [
-        p["name"] for p in oc.search(SEARCH["results"], "temperature", model="aifs")
-    ]
+    hits = [p["name"] for p in oc.search(SEARCH["results"], "temperature", model="aifs")]
     assert hits and all(h.startswith("aifs") for h in hits)
     hits = [p["name"] for p in oc.search(SEARCH["results"], "temperature", model="ifs")]
     assert hits and not any(h.startswith("aifs") for h in hits)
@@ -58,9 +59,7 @@ def test_product_url():
 
 def test_image_link_and_meta():
     link, meta = oc.image_link(PRODUCT)
-    assert link.startswith("https://charts.ecmwf.int/content/") and link.endswith(
-        ".png"
-    )
+    assert link.startswith("https://charts.ecmwf.int/content/") and link.endswith(".png")
     assert meta["licence"] == "CC-BY-4.0"
 
 
@@ -71,9 +70,7 @@ def test_image_link_error_message():
 
 def test_validate_choice_lists_alternatives():
     with pytest.raises(ValueError, match="opencharts_europe"):
-        oc.validate_choice(
-            "projection", "europe", ["opencharts_europe", "opencharts_global"]
-        )
+        oc.validate_choice("projection", "europe", ["opencharts_europe", "opencharts_global"])
 
 
 @pytest.mark.live

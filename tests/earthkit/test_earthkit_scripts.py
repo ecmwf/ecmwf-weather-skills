@@ -1,8 +1,11 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import subprocess
 
 import pytest
-
 from conftest import FIXTURES, SKILLS, load_script
 
 GRIB = FIXTURES / "ifs-sfc-5deg-20261002-00z.grib2"
@@ -76,7 +79,7 @@ def test_ekplot_meteogram_panels_none_becomes_nan():
     m = load_script("earthkit", "ekplot")
     pj = json.loads(json.dumps(POINT_JSON))
     pj["series"][0]["precip_mm"] = None
-    p = [x for x in m.meteogram_panels(pj) if x["key"] == "precip_mm"][0]
+    p = next(x for x in m.meteogram_panels(pj) if x["key"] == "precip_mm")
     assert math.isnan(p["values"][0]) and p["values"][1] == 1.2
 
 
@@ -115,8 +118,7 @@ def test_ekplot_meteogram_panels_ensemble_band():
 def test_ekplot_attribution_comes_from_the_data():
     m = load_script("earthkit", "ekplot")
     assert (
-        m.attribution_for({"attribution": {"short": "Data: © 2026 ECMWF"}})
-        == "Data: © 2026 ECMWF"
+        m.attribution_for({"attribution": {"short": "Data: © 2026 ECMWF"}}) == "Data: © 2026 ECMWF"
     )
     assert "CC BY 4.0" in m.attribution_for({})  # Open Data default
 

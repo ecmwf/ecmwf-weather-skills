@@ -1,10 +1,11 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
-import sys
 
+import run_evals as re_
 from conftest import ROOT
-
-sys.path.insert(0, str(ROOT / "scripts"))
-import run_evals as re_  # noqa: E402
 
 CLAUDE_STREAM = "\n".join(
     json.dumps(x)
@@ -30,7 +31,9 @@ CLAUDE_STREAM = "\n".join(
                         "type": "tool_use",
                         "name": "Bash",
                         "input": {
-                            "command": "python3 /x/skills/open-data/scripts/odcatalog.py latest --json"
+                            "command": (
+                                "python3 /x/skills/open-data/scripts/odcatalog.py latest --json"
+                            )
                         },
                     }
                 ]

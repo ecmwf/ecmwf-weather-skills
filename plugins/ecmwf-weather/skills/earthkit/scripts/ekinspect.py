@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["earthkit-data>=1.2"]
@@ -24,28 +29,32 @@ def _iso(dt) -> str:
     return dt.strftime("%Y-%m-%dT%H:%MZ")
 
 
+def _meta(field, key, default=None):
+    """GRIB/NetCDF metadata value of one field (earthkit-data 1.x API)."""
+    return field.get(f"metadata.{key}", default=default)
+
+
 def summarise(fl) -> dict:
     params: dict[str, dict] = {}
     base, valid = set(), set()
     for f in fl:
-        md = lambda k, default=None: f.get(f"metadata.{k}", default=default)  # 1.x API
-        name = md("shortName")
+        name = _meta(f, "shortName")
         p = params.setdefault(
             name,
             {
-                "units": md("units", default=None),
-                "name": md("name", default=None),
-                "levtype": md("levtype", default=None),
+                "units": _meta(f, "units", default=None),
+                "name": _meta(f, "name", default=None),
+                "levtype": _meta(f, "levtype", default=None),
                 "levels": set(),
                 "steps": set(),
                 "members": set(),
             },
         )
-        lev = md("level", default=None)
+        lev = _meta(f, "level", default=None)
         if p["levtype"] in ("pl", "sol", "ml") and lev is not None:
             p["levels"].add(int(lev))
         p["steps"].add(int(f.time.step().total_seconds() // 3600))
-        num = md("number", default=None)
+        num = _meta(f, "number", default=None)
         if num not in (None, 0):
             p["members"].add(int(num))
         base.add(f.time.base_datetime())
@@ -101,12 +110,9 @@ def main(argv=None) -> int:
     if a.json:
         print(json.dumps(s, indent=2))
         return 0
-    print(
-        f"{a.path}: {s['fields']} fields, grid {s['grid']['type']} {s['grid']['shape']}"
-    )
-    print(
-        f"base time(s): {', '.join(s['base_times'])}; valid {s['valid_time_range'][0]} .. {s['valid_time_range'][1]}"
-    )
+    print(f"{a.path}: {s['fields']} fields, grid {s['grid']['type']} {s['grid']['shape']}")
+    first_valid, last_valid = s["valid_time_range"][0], s["valid_time_range"][1]
+    print(f"base time(s): {', '.join(s['base_times'])}; valid {first_valid} .. {last_valid}")
     for k, p in s["params"].items():
         extra = f" levels {p['levels']}" if "levels" in p else ""
         extra += f" members {len(p['members'])}" if "members" in p else ""

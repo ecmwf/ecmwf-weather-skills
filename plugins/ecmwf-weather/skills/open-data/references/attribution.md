@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Attribution — ECMWF Open Data
 
 Source: ECMWF Terms of Use, https://apps.ecmwf.int/datasets/licences/general/ (CC-BY-4.0).

@@ -1,14 +1,14 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Lint every skill against the Anthropic skill-authoring best practices (see AGENTS.md)."""
 
-import sys
 from pathlib import Path
 
+import check_skills as cs
 import pytest
-
-from conftest import ROOT, SKILLS
-
-sys.path.insert(0, str(ROOT / "scripts"))
-import check_skills as cs  # noqa: E402
+from conftest import SKILLS
 
 GOOD = """---
 name: demo-skill
@@ -61,9 +61,7 @@ def test_violations_detected(tmp_path, mutate, expected):
 
 
 def test_long_description_rejected(tmp_path):
-    long = GOOD.replace(
-        "Use when the user mentions demo files.", "Use when " + "x " * 600
-    )
+    long = GOOD.replace("Use when the user mentions demo files.", "Use when " + "x " * 600)
     assert any("1024" in p for p in cs.check_skill(make_skill(tmp_path, long)))
 
 
@@ -89,9 +87,7 @@ def test_nested_reference_links_rejected(tmp_path):
         "- Details — `references/details.md`",
         "- Details — `references/details.md`, `references/other.md`",
     )
-    assert any(
-        "one level" in p for p in cs.check_skill(make_skill(tmp_path, text, refs))
-    )
+    assert any("one level" in p for p in cs.check_skill(make_skill(tmp_path, text, refs)))
 
 
 def test_time_sensitive_wording_flagged(tmp_path):

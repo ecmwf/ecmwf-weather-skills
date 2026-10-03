@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """ECMWF Open Data catalogue helper — standard library only.
 
 Finds the latest run, builds file/index URLs, lists steps, estimates download size from the
@@ -81,9 +86,7 @@ def stream_for(model: str, stream: str, hour: int, run_date: date | None = None)
     return stream
 
 
-def steps_for(
-    model: str, stream: str, hour: int, run_date: date | None = None
-) -> list[int]:
+def steps_for(model: str, stream: str, hour: int, run_date: date | None = None) -> list[int]:
     _check(model, stream)
     run_date = run_date or datetime.now(UTC).date()
     if model != "ifs":
@@ -118,10 +121,7 @@ def file_url(
     s = stream_for(model, stream, run.hour, run.date())
     t = type_ or default_type(model, stream)
     ymd, hh = run.strftime("%Y%m%d"), f"{run.hour:02d}"
-    return (
-        f"{ROOTS[source]}/{ymd}/{hh}z/{model}/{resol}/{s}/"
-        f"{ymd}{hh}0000-{step}h-{s}-{t}.{ext}"
-    )
+    return f"{ROOTS[source]}/{ymd}/{hh}z/{model}/{resol}/{s}/{ymd}{hh}0000-{step}h-{s}-{t}.{ext}"
 
 
 # --- index files ------------------------------------------------------------------------------
@@ -165,11 +165,7 @@ def summarise_fields(entries: list[dict]) -> dict:
 
     def levels(lt):
         return sorted(
-            {
-                int(e["levelist"])
-                for e in entries
-                if e["levtype"] == lt and "levelist" in e
-            },
+            {int(e["levelist"]) for e in entries if e["levtype"] == lt and "levelist" in e},
             reverse=(lt == "pl"),
         )
 
@@ -252,7 +248,9 @@ def clamp_workers(n: int) -> int:
 def fetch_range(url: str, start: int, end: int, retries: int = RANGE_RETRIES) -> bytes:
     for attempt in range(retries):
         try:
-            with _request(url, headers={"Range": f"bytes={start}-{end}"}, timeout=RANGE_TIMEOUT_S) as r:
+            with _request(
+                url, headers={"Range": f"bytes={start}-{end}"}, timeout=RANGE_TIMEOUT_S
+            ) as r:
                 if r.status != 206:
                     raise RuntimeError(f"server ignored Range request for {url}")
                 return r.read()
@@ -263,8 +261,9 @@ def fetch_range(url: str, start: int, end: int, retries: int = RANGE_RETRIES) ->
     raise RuntimeError("unreachable")
 
 
-def download_ranges(jobs: list[tuple[str, int, int]], output, workers: int = DEFAULT_WORKERS,
-                    fetch=fetch_range) -> int:
+def download_ranges(
+    jobs: list[tuple[str, int, int]], output, workers: int = DEFAULT_WORKERS, fetch=fetch_range
+) -> int:
     """Download (url, start, end) byte ranges in parallel; write them in order. Returns bytes."""
     from concurrent.futures import ThreadPoolExecutor
 
@@ -278,8 +277,9 @@ def download_ranges(jobs: list[tuple[str, int, int]], output, workers: int = DEF
 
 def range_jobs(per_step) -> list[tuple[str, int, int]]:
     """[(step, index_url, selected_entries)] -> [(grib_url, start, end)]."""
-    return [(idx_url[:-5] + "grib2", a, b) for _, idx_url, sel in per_step
-            for a, b in byte_ranges(sel)]
+    return [
+        (idx_url[:-5] + "grib2", a, b) for _, idx_url, sel in per_step for a, b in byte_ranges(sel)
+    ]
 
 
 def latest_run(
@@ -317,7 +317,9 @@ def freshness(run: datetime, model: str, now: datetime | None = None) -> dict:
         "run": _iso(run),
         "age_hours": round((now - run).total_seconds() / 3600, 1),
         "next_run": _iso(nxt),
-        "next_run_available": f"approx {_iso(nxt + PUBLISH_DELAY)} (runs appear ~6-8 h after base time)",
+        "next_run_available": (
+            f"approx {_iso(nxt + PUBLISH_DELAY)} (runs appear ~6-8 h after base time)"
+        ),
     }
 
 
@@ -363,9 +365,7 @@ def _parse_steps(spec: str, available: list[int]) -> list[int]:
             out.append(int(part))
     bad = [s for s in out if s not in available]
     if bad:
-        raise ValueError(
-            f"steps {bad} not published for this run; available: {available}"
-        )
+        raise ValueError(f"steps {bad} not published for this run; available: {available}")
     return out
 
 
@@ -408,12 +408,8 @@ def main(argv=None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     def common(sp, run=True):
-        sp.add_argument(
-            "--model", default="ifs", help="ifs (default), aifs-single, aifs-ens"
-        )
-        sp.add_argument(
-            "--stream", default=None, help="oper/enfo/wave/waef (default per model)"
-        )
+        sp.add_argument("--model", default="ifs", help="ifs (default), aifs-single, aifs-ens")
+        sp.add_argument("--stream", default=None, help="oper/enfo/wave/waef (default per model)")
         sp.add_argument("--source", default="ecmwf", choices=list(ROOTS))
         sp.add_argument("--json", action="store_true")
         if run:
@@ -441,16 +437,18 @@ def main(argv=None) -> int:
         sp.add_argument("--step", default="0", help="e.g. 24 | 0,6,12 | 0-48")
         sp.add_argument("--type", dest="type_")
         if name != "fields":
-            sp.add_argument(
-                "--param", required=True, help="comma list, e.g. 2t,tp,10u,10v"
-            )
+            sp.add_argument("--param", required=True, help="comma list, e.g. 2t,tp,10u,10v")
             sp.add_argument("--levtype", help="sfc | pl | sol")
             sp.add_argument("--levelist", help="comma list of levels, e.g. 850,500")
             sp.add_argument("--number", help="ensemble members, e.g. 1,2,3")
         if name == "download":
             sp.add_argument("-o", "--output", required=True)
-            sp.add_argument("--workers", type=int, default=DEFAULT_WORKERS,
-                            help="parallel connections (default 8, max 16)")
+            sp.add_argument(
+                "--workers",
+                type=int,
+                default=DEFAULT_WORKERS,
+                help="parallel connections (default 8, max 16)",
+            )
 
     a = p.parse_args(argv)
     try:
@@ -459,9 +457,7 @@ def main(argv=None) -> int:
         att = attribution()
 
         if a.cmd == "latest":
-            run = latest_run(
-                a.model, a.stream, step=0 if a.partial else None, source=a.source
-            )
+            run = latest_run(a.model, a.stream, step=0 if a.partial else None, source=a.source)
             if run is None:
                 print("error: no published run found in the last 72 h", file=sys.stderr)
                 return 2
@@ -521,9 +517,7 @@ def main(argv=None) -> int:
         steps = _parse_steps(a.step, available)
         per_step = []
         for s in steps:
-            idx_url = file_url(
-                run, a.model, a.stream, s, a.type_, a.source, ext="index"
-            )
+            idx_url = file_url(run, a.model, a.stream, s, a.type_, a.source, ext="index")
             entries = parse_index(fetch_text(idx_url))
             if a.cmd == "fields":
                 per_step.append((s, idx_url, entries))
@@ -537,9 +531,7 @@ def main(argv=None) -> int:
             )
             if not sel:
                 have = sorted({e["param"] for e in entries})
-                raise ValueError(
-                    f"no fields match at step {s}; params in file: {', '.join(have)}"
-                )
+                raise ValueError(f"no fields match at step {s}; params in file: {', '.join(have)}")
             per_step.append((s, idx_url, sel))
 
         if a.cmd == "fields":
@@ -559,9 +551,7 @@ def main(argv=None) -> int:
                     f"  pressure levels (hPa): {', '.join(map(str, summ['pressure_levels']))}"
                 )
             if summ["soil_levels"]:
-                lines.append(
-                    f"  soil layers: {', '.join(map(str, summ['soil_levels']))}"
-                )
+                lines.append(f"  soil layers: {', '.join(map(str, summ['soil_levels']))}")
             _emit(a, data, lines)
             return 0
 
@@ -585,7 +575,8 @@ def main(argv=None) -> int:
                 data,
                 [
                     f"Request : {a.model}/{a.stream} {_iso(run)} steps {a.step} params {a.param}",
-                    f"Estimate: {nfields} fields, {human_size(total)} (Range download of selected fields only)",
+                    f"Estimate: {nfields} fields, {human_size(total)} "
+                    "(Range download of selected fields only)",
                 ],
             )
             return 0

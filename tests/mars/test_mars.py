@@ -1,8 +1,10 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import subprocess
 import sys
-
-import pytest
 
 from conftest import FIXTURES, SKILLS, load_script
 
@@ -59,7 +61,7 @@ def test_expand_values():
     assert mars.expand("00/12") == ["00", "12"]
 
 
-# --- lint ------------------------------------------------------------------------------------------
+# --- lint -----------------------------------------------------------------------------------------
 
 
 def test_lint_clean_request():
@@ -81,10 +83,7 @@ def test_lint_area_and_grid():
 
 
 def test_lint_pf_needs_number_and_an_has_no_step():
-    assert any(
-        "number" in e
-        for e in mars.lint({**HRES, "stream": "enfo", "type": "pf"})["errors"]
-    )
+    assert any("number" in e for e in mars.lint({**HRES, "stream": "enfo", "type": "pf"})["errors"])
     assert any("step" in w for w in mars.lint({**HRES, "type": "an"})["warnings"])
 
 
@@ -104,7 +103,7 @@ def test_lint_warns_multi_month_archive_requests():
     assert "month" in w.lower()
 
 
-# --- estimate / plan --------------------------------------------------------------------------------
+# --- estimate / plan ------------------------------------------------------------------------------
 
 
 def test_estimate_fields_and_size():
@@ -169,7 +168,7 @@ def test_parse_cost_output():
     }
 
 
-# --- credentials / CLI --------------------------------------------------------------------------------
+# --- credentials / CLI ----------------------------------------------------------------------------
 
 
 def test_credentials(tmp_path):
@@ -205,11 +204,7 @@ def test_cli_lint_json(tmp_path):
     )
     assert out.returncode == 0, out.stderr
     d = json.loads(out.stdout)
-    assert (
-        d["errors"] == []
-        and d["estimate"]["fields"] == 1209
-        and "retrieve," in d["mars"]
-    )
+    assert d["errors"] == [] and d["estimate"]["fields"] == 1209 and "retrieve," in d["mars"]
 
 
 def test_cli_check_without_credentials(tmp_path):

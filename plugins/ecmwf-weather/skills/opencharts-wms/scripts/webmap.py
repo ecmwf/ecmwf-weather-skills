@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Build and serve an ECMWF forecast web map with click-for-meteogram. Stdlib only.
 
   python3 webmap.py create webmap                       # writes webmap/{index.html,app.js,…}
-  python3 webmap.py create webmap --layers msl_public,t850_public,ws850_public --center 50,10 --zoom 4
+  python3 webmap.py create webmap --layers msl_public,t850_public,ws850_public \\
+      --center 50,10 --zoom 4
   python3 webmap.py serve webmap --port 8000            # http://127.0.0.1:8000
 
 The page (Leaflet) shows ECMWF WMS layers with a time slider, legend and click values; it works
@@ -101,9 +107,7 @@ def _run(cmd: list[str], **kw) -> str:
 
 
 def _latest_run_id() -> str:
-    spec = importlib.util.spec_from_file_location(
-        "odcatalog", sibling_scripts()["odcatalog"]
-    )
+    spec = importlib.util.spec_from_file_location("odcatalog", sibling_scripts()["odcatalog"])
     assert spec and spec.loader
     oc = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(oc)
@@ -225,9 +229,7 @@ def make_server(outdir: Path, port: int = 8000, service=None, host: str = "127.0
                 return self._send(400, "text/plain", f"bad request: {e}".encode())
             try:
                 if u.path == "/api/meteogram.png":
-                    return self._send(
-                        200, "image/png", service.meteogram(lat, lon).read_bytes()
-                    )
+                    return self._send(200, "image/png", service.meteogram(lat, lon).read_bytes())
                 if u.path == "/api/point.json":
                     return self._send(
                         200,
@@ -245,12 +247,10 @@ def make_server(outdir: Path, port: int = 8000, service=None, host: str = "127.0
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, format, *args):  # noqa: A002 — base-class signature
+        def log_message(self, format, *args):
             sys.stderr.write("%s\n" % (format % args))
 
-    return ThreadingHTTPServer(
-        (host, port), functools.partial(Handler, directory=str(outdir))
-    )
+    return ThreadingHTTPServer((host, port), functools.partial(Handler, directory=str(outdir)))
 
 
 def main(argv=None) -> int:
@@ -293,9 +293,7 @@ def main(argv=None) -> int:
                 file=sys.stderr,
             )
         srv = make_server(Path(a.outdir), a.port, host=a.host)
-        print(
-            f"serving {a.outdir} on http://{a.host}:{srv.server_address[1]}  (Ctrl-C to stop)"
-        )
+        print(f"serving {a.outdir} on http://{a.host}:{srv.server_address[1]}  (Ctrl-C to stop)")
         srv.serve_forever()
     except (ValueError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)

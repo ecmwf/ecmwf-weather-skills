@@ -1,31 +1,39 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Third-party actions are pinned to full commit SHAs (ecmwf/codex audit guidance); the
+# comment names the release each SHA belongs to.
 name: weekly
 on:
   schedule:
     - cron: "17 5 * * 1"   # Mondays 05:17 UTC
   workflow_dispatch:
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 jobs:
   live:
+    name: live tests and links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - name: Live tests against ECMWF services (no credentials)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Live tests without credentials (Polytope and MARS need accounts)
         run: uv run --group earthkit pytest -q -m live -k "not ptpoint and not mars"
         env:
           MIR_CACHE_PATH: ${{ runner.temp }}/mir
-      - name: Links
-        run: python3 scripts/check_links.py
+      - run: make links
   refresh-references:
+    name: regenerate references
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - name: Regenerate references
-        run: python3 scripts/regenerate_references.py
-      - name: Bump patch version if anything changed
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - run: make references
+      - name: Bump the MICRO version if anything changed
         id: bump
         run: |
           if [ -n "$(git status --porcelain)" ]; then
@@ -33,9 +41,11 @@ jobs:
           fi
       - name: Open pull request
         if: steps.bump.outputs.version != ''
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          branch: refresh-references
-          title: "Refresh generated references (v${{ steps.bump.outputs.version }})"
-          commit-message: "Refresh generated references from live ECMWF catalogues"
-          body: "Automated weekly regeneration (`scripts/regenerate_references.py`). Review the diff; earthkit components that reach 1.0 need a policy review."
+          branch: chore/refresh-references
+          title: "chore: refresh generated references (${{ steps.bump.outputs.version }})"
+          commit-message: "chore: refresh generated references from live ECMWF catalogues"
+          body: |
+            Automated weekly regeneration (`make references`). Review the diff; an earthkit
+            component reaching 1.0 needs a policy review. Add a CHANGELOG entry before merging.

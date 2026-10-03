@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Bump the plugin version in both manifests and every SKILL.md (they must agree first).
 
 python3 scripts/bump_version.py --level patch     # or minor / major
@@ -14,9 +19,9 @@ import re
 import sys
 from pathlib import Path
 
+import validate_packaging as vp  # sibling script; its directory is sys.path[0]
+
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import validate_packaging as vp  # noqa: E402
 
 
 def _files(root: Path):
@@ -37,9 +42,7 @@ def current(root: Path = ROOT) -> str:
 def bump(root: Path = ROOT, level: str | None = None, set_to: str | None = None) -> str:
     drift = [p for p in vp.problems(root) if "version" in p]
     if drift:
-        sys.exit(
-            "refusing to bump — versions already disagree:\n  " + "\n  ".join(drift)
-        )
+        sys.exit("refusing to bump — versions already disagree:\n  " + "\n  ".join(drift))
     old = current(root)
     if set_to:
         if not re.fullmatch(r"\d+\.\d+\.\d+", set_to):
@@ -59,11 +62,7 @@ def bump(root: Path = ROOT, level: str | None = None, set_to: str | None = None)
         m.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n")
     for s in skills:
         t = s.read_text()
-        s.write_text(
-            re.sub(
-                r'(^\s+version:\s*)"[^"]*"', rf'\g<1>"{new}"', t, count=1, flags=re.M
-            )
-        )
+        s.write_text(re.sub(r'(^\s+version:\s*)"[^"]*"', rf'\g<1>"{new}"', t, count=1, flags=re.M))
     return new
 
 

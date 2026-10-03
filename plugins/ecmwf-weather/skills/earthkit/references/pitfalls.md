@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # earthkit 1.x pitfalls (verified against earthkit-data 1.2.3, plots 1.0.4)
 
 Most earthkit examples online target 0.x. These differences break silently or loudly:

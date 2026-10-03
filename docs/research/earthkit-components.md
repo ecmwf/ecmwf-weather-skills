@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Research — earthkit components (2026-10-02)
 
 Method: PyPI JSON API, `pip install --dry-run --report` for dependency sets, wheel HEAD requests

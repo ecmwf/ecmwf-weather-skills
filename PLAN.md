@@ -1,6 +1,12 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # ECMWF Weather Skill — Plan
 
-Status: **M1–M6 done** — release candidate; v1.0.0 after the open items in TODO.md.
+Status: all six skills, tooling and CI implemented — pre-release; open items in `TODO.md`.
 Model: [vaisala-xweather/xweather-agent-skills](https://github.com/vaisala-xweather/xweather-agent-skills).
 Research: `docs/research/earthkit-components.md`, `docs/research/open-questions.md`.
 
@@ -119,14 +125,14 @@ Post-50r1 (13 May 2026): no `scda`/`scwv`; 06/18z `oper` to 144 h; ENS 50 `pf`, 
 AIFS 0–360 h by 6 at all runs. Retention ~2–3 days on data.ecmwf.int, AWS mirror since 2023.
 500-connection limit. `.index` enables single-field Range downloads.
 
-## 5. Scripts (M1 scope marked ★)
+## 5. Scripts
 
 | Script | Skill | Kind | Purpose |
 |---|---|---|---|
-| ★ `odcatalog.py` | open-data | stdlib | Latest run, URLs, steps per model/stream/run, `.index` parsing, size estimate, freshness, attribution |
-| ★ `odpoint.py` | open-data | earthkit (data+geo+utils) | Point forecast → JSON/CSV; fallback message if earthkit unavailable |
-| ★ `ekinspect.py` | earthkit | earthkit-data | Summarise a GRIB/NetCDF file (params, levels, steps, times, grid) |
-| ★ `ekplot.py` | earthkit | earthkit-plots | Quick map or point time series PNG |
+| `odcatalog.py` | open-data | stdlib | Latest run, URLs, steps per model/stream/run, `.index` parsing, size estimate, freshness, attribution |
+| `odpoint.py` | open-data | earthkit (data+geo+utils) | Point forecast → JSON/CSV; fallback message if earthkit unavailable |
+| `ekinspect.py` | earthkit | earthkit-data | Summarise a GRIB/NetCDF file (params, levels, steps, times, grid) |
+| `ekplot.py` | earthkit | earthkit-plots | Quick map or point time series PNG |
 | `ecmwf_access.py` | all | stdlib | Which routes have credentials (no secrets printed) |
 | `cds.py` | cds-ads | stdlib (+earthkit-data[cds] for retrieve) | Check, search, describe, validate + cost, ERA5 point, retrieve |
 | `mars.py` | mars | stdlib (+earthkit-data[mars] for cost/retrieve) | Check, lint, estimate, monthly plan, server cost, retrieve |
@@ -155,15 +161,17 @@ layers are MSLP, z500, t850, ws850 and ENS mean/spread). Plan: WMS public layers
 OpenCharts images as an option; the clicked-point meteogram comes from Open Data via `odpoint.py`
 (2 m temperature, precipitation, wind). Ask ECMWF about adding public surface layers (TODO).
 
-## 9. Milestones
+## 9. Delivery status
 
-0. Scaffold ✅ · Research ✅
-1. M1 — open-data + earthkit ✅
-2. M2 — opencharts-wms + flagship demo ✅ (wms.py, opencharts.py, webmap.py; verified in a browser)
-3. M3 — polytope ✅ (ptpoint.py: hourly point + 50-member ensemble percentiles, verified live)
-4. M4 — cds-ads ✅ (cds.py: check/search/describe/validate+costing keyless; retrieve via earthkit-data[cds])
-5. M5 — mars ✅ (mars.py: lint/estimate/plan offline, cost + retrieve via Web API, verified live)
-6. M6 — tooling & CI ✅ (validate_packaging, check_skills, bump_version, regenerate_references, check_links, build_dist, pre-push hook, workflows)
+| Area | State |
+|---|---|
+| Scaffold, research | done |
+| `open-data` + `earthkit` | done |
+| `opencharts-wms` + flagship web map | done (verified in a browser) |
+| `polytope` | done (verified live) |
+| `cds-ads` | done (downloads not yet live-tested) |
+| `mars` | done (cost verified live; retrieve not yet run end to end) |
+| Tooling, CI, ECMWF open-source compliance | done |
 
 ## 10. Open questions → best guesses
 

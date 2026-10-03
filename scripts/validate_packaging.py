@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Check that marketplace, both plugin manifests and every SKILL.md agree.
 
 python3 scripts/validate_packaging.py        # exit 1 and list problems on drift
@@ -40,9 +45,7 @@ def problems(root: Path = ROOT) -> list[str]:
     if claude.get("name") != PLUGIN:
         p.append(f"plugin name must stay {PLUGIN!r} (renaming breaks installs)")
 
-    entry = next(
-        (e for e in market.get("plugins", []) if e.get("name") == PLUGIN), None
-    )
+    entry = next((e for e in market.get("plugins", []) if e.get("name") == PLUGIN), None)
     if entry is None:
         p.append(f"marketplace has no entry named {PLUGIN!r}")
     else:
@@ -53,9 +56,7 @@ def problems(root: Path = ROOT) -> list[str]:
         names = {
             "marketplace displayName": entry.get("displayName"),
             "claude displayName": claude.get("displayName"),
-            "codex interface.displayName": codex.get("interface", {}).get(
-                "displayName"
-            ),
+            "codex interface.displayName": codex.get("interface", {}).get("displayName"),
         }
         if len(set(names.values())) != 1:
             p.append(f"displayName differs: {names}")
@@ -72,7 +73,8 @@ def problems(root: Path = ROOT) -> list[str]:
             )
         if fm.get("metadata.version") != version:
             p.append(
-                f"skill {skill.name}: metadata.version {fm.get('metadata.version')!r} != plugin version {version!r}"
+                f"skill {skill.name}: metadata.version {fm.get('metadata.version')!r} "
+                f"!= plugin version {version!r}"
             )
         if fm.get("license") != claude.get("license"):
             p.append(

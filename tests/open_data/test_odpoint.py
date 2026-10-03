@@ -1,10 +1,11 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import subprocess
-import sys
-from pathlib import Path
 
 import pytest
-
 from conftest import FIXTURES, SKILLS, load_script
 
 GRIB = FIXTURES / "ifs-sfc-5deg-20261002-00z.grib2"

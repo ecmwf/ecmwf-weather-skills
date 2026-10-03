@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Probe every URL mentioned in the skills (SKILL.md, references, scripts). Weekly in CI.
 
   python3 scripts/check_links.py          # exit 1 if any URL is dead
@@ -23,7 +28,9 @@ URL = re.compile(r"https?://[^\s<>\"'`)\]|\\]+")
 IGNORE = {
     "https://data.ecmwf.int/forecasts": "API root used as a path prefix; only full paths resolve",
     "https://charts.ecmwf.int/opencharts-api/v1": "API root used as a path prefix",
-    "https://ai4edataeuwest.blob.core.windows.net/ecmwf": "Azure mirror needs a SAS token (documented)",
+    "https://ai4edataeuwest.blob.core.windows.net/ecmwf": (
+        "Azure mirror needs a SAS token (documented)"
+    ),
     "https://github.com/ecmwf/ecmwf-weather-skill": "this repository — 404 until published",
 }
 IGNORE_HOSTS = ("http://127.0.0.1", "http://localhost")
@@ -58,9 +65,7 @@ def collect(skills: Path = SKILLS) -> list[str]:
 
 
 def probe(url: str) -> tuple[str, int | str]:
-    req = urllib.request.Request(
-        url, headers={"User-Agent": "ecmwf-weather-skill-linkcheck/0.1"}
-    )
+    req = urllib.request.Request(url, headers={"User-Agent": "ecmwf-weather-skill-linkcheck/0.1"})
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
             return url, r.status
@@ -74,11 +79,7 @@ def main() -> int:
     urls = collect()
     with ThreadPoolExecutor(8) as ex:
         results = list(ex.map(probe, urls))
-    bad = [
-        (u, s)
-        for u, s in results
-        if not (isinstance(s, int) and (s < 400 or s in AUTH_OK))
-    ]
+    bad = [(u, s) for u, s in results if not (isinstance(s, int) and (s < 400 or s in AUTH_OK))]
     for u, s in bad:
         print(f"DEAD {s}: {u}")
     print(f"{len(urls)} URLs, {len(bad)} dead")

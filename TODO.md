@@ -1,54 +1,43 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # TODO
 
-See `PLAN.md` for context and milestones.
+Accepted, open work only. Finished work is recorded in `CHANGELOG.md`; design in `PLAN.md`.
 
-## Now (v0.x)
+## Before the first public release
 
-- [x] Research step — earthkit components, live services (`docs/research/`)
-- [x] M1 — `open-data` + `earthkit` skills, scripts, references, tests, eval cases
-- [ ] M1 — run evals on **Claude Code** (blocked: CLI login expired — `claude /login`)
-- [ ] M1 polish — meteogram precipitation panel x-axis not aligned with the other panels
-      (earthkit-plots bar width/limits); share x-limits across panels
-- [ ] M1 polish — `odcatalog.py latest` could link the ECMWF dissemination schedule so agents
-      don't cite guessed URLs
-- [x] M2 — `opencharts-wms` skill + flagship web map demo
-- [ ] M2 polish — meteogram click takes ~20 s after the first (decoding 300 MB GRIB per point);
-      keep a warm earthkit process or pre-extract a point index
-- [ ] M2 polish — `opencharts.py get --valid-time` validation; regenerate `layers.md` from
-      GetCapabilities weekly
-- [x] M3 — `polytope` skill + point-forecast fallback wiring
-- [ ] M3 polish — meteogram median line colour (pale yellow, low contrast); precipitation
-      intervals change length (1 h → 3 h → 6 h) — consider normalising to mm/h
-- [ ] Web map: use Polytope for click meteograms when `ptpoint.py --check` passes (seconds, not
-      ~300 MB)
-- [x] M4 — `cds-ads` skill (ERA5, CAMS)
-- [ ] M4 — live-test `cds.py retrieve` / `era5-point` download with a CDS key and an ADS key
-      (no keys on the dev machine); confirm ERA5 time-series CSV column names
-- [x] M5 — `mars` skill
-- [ ] M5 — live-test `mars.py retrieve` end to end (cost verified live); check `levelist=all`
-      level counts per class
-- [x] M6 — tooling: `validate_packaging.py`, `check_skills.py`, `check_links.py`,
-      `bump_version.py`, `build_dist.py`, `regenerate_references.py`, pre-push hook, CI workflows
-- [ ] Before v1.0.0: Claude Code eval run on Haiku, Sonnet and Opus; CI secrets
-      (`ANTHROPIC_API_KEY`); publish to github.com/ecmwf; remove the repo URL from
+- [ ] Claude Code skill evals on Haiku, Sonnet and Opus (`make evals MODEL=…`)
+- [ ] Live download tests: `cds.py retrieve` / `era5-point` with CDS and ADS keys; confirm ERA5
+      time-series CSV column names
+- [ ] Live `mars.py retrieve` end to end; verify `levelist=all` level counts per class
+- [ ] Confirm with ECMWF: attribution wording and logo use per data source; public WMS token
+      policy and public surface layers (2t, tp); Polytope access for non-member-state users
+- [ ] Plugin icon in `plugins/ecmwf-weather/assets/` (needs ECMWF communications approval)
+- [ ] Open-sourcing checklist (ecmwf/codex `Legal/Open-Sourcing-Software.md`): Head of
+      Development approval, IPR / sensitive-information audit, `open-source-audit` and security
+      audits filed in `ecmwf/repo-audits`, CLA Assistant enabled on the repository
+- [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow; remove the repository URL from
       `check_links.py` IGNORE once public
-- [ ] Confirm with ECMWF: attribution strings and logo rules per data source
-- [ ] Confirm with ECMWF: public WMS token policy; ask for public surface layers (2t, tp)
-- [ ] Confirm with ECMWF: Polytope access model for non-member-state users
-- [ ] Plugin icon in `plugins/ecmwf-weather/assets/` + `composerIcon`/`logo` in Codex manifest
-      (needs ECMWF comms approval to use the logo)
-- [ ] Ask earthkit team about parallel range downloads in the `ecmwf-open-data` source; drop the
-      custom parallel fetcher once available
+
+## Improvements
+
+- [ ] Meteogram: align the precipitation panel x-axis with the other panels; higher-contrast
+      ensemble median line; normalise precipitation to mm/h where step length changes
+- [ ] Web map: use Polytope for click meteograms when `ptpoint.py --check` passes; otherwise
+      keep a warm earthkit process so clicks after the first take seconds, not ~20 s
+- [ ] `odcatalog.py latest`: link the ECMWF dissemination schedule
+- [ ] `opencharts.py get --valid-time` validation against the product schema
+- [ ] earthkit-data parallel Range downloads in the `ecmwf-open-data` source; drop the custom
+      fetcher once available
 
 ## Later
 
-- [ ] **ECMWF MCP server** — hosted or local server exposing direct tools (point forecast, latest run,
-      map URL, ERA5 lookup) so agents can answer end-user weather questions without writing code.
-      Document it in the skills but do **not** bundle it in the plugin (a bundled MCP server cannot be
-      conditionally disabled).
-- [ ] Route end-user "weather in X" Q&A through the MCP server once it exists
-- [ ] Auto-generate CDS/ADS dataset ids and request schemas (weekly CI)
-- [ ] **Destination Earth** — Climate DT / Extremes DT access (new skill or extension), credentials,
-      generated catalog
-- [ ] Claude.ai upload ZIP and ChatGPT plugin directory submission
+- [ ] ECMWF MCP server — documented, not bundled (a bundled server cannot be disabled
+      conditionally); route end-user "weather in X" questions through it
+- [ ] Generated CDS/ADS dataset catalogue (weekly CI)
+- [ ] Destination Earth skill — Climate DT / Extremes DT, DESP authentication, catalogue
+- [ ] Claude.ai upload and ChatGPT plugin directory submission
 - [ ] Gemini CLI eval runs (needs `GEMINI_API_KEY`)

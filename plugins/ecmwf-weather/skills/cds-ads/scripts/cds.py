@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["earthkit-data[cds]>=1.2"]
@@ -50,7 +55,8 @@ STORES = {
     },
 }
 KEY_HELP = (
-    "Register (free) at https://cds.climate.copernicus.eu (ADS: https://ads.atmosphere.copernicus.eu), "
+    "Register (free) at https://cds.climate.copernicus.eu "
+    "(ADS: https://ads.atmosphere.copernicus.eu), "
     "copy the key from your profile into ~/.cdsapirc (ADS: ~/.adsapirc) as two lines "
     "'url: <store>/api' and 'key: <key>' (CDS also reads CDSAPI_URL/CDSAPI_KEY), and accept "
     "each dataset's licence once on its web page (Download tab)."
@@ -96,7 +102,7 @@ def get_collection(store: str, dataset: str) -> dict:
 
 def get_form(collection: dict) -> list:
     href = next(
-        (l["href"] for l in collection.get("links", []) if l.get("rel") == "form"), None
+        (link["href"] for link in collection.get("links", []) if link.get("rel") == "form"), None
     )
     return _http(href) if href else []
 
@@ -108,7 +114,7 @@ def costing(store: str, dataset: str, request: dict) -> dict:
     )
 
 
-# --- catalogue --------------------------------------------------------------------------------------
+# --- catalogue ------------------------------------------------------------------------------------
 
 
 def search_results(search_json: dict, text: str) -> list[dict]:
@@ -117,17 +123,13 @@ def search_results(search_json: dict, text: str) -> list[dict]:
     for c in search_json.get("collections", []):
         hay = f"{c['id']} {c.get('title', '')}".lower()
         if all(w in hay for w in words):
-            out.append(
-                {"id": c["id"], "title": c.get("title"), "licence": c.get("license")}
-            )
+            out.append({"id": c["id"], "title": c.get("title"), "licence": c.get("license")})
     return out
 
 
 def _collect_values(obj) -> list:
     if isinstance(obj, dict):
-        vals = (
-            list(obj.get("values", [])) if isinstance(obj.get("values"), list) else []
-        )
+        vals = list(obj.get("values", [])) if isinstance(obj.get("values"), list) else []
         for k, v in obj.items():
             if k != "values":
                 vals += _collect_values(v)
@@ -175,9 +177,9 @@ def describe(collection: dict, form: list, store: str) -> dict:
         "store": store,
         "licence": collection.get("license"),
         "doi": doi,
-        "temporal": (
-            collection.get("extent", {}).get("temporal", {}).get("interval") or [[None]]
-        )[0],
+        "temporal": (collection.get("extent", {}).get("temporal", {}).get("interval") or [[None]])[
+            0
+        ],
         "inputs": {
             k: (
                 {**v, "values": v["values"][:40], "n_values": len(v["values"])}
@@ -190,11 +192,13 @@ def describe(collection: dict, form: list, store: str) -> dict:
         if doi
         else title,
         "attribution": attribution(store),
-        "licence_note": "Accept the licence once on the dataset's web page before the API will serve it.",
+        "licence_note": (
+            "Accept the licence once on the dataset's web page before the API will serve it."
+        ),
     }
 
 
-# --- requests ---------------------------------------------------------------------------------------
+# --- requests -------------------------------------------------------------------------------------
 
 
 def _as_list(v):
@@ -220,9 +224,7 @@ def validate(request: dict, form: list) -> list[str]:
             for v in _as_list(val):
                 for d in str(v).split("/"):
                     if (lo and d < lo) or (hi and d > hi):
-                        errs.append(
-                            f"date {d} outside the available range {lo} .. {hi}"
-                        )
+                        errs.append(f"date {d} outside the available range {lo} .. {hi}")
         elif o["type"] == "location":
             lat, lon = val.get("latitude"), val.get("longitude")
             if lat is None or not -90 <= lat <= 90:
@@ -250,7 +252,7 @@ def era5_point_request(
     }
 
 
-# --- retrieve (earthkit) ------------------------------------------------------------------------------
+# --- retrieve (earthkit) --------------------------------------------------------------------------
 
 
 def retrieve(store: str, dataset: str, request: dict, output: str) -> None:
@@ -267,7 +269,7 @@ def retrieve(store: str, dataset: str, request: dict, output: str) -> None:
     shutil.copy(src.path, output)
 
 
-# --- CLI ---------------------------------------------------------------------------------------------
+# --- CLI ------------------------------------------------------------------------------------------
 
 
 def _print(obj, as_json: bool, text: str):
@@ -295,9 +297,8 @@ def _validate_and_cost(store, dataset, request) -> dict:
                     "(e.g. by year) or shrink area/variables"
                 )
         except urllib.error.HTTPError as e:
-            res["errors"].append(
-                f"server rejected the request (HTTP {e.code}): {e.read()[:300].decode(errors='replace')}"
-            )
+            body = e.read()[:300].decode(errors="replace")
+            res["errors"].append(f"server rejected the request (HTTP {e.code}): {body}")
             res["valid"] = False
     res["attribution"] = attribution(store)
     res["licence"] = coll.get("license")
@@ -352,8 +353,10 @@ def main(argv=None) -> int:
                 "cds": credentials("cds"),
                 "ads": credentials("ads"),
                 "how_to_get_a_key": KEY_HELP,
-                "keyless_alternatives": "CAMS forecasts: opencharts-wms skill (composition_* WMS layers, "
-                "`wms.py info` for point values).",
+                "keyless_alternatives": (
+                    "CAMS forecasts: opencharts-wms skill (composition_* WMS layers, "
+                    "`wms.py info` for point values)."
+                ),
             }
             _print(res, a.json, "\n".join(f"{k}: {v}" for k, v in res.items()))
             return 0 if res["cds"] or res["ads"] else 4
@@ -366,9 +369,7 @@ def main(argv=None) -> int:
                 {"id": c["id"], "title": c.get("title"), "licence": c.get("license")}
                 for c in s.get("collections", [])
             ]
-            _print(
-                hits, a.json, "\n".join(f"{h['id']:55} {h['title']}" for h in hits[:40])
-            )
+            _print(hits, a.json, "\n".join(f"{h['id']:55} {h['title']}" for h in hits[:40]))
             return 0
 
         if a.cmd == "describe":
@@ -400,37 +401,29 @@ def main(argv=None) -> int:
             return 0
 
         if a.cmd == "era5-point":
-            req = era5_point_request(
-                a.lat, a.lon, a.start, a.end, a.variable.split(","), a.format
-            )
+            req = era5_point_request(a.lat, a.lon, a.start, a.end, a.variable.split(","), a.format)
             dataset = "reanalysis-era5-single-levels-timeseries"
         else:
             req = json.loads(Path(a.request).read_text())
             dataset = a.dataset
 
-        if a.cmd == "retrieve" or (a.cmd == "era5-point" and not a.dry_run):
-            if not credentials(a.store):
-                print(
-                    f"error: no {a.store.upper()} credentials (~/{STORES[a.store]['rc']}"
-                    f"{' or CDSAPI_URL/CDSAPI_KEY' if a.store == 'cds' else ''}). {KEY_HELP} "
-                    "Validate the request without a key: cds.py validate / era5-point --dry-run.",
-                    file=sys.stderr,
-                )
-                return 4
+        needs_key = a.cmd == "retrieve" or (a.cmd == "era5-point" and not a.dry_run)
+        if needs_key and not credentials(a.store):
+            print(
+                f"error: no {a.store.upper()} credentials (~/{STORES[a.store]['rc']}"
+                f"{' or CDSAPI_URL/CDSAPI_KEY' if a.store == 'cds' else ''}). {KEY_HELP} "
+                "Validate the request without a key: cds.py validate / era5-point --dry-run.",
+                file=sys.stderr,
+            )
+            return 4
 
         res = _validate_and_cost(a.store, dataset, req)
-        if (
-            a.cmd == "validate"
-            or (a.cmd == "era5-point" and a.dry_run)
-            or not res["valid"]
-        ):
+        if a.cmd == "validate" or (a.cmd == "era5-point" and a.dry_run) or not res["valid"]:
             text = "\n".join(
                 [
                     f"dataset: {dataset}",
                     "request: " + json.dumps(req),
-                    "valid"
-                    if res["valid"]
-                    else "INVALID:\n  " + "\n  ".join(res["errors"]),
+                    "valid" if res["valid"] else "INVALID:\n  " + "\n  ".join(res["errors"]),
                     f"cost: {res.get('cost')}",
                     f"attribution: {res['attribution']}",
                 ]
@@ -438,10 +431,7 @@ def main(argv=None) -> int:
             _print(res, a.json, text)
             return 0 if res["valid"] else 2
 
-        out = (
-            a.output
-            or f"{dataset}.{'csv' if req.get('data_format') == 'csv' else 'nc'}"
-        )
+        out = a.output or f"{dataset}.{'csv' if req.get('data_format') == 'csv' else 'nc'}"
         retrieve(a.store, dataset, req, out)
         res["output"] = out
         _print(
@@ -459,9 +449,7 @@ def main(argv=None) -> int:
     except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    except (
-        Exception
-    ) as e:  # earthkit/cdsapi errors: licence not accepted, queue failures
+    except Exception as e:  # earthkit/cdsapi errors: licence not accepted, queue failures
         msg = str(e)
         if re.search(r"(?i)licen[cs]e|terms", msg):
             msg += " — accept the dataset licence on its web page (Download tab), then retry."

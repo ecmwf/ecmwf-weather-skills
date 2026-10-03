@@ -1,9 +1,9 @@
-import sys
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
 
+import check_links
 from conftest import ROOT
-
-sys.path.insert(0, str(ROOT / "scripts"))
-import check_links  # noqa: E402
 
 
 def test_extract_urls_skips_templates_and_placeholders():

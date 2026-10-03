@@ -1,9 +1,12 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import subprocess
 import sys
 
 import pytest
-
 from conftest import FIXTURES, SKILLS, load_script
 
 cds = load_script("cds-ads", "cds")
@@ -20,14 +23,10 @@ SCRIPT = SKILLS / "cds-ads" / "scripts" / "cds.py"
 def test_credentials_cds(tmp_path):
     assert cds.credentials("cds", env={}, home=tmp_path) is None
     assert (
-        cds.credentials(
-            "cds", env={"CDSAPI_KEY": "x", "CDSAPI_URL": "u"}, home=tmp_path
-        )
+        cds.credentials("cds", env={"CDSAPI_KEY": "x", "CDSAPI_URL": "u"}, home=tmp_path)
         == "CDSAPI_URL/CDSAPI_KEY"
     )
-    (tmp_path / ".cdsapirc").write_text(
-        "url: https://cds.climate.copernicus.eu/api\nkey: abc\n"
-    )
+    (tmp_path / ".cdsapirc").write_text("url: https://cds.climate.copernicus.eu/api\nkey: abc\n")
     assert cds.credentials("cds", env={}, home=tmp_path) == "~/.cdsapirc"
 
 
@@ -38,13 +37,11 @@ def test_credentials_ads_only_file(tmp_path):
 
 
 def test_cdsapirc_pointing_at_ads_is_not_cds(tmp_path):
-    (tmp_path / ".cdsapirc").write_text(
-        "url: https://ads.atmosphere.copernicus.eu/api\nkey: k\n"
-    )
+    (tmp_path / ".cdsapirc").write_text("url: https://ads.atmosphere.copernicus.eu/api\nkey: k\n")
     assert cds.credentials("cds", env={}, home=tmp_path) is None
 
 
-# --- catalogue -------------------------------------------------------------------------------------
+# --- catalogue ------------------------------------------------------------------------------------
 
 
 def test_search_results():
@@ -75,7 +72,7 @@ def test_attribution_ads_mentions_cams():
     assert "Copernicus Atmosphere Monitoring Service" in cds.attribution("ads", 2026)
 
 
-# --- validation ------------------------------------------------------------------------------------
+# --- validation -----------------------------------------------------------------------------------
 
 
 def test_validate_ok_timeseries():
@@ -98,12 +95,7 @@ def test_validate_catches_bad_values_with_suggestions():
     }
     errs = "\n".join(cds.validate(req, FORM_TS))
     assert "2m_temp" in errs and "2m_temperature" in errs  # close-match suggestion
-    assert (
-        "1940-01-01" in errs
-        and "xlsx" in errs
-        and "latitude" in errs
-        and "bogus" in errs
-    )
+    assert "1940-01-01" in errs and "xlsx" in errs and "latitude" in errs and "bogus" in errs
 
 
 def test_validate_single_levels_lists():
@@ -122,9 +114,7 @@ def test_validate_single_levels_lists():
 
 
 def test_era5_point_request():
-    r = cds.era5_point_request(
-        38.72, -9.14, "1991-01-01", "2020-12-31", ["2m_temperature"], "csv"
-    )
+    r = cds.era5_point_request(38.72, -9.14, "1991-01-01", "2020-12-31", ["2m_temperature"], "csv")
     assert r == {
         "variable": ["2m_temperature"],
         "location": {"latitude": 38.72, "longitude": -9.14},
@@ -134,7 +124,7 @@ def test_era5_point_request():
     assert cds.validate(r, FORM_TS) == []
 
 
-# --- CLI -------------------------------------------------------------------------------------------
+# --- CLI ------------------------------------------------------------------------------------------
 
 
 def test_cli_check_without_credentials(tmp_path):

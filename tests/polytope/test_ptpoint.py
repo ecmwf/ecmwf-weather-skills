@@ -1,10 +1,13 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 import subprocess
 import sys
 from datetime import datetime, timezone
 
 import pytest
-
 from conftest import FIXTURES, SKILLS, load_script
 
 pt = load_script("polytope", "ptpoint")
@@ -22,10 +25,7 @@ def test_credentials_none(tmp_path):
 
 
 def test_credentials_env_and_files(tmp_path):
-    assert (
-        pt.credentials(env={"POLYTOPE_USER_KEY": "k"}, home=tmp_path)
-        == "POLYTOPE_USER_KEY"
-    )
+    assert pt.credentials(env={"POLYTOPE_USER_KEY": "k"}, home=tmp_path) == "POLYTOPE_USER_KEY"
     (tmp_path / ".ecmwfapirc").write_text("{}")
     assert pt.credentials(env={}, home=tmp_path) == "~/.ecmwfapirc"
     (tmp_path / ".polytopeapirc").write_text("{}")
@@ -47,9 +47,7 @@ def test_build_request_deterministic():
 
 
 def test_build_request_ensemble():
-    r = pt.build_request(
-        51.45, -0.97, date="20261001", time="1200", end_step=120, ensemble=True
-    )
+    r = pt.build_request(51.45, -0.97, date="20261001", time="1200", end_step=120, ensemble=True)
     assert r["stream"] == "enfo" and r["type"] == "pf" and r["number"] == "1/to/50"
     assert r["param"] == "167/228"
 
@@ -71,9 +69,7 @@ def test_candidate_runs_latest_first():
 def test_parse_covjson_deterministic():
     p = pt.parse_covjson(OPER)
     assert p["run"].endswith("T00:00Z")
-    assert (
-        abs(p["gridpoint"]["lat"] - 38.7) < 0.1 and -9.5 < p["gridpoint"]["lon"] < -9.0
-    )
+    assert abs(p["gridpoint"]["lat"] - 38.7) < 0.1 and -9.5 < p["gridpoint"]["lon"] < -9.0
     assert list(p["members"]) == [0]
     m = p["members"][0]
     assert set(m) == {"2t", "tp", "10u", "10v", "msl", "tcc"}
@@ -86,9 +82,10 @@ def test_parse_covjson_ensemble_members():
 
 
 def test_quantiles_pure():
-    assert pt.quantiles(
-        [[1, 10], [2, 20], [3, 30], [4, 40], [5, 50]], (10, 50, 90)
-    ) == [[1.4, 3.0, 4.6], [14.0, 30.0, 46.0]]
+    assert pt.quantiles([[1, 10], [2, 20], [3, 30], [4, 40], [5, 50]], (10, 50, 90)) == [
+        [1.4, 3.0, 4.6],
+        [14.0, 30.0, 46.0],
+    ]
 
 
 def test_size_note_mentions_kb():

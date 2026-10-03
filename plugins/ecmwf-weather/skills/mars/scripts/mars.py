@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["earthkit-data[mars]>=1.2"]
@@ -43,7 +48,7 @@ WARN_BYTES = 20 * 1024**3
 ERA5_CLASSES = {"ea", "e5", "ep", "rr"}
 
 
-# --- parse / format ---------------------------------------------------------------------------------
+# --- parse / format -------------------------------------------------------------------------------
 
 
 def parse_request(text: str) -> dict:
@@ -103,7 +108,7 @@ def _count(req: dict, key: str) -> int:
     return len(expand(v))
 
 
-# --- lint / estimate / plan -------------------------------------------------------------------------
+# --- lint / estimate / plan -----------------------------------------------------------------------
 
 
 def _two_numbers(v: str) -> list[float] | None:
@@ -127,11 +132,9 @@ def estimate(req: dict) -> dict:
     if grid and len(grid) == 2:
         if area and len(area) == 4:
             n, w, s, e = area
-            pts = (int(round((n - s) / grid[1])) + 1) * (
-                int(round((e - w) / grid[0])) + 1
-            )
+            pts = (round((n - s) / grid[1]) + 1) * (round((e - w) / grid[0]) + 1)
         else:
-            pts = (int(round(180 / grid[1])) + 1) * int(round(360 / grid[0]))
+            pts = (round(180 / grid[1]) + 1) * round(360 / grid[0])
     else:
         pts = NATIVE_POINTS.get(req.get("class"), NATIVE_POINTS["od"])
     b = fields * pts * BYTES_PER_POINT
@@ -163,21 +166,13 @@ def lint(req: dict) -> dict:
         if k not in req:
             errs.append(f"missing required keyword '{k}'")
     if req.get("levtype") in ("pl", "ml", "pt", "pv") and "levelist" not in req:
-        errs.append(
-            f"levtype={req.get('levtype')} needs 'levelist' (e.g. 1000/850/500 or all)"
-        )
+        errs.append(f"levtype={req.get('levtype')} needs 'levelist' (e.g. 1000/850/500 or all)")
     if req.get("type") == "pf" and "number" not in req:
-        errs.append(
-            "type=pf (ensemble perturbed members) needs 'number' (e.g. 1/to/50)"
-        )
+        errs.append("type=pf (ensemble perturbed members) needs 'number' (e.g. 1/to/50)")
     if req.get("type") in FORECAST_TYPES and "step" not in req:
-        errs.append(
-            f"type={req.get('type')} is a forecast: add 'step' (e.g. 0/to/72/by/6)"
-        )
+        errs.append(f"type={req.get('type')} is a forecast: add 'step' (e.g. 0/to/72/by/6)")
     if req.get("type") == "an" and req.get("step") not in (None, "0"):
-        warns.append(
-            "type=an (analysis) has no forecast steps — drop 'step' or use type=fc"
-        )
+        warns.append("type=an (analysis) has no forecast steps — drop 'step' or use type=fc")
     if "grid" in req:
         g = _two_numbers(req["grid"])
         if not g or len(g) != 2:
@@ -187,9 +182,7 @@ def lint(req: dict) -> dict:
         if not a or len(a) != 4:
             errs.append("area must be north/west/south/east, e.g. 72/-25/30/45")
         elif a[0] < a[2]:
-            errs.append(
-                f"area north {a[0]} is below south {a[2]} — order is north/west/south/east"
-            )
+            errs.append(f"area north {a[0]} is below south {a[2]} — order is north/west/south/east")
     if "expver" not in req:
         warns.append("no 'expver' — defaults to 1 (operational/final data)")
     if _months(req) > 1:
@@ -200,12 +193,11 @@ def lint(req: dict) -> dict:
         )
     e = estimate(req)
     if e["bytes"] > WARN_BYTES:
-        warns.append(
-            f"estimated {e['size']} — split the request (limit per retrieval is 75 GB)"
-        )
+        warns.append(f"estimated {e['size']} — split the request (limit per retrieval is 75 GB)")
     if not req.get("grid") and req.get("class") == "od":
         warns.append(
-            "no 'grid' — native O1280 (~9 km) fields are large; add grid=0.25/0.25 and an area if possible"
+            "no 'grid' — native O1280 (~9 km) fields are large; "
+            "add grid=0.25/0.25 and an area if possible"
         )
     return {"errors": errs, "warnings": warns, "estimate": e}
 
@@ -240,7 +232,7 @@ def parse_cost(text: str) -> dict:
     return {k.strip(): int(v) for k, v in re.findall(r"(\w+)=(\d+);", text)}
 
 
-# --- access ------------------------------------------------------------------------------------------
+# --- access ---------------------------------------------------------------------------------------
 
 
 def credentials(env=os.environ, home: Path | None = None, which=shutil.which) -> dict:
@@ -260,16 +252,17 @@ def credentials(env=os.environ, home: Path | None = None, which=shutil.which) ->
 def licence_note(req: dict) -> str:
     if req.get("class") in ERA5_CLASSES:
         return (
-            "ERA5 (Copernicus Climate Change Service) — CC BY 4.0. Credit: 'Generated using Copernicus "
-            "Climate Change Service information <year>' and cite the ERA5 DOI 10.24381/cds.adbb2d47."
+            "ERA5 (Copernicus Climate Change Service) — CC BY 4.0. "
+            "Credit: 'Generated using Copernicus Climate Change Service information <year>' "
+            "and cite the ERA5 DOI 10.24381/cds.adbb2d47."
         )
     return (
-        "Licensed ECMWF data — use under your organisation's ECMWF licence; credit '© ECMWF' and check "
-        "the licence before redistributing or publishing."
+        "Licensed ECMWF data — use under your organisation's ECMWF licence; "
+        "credit '© ECMWF' and check the licence before redistributing or publishing."
     )
 
 
-# --- server (Web API / local client) -------------------------------------------------------------------
+# --- server (Web API / local client) --------------------------------------------------------------
 
 
 def server_cost(req: dict) -> dict:
@@ -297,7 +290,7 @@ def retrieve(req: dict, output: str) -> None:
     shutil.copy(src.path, output)
 
 
-# --- CLI --------------------------------------------------------------------------------------------------
+# --- CLI ------------------------------------------------------------------------------------------
 
 
 def _load(arg: str) -> dict:
@@ -314,9 +307,7 @@ def main(argv=None) -> int:
     sp.add_argument("--json", action="store_true")
     for name in ("lint", "estimate", "plan", "cost", "retrieve"):
         sp = sub.add_parser(name)
-        sp.add_argument(
-            "request", help="JSON or MARS-text file, or an inline MARS request string"
-        )
+        sp.add_argument("request", help="JSON or MARS-text file, or an inline MARS request string")
         sp.add_argument("--json", action="store_true")
         if name == "retrieve":
             sp.add_argument("-o", "--output", required=True)
@@ -325,15 +316,12 @@ def main(argv=None) -> int:
     if a.cmd == "check":
         c = credentials()
         c["how"] = (
-            "Web API key: https://api.ecmwf.int/v1/key/ -> ~/.ecmwfapirc. MARS access itself depends on "
-            "your account (Member/Co-operating State users, licensed users). Verify with "
+            "Web API key: https://api.ecmwf.int/v1/key/ -> ~/.ecmwfapirc. "
+            "MARS access itself depends on your account "
+            "(Member/Co-operating State users, licensed users). Verify with "
             "`uv run mars.py cost` on a tiny request — the Web API queue can take several minutes."
         )
-        print(
-            json.dumps(c, indent=2)
-            if a.json
-            else "\n".join(f"{k}: {v}" for k, v in c.items())
-        )
+        print(json.dumps(c, indent=2) if a.json else "\n".join(f"{k}: {v}" for k, v in c.items()))
         return 0 if (c["webapi"] or c["mars_client"]) else 4
 
     try:
@@ -353,7 +341,8 @@ def main(argv=None) -> int:
                     print(f"warning: {w}")
                 e = r["estimate"]
                 print(
-                    f"estimate: {e['fields']} fields x {e['points_per_field']} points ≈ {e['size']} ({e['note']})"
+                    f"estimate: {e['fields']} fields x {e['points_per_field']} points "
+                    f"≈ {e['size']} ({e['note']})"
                 )
                 print(f"licence: {r['licence']}")
             return 2 if r["errors"] else 0
@@ -369,25 +358,22 @@ def main(argv=None) -> int:
             return 0
         if not any(credentials().values()):
             print(
-                "error: no MARS access configured (~/.ecmwfapirc or ECMWF_API_*; or a local `mars` client). "
+                "error: no MARS access configured "
+                "(~/.ecmwfapirc or ECMWF_API_*; or a local `mars` client). "
                 "Run `mars.py check`.",
                 file=sys.stderr,
             )
             return 4
         errs = lint(req)["errors"]
         if errs:
-            print(
-                "error: fix the request first:\n  " + "\n  ".join(errs), file=sys.stderr
-            )
+            print("error: fix the request first:\n  " + "\n  ".join(errs), file=sys.stderr)
             return 2
         if a.cmd == "cost":
             c = server_cost(req)
             c["size_human"] = _human(c.get("size", 0))
             c["on_tape"] = c.get("number_of_offline_fields", 0) > 0
             print(
-                json.dumps(c, indent=2)
-                if a.json
-                else "\n".join(f"{k}: {v}" for k, v in c.items())
+                json.dumps(c, indent=2) if a.json else "\n".join(f"{k}: {v}" for k, v in c.items())
             )
             return 0
         retrieve(req, a.output)
@@ -400,9 +386,7 @@ def main(argv=None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     except Exception as e:  # ecmwf-api-client / MARS errors
-        print(
-            f"error: {str(e).splitlines()[-1] if str(e) else repr(e)}", file=sys.stderr
-        )
+        print(f"error: {str(e).splitlines()[-1] if str(e) else repr(e)}", file=sys.stderr)
         return 2
 
 

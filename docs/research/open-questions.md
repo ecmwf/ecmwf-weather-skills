@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Research — open questions, best guesses (2026-10-02)
 
 Confidence: H/M/L. Everything below should be confirmed with ECMWF before v1.0.
