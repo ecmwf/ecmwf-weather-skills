@@ -1,11 +1,11 @@
 ---
 name: opencharts-wms
-description: Builds ECMWF weather maps — map images and tile layers from the ECMWF ecCharts WMS (mean sea level pressure, 500 hPa geopotential, 850 hPa temperature and wind, ensemble mean and spread, tropical cyclones, CAMS air quality), official OpenCharts forecast charts as PNG/PDF, and ready-made interactive web maps (Leaflet) with a time slider, legends, click values and a 10-day meteogram on click. Use when a task asks for an ECMWF weather map or chart, WMS GetCapabilities, GetMap, GetLegend or GetFeatureInfo URLs, layer names, styles or valid times, adding ECMWF layers to Leaflet, MapLibre or OpenLayers, or building a weather web map or dashboard.
+description: Builds ECMWF weather maps — map images and tile layers from the ECMWF ecCharts WMS (mean sea level pressure, 500 hPa geopotential, 850 hPa temperature and wind, ensemble mean and spread, tropical cyclones, CAMS air quality), official OpenCharts forecast charts as PNG/PDF, and ready-made interactive web maps (Leaflet) with a time slider, legends, click values and a 10-day meteogram on click. Use when a task asks for an ECMWF weather map or chart, WMS GetCapabilities, GetMap, GetLegend or GetFeatureInfo URLs, layer names, styles or valid times, adding ECMWF layers to Leaflet, MapLibre or OpenLayers, or building a weather web map or dashboard (always start from scripts/webmap.py). Not for a map of a local GRIB or NetCDF file — that is the earthkit skill.
 compatibility: wms.py, opencharts.py and webmap.py need only Python 3 (standard library); `uv run wms.py getmap -o` adds Pillow to composite background and coastlines. Meteograms in the web map use the open-data and earthkit skills (uv, earthkit). Network access to eccharts.ecmwf.int, charts.ecmwf.int and data.ecmwf.int.
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 <!--
@@ -27,7 +27,10 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Choose the route
 
-| Need | Run (paths relative to this skill; run the scripts, don't read them) |
+Run the scripts; don't read them. Run them from the user's working directory and write
+files there, never inside the skill directory.
+
+| Need | Run (paths relative to this skill) |
 |---|---|
 | Interactive web map, click → meteogram | `python3 scripts/webmap.py create DIR` then `python3 scripts/webmap.py serve DIR` |
 | Which layers exist, their valid times | `python3 scripts/wms.py layers --public` / `wms.py times --layer NAME` |
@@ -36,11 +39,14 @@ SPDX-License-Identifier: Apache-2.0
 | Official ECMWF chart (as on charts.ecmwf.int) | `python3 scripts/opencharts.py search TEXT` → `opencharts.py get NAME --step 48 -o chart.png` |
 | 2 m temperature or precipitation **maps** | OpenCharts (`medium-2t-wind`, `medium-rain-rate`…) — the public WMS has no surface temperature/precipitation layers |
 | Forecast numbers at a place | the `open-data` skill |
+| Map of a GRIB/NetCDF file the user already has | the `earthkit` skill (`ekplot.py map`) — not an OpenCharts image |
 
 Use ECMWF sources only — never substitute a third-party weather API; if no ECMWF route works,
 say so.
 
 ## Web map workflow
+
+Always build web maps with `webmap.py` and customise its output; don't write one from scratch.
 
 ```
 - [ ] 1. python3 scripts/webmap.py create webmap [--layers a,b] [--center LAT,LON --zoom N]
@@ -66,6 +72,9 @@ uv run  scripts/wms.py getmap --layer t850_public --bbox -15,33,35,65 --time 202
 python3 scripts/wms.py getmap --layer msl_public --bbox -15,33,35,65 --url-only   # URL for a client
 python3 scripts/wms.py legend --layer t850_public -o legend.png
 ```
+
+When telling the user which layers to use, include the endpoint line `wms.py layers` prints
+(`https://eccharts.ecmwf.int/wms/?token=public`) — the layer names alone aren't usable.
 
 `--bbox` is always west,south,east,north in degrees; the script converts it for the CRS. `-o`
 composites background + layer + coastlines; `--no-background` gives the transparent layer only.

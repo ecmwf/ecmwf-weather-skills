@@ -25,7 +25,8 @@ metadata:
 - Details — `references/details.md`
 
 ## Quick start
-Run `scripts/demo.py`.
+Run `scripts/demo.py` from the user's working directory; write files there, never inside the
+skill directory.
 """
 
 
@@ -52,6 +53,7 @@ def test_good_skill_has_no_problems(tmp_path):
         (lambda s: s.replace("Use when the user", "Use when: the user"), "': '"),
         (lambda s: s.replace("## Contents", "## Stuff"), "table of contents"),
         (lambda s: s + "See references\\details.md\n", "backslash"),
+        (lambda s: s.replace("never inside the\nskill directory", "anywhere"), "skill directory"),
         (lambda s: s.replace("references/details.md", "nothing"), "not linked"),
     ],
 )

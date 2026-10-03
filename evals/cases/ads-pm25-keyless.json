@@ -4,9 +4,22 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "command", "pattern": "wms\\.py\\s+info.*composition_pm2p5|cds\\.py"},
-    {"kind": "final", "pattern": "(?i)µg|ug ?/ ?m|microgram"},
-    {"kind": "final", "pattern": "(?i)Copernicus Atmosphere Monitoring Service|CAMS"},
-    {"kind": "command_not", "pattern": "(?i)open-meteo|iqair|waqi"}
-  ]
+    {
+      "kind": "command",
+      "pattern": "wms\\.py\\s+info.*composition_\\w*pm2p5|cds\\.py"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\u00b5g|ug ?/ ?m|microgram"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)Copernicus Atmosphere Monitoring Service|CAMS"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|iqair|waqi"
+    }
+  ],
+  "note": "Any CAMS PM2.5 layer counts: the Europe regional layer (composition_europe_pm2p5_forecast_surface) is a better choice for European cities than the global one."
 }

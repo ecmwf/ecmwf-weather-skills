@@ -1,14 +1,37 @@
 {
   "id": "ek-inspect-map",
   "prompt": "There's a file forecast.grib2 in this folder. Tell me what's in it, then make a map of 2 metre temperature in Celsius over Europe at forecast step 12 and save it as t2m.png.",
-  "setup": {"copy": {"tests/fixtures/ifs-sfc-5deg-20261002-00z.grib2": "forecast.grib2"}},
+  "setup": {
+    "copy": {
+      "tests/fixtures/ifs-sfc-5deg-20261002-00z.grib2": "forecast.grib2"
+    }
+  },
   "timeout": 900,
   "max_budget_usd": 3,
   "expect": [
-    {"kind": "skill", "name": "earthkit"},
-    {"kind": "command", "pattern": "ekinspect\\.py|ekplot\\.py|earthkit"},
-    {"kind": "command_not", "pattern": "pip install (earthkit(\\s|$)|.*earthkit-data\\[all\\])"},
-    {"kind": "file", "pattern": "t2m.png"},
-    {"kind": "final", "pattern": "2t|2 ?m(etre)? temperature"}
+    {
+      "kind": "skill",
+      "name": "earthkit"
+    },
+    {
+      "kind": "command",
+      "pattern": "ekinspect\\.py|ekplot\\.py|earthkit"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "pip install (earthkit(\\s|$)|.*earthkit-data\\[all\\])"
+    },
+    {
+      "kind": "file",
+      "pattern": "t2m.png"
+    },
+    {
+      "kind": "final",
+      "pattern": "2t|2 ?m(etre)? temperature"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "opencharts\\.py|pip3? install"
+    }
   ]
 }

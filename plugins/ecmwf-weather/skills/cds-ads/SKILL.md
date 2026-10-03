@@ -5,7 +5,7 @@ compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 <!--
@@ -27,7 +27,8 @@ Use ECMWF/Copernicus sources only — never substitute a third-party weather or 
 
 ## Workflow
 
-Run the scripts; don't read them. Paths are relative to this skill.
+Run the scripts; don't read them. Run them from the user's working directory and write
+files there, never inside the skill directory. Paths are relative to this skill.
 
 ```
 - [ ] 1. python3 scripts/cds.py check                    # exit 4 = no key (names only, never values)

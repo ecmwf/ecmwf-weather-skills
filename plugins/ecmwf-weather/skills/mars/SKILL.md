@@ -1,11 +1,11 @@
 ---
 name: mars
-description: Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
+description: Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 <!--
@@ -18,6 +18,7 @@ SPDX-License-Identifier: Apache-2.0
 ## Contents
 - Is MARS the right route?
 - Request workflow (lint → plan → cost → retrieve)
+- Templates (lint-clean starting points)
 - Efficiency rules (tape)
 - Licence and attribution
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
@@ -33,12 +34,18 @@ Use ECMWF sources only — never substitute a third-party weather API.
 | ERA5 without an ECMWF licence | `cds-ads` skill (CDS, free key) |
 | Older operational runs, all ENS members, model levels, full resolution, research/experimental data | **MARS** |
 
-Check access first: `python3 scripts/mars.py check` (exit 4 = nothing configured; names only).
-Having `~/.ecmwfapirc` doesn't guarantee MARS rights — that depends on the account.
+Check access first: `python3 scripts/mars.py check` — finds credentials (names only), verifies
+the key with the Web API in seconds and reports the account id; exit 4 = nothing usable. A
+verified key doesn't guarantee MARS rights for every dataset — that depends on the account.
+Don't read `~/.ecmwfapirc` yourself.
 
 ## Request workflow
 
-Run the scripts; don't read them. Requests are JSON or MARS text files.
+Run the scripts; don't read them. Run them from the user's working directory and write
+files there, never inside the skill directory. Requests are JSON or MARS text files. **Never hand a request
+to the user that `mars.py lint` hasn't passed** — MARS keywords differ from CDS ones
+(`levelist` not `level`; no `dataset`, `format` or `variable`), and lint catches them. Operational
+IFS (HRES and ENS) is always `class=od`.
 
 ```
 - [ ] 1. Write the request (keywords: references/keywords.md)
@@ -56,6 +63,25 @@ Run the scripts; don't read them. Requests are JSON or MARS text files.
   timeout or run in the background; don't resubmit while one is queued.
 - Always interpolate when full resolution isn't needed: `grid=0.25/0.25` (+ `area=N/W/S/E`) cuts
   size by orders of magnitude versus native O1280.
+
+## Templates (lint-clean — start from these)
+
+ERA5, one month of hourly data on all 37 pressure levels (one tape-friendly chunk):
+
+```
+retrieve, class=ea, stream=oper, type=an, expver=1, levtype=pl, levelist=all,
+    param=t, date=2010-01-01/to/2010-01-31, time=00/to/23/by/1, grid=0.25/0.25
+```
+
+Operational IFS HRES forecast, surface fields over Europe:
+
+```
+retrieve, class=od, stream=oper, type=fc, expver=1, levtype=sfc, param=2t/10u/10v,
+    date=2024-03-01/to/2024-03-31, time=00, step=0/to/72/by/6, grid=0.25/0.25, area=72/-25/30/45
+```
+
+Ranges need `/to/` (`a/b` means just those two values). Even from a template, run `lint` on the
+final request and paste its output request in the answer.
 
 ## Efficiency rules
 

@@ -1,11 +1,11 @@
 ---
 name: open-data
-description: Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. Default route whenever no CDS, MARS or Polytope credentials are available.
+description: Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the opencharts-wms skill; when the user has or mentions an ECMWF account, use the polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
 compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 <!--
@@ -31,7 +31,8 @@ the nearest gridpoint. The scripts do that with the minimum download.
 
 ## Scripts
 
-Run them; don't read them. Paths are relative to this skill's directory; all accept `--help`
+Run them; don't read them. Run them from the user's working directory and write
+files there, never inside the skill directory. Paths are relative to this skill's directory; all accept `--help`
 and `--json`.
 
 | Need | Run |
@@ -41,6 +42,8 @@ and `--json`.
 | Size before downloading | `python3 scripts/odcatalog.py estimate --param 2t,tp --step 0-240` |
 | Raw GRIB of selected fields only | `python3 scripts/odcatalog.py download --param 2t --step 24 -o out.grib2` |
 | Decode, plot or process GRIB | the `earthkit` skill |
+| Web map or dashboard (layers, time slider, click → meteogram) | the `opencharts-wms` skill: `webmap.py create` |
+| Forecast at a place **and the user mentions an ECMWF account or key** | the `polytope` skill (`ptpoint.py --check`, then `ptpoint.py`) |
 | **Ensemble spread / uncertainty at a place** | the `polytope` skill: `ptpoint.py --check`, then `ptpoint.py --ensemble` |
 
 Use ECMWF sources only — never substitute a third-party weather API; if no ECMWF route works,

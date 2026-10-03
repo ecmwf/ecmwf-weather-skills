@@ -4,9 +4,21 @@
   "timeout": 900,
   "max_budget_usd": 3,
   "expect": [
-    {"kind": "skill", "name": "opencharts-wms"},
-    {"kind": "command", "pattern": "webmap\\.py"},
-    {"kind": "file", "pattern": "webmap/index.html"},
-    {"kind": "final", "pattern": "webmap\\.py\\s+serve|serve"}
+    {
+      "kind": "skill",
+      "name": "opencharts-wms"
+    },
+    {
+      "kind": "command",
+      "pattern": "webmap\\.py"
+    },
+    {
+      "kind": "file",
+      "pattern": "webmap/index.html"
+    },
+    {
+      "kind": "final",
+      "pattern": "webmap\\.py\\s+serve|serve"
+    }
   ]
 }

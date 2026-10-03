@@ -5,7 +5,7 @@ compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — eart
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 <!--
@@ -32,6 +32,8 @@ say so.
 
 ## Access check
 
+Run it yourself — don't ask the user to run it — and report the result.
+
 ```bash
 uv run scripts/ptpoint.py --check --json     # never prints keys
 ```
@@ -41,6 +43,9 @@ uv run scripts/ptpoint.py --check --json     # never prints keys
   Polytope access would make it hourly, native resolution and ~10 KB.
 
 ## Point forecast and ensemble workflow
+
+Run the scripts; don't read them. Run them from the user's working directory and write
+files there, never inside the skill directory.
 
 ```
 - [ ] 1. Coordinates for the place (ask if ambiguous)
