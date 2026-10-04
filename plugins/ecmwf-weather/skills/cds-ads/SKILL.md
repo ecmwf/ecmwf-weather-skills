@@ -5,7 +5,7 @@ compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.2.2"
+  version: "0.2.3"
 ---
 
 <!--
