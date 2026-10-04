@@ -5,7 +5,7 @@ compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — eart
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 <!--
@@ -20,6 +20,7 @@ SPDX-License-Identifier: Apache-2.0
 - Point forecast and ensemble workflow
 - Other features (profiles, areas, routes)
 - Licence and attribution (operational data is not CC BY)
+- When blocked (legal or technical barriers)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -86,3 +87,15 @@ Operational data (`class: od`) is **not** open data: it is used under the user's
 ECMWF licence. Show `Data: © <year> ECMWF` and warn before redistributing or publishing. The
 Open Data section (`class: ai`, AIFS) is CC BY 4.0. `ptpoint.py` reports which applies in
 `attribution`, and `ekplot.py` stamps that line on figures.
+
+## When blocked
+
+Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the user, and what
+the agent should do) whenever a legal or technical barrier stops access. Relay the user's
+steps in full and follow the agent instruction; never work around a barrier with another
+provider's data, and never ask for passwords or keys in chat.
+
+| Barrier | Report |
+|---|---|
+| no credentials | `ptpoint.py --setup` steps; answer with `open-data` meanwhile |
+| 401/403 | key invalid or no Polytope access: Computing Representative / support |

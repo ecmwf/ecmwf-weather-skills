@@ -97,6 +97,10 @@ def check_skill(skill_dir: Path) -> list[str]:
     body_lines = body.splitlines()
     # Agents often cd into the skill to run scripts and then write outputs there, polluting
     # the installed plugin; every skill must say where files go.
+    # Users blocked by legal or technical barriers must always get detailed instructions
+    # (AGENTS.md "When access is blocked"); every skill says how.
+    if not re.search(r"^## When blocked\s*$", body, re.M):
+        p.append("SKILL.md needs a '## When blocked' section (instructions for user and agent)")
     if "never inside the skill directory" not in " ".join(body.split()):
         p.append(
             "SKILL.md must tell the agent to write files in the user's working directory, "

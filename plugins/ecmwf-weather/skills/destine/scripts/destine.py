@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -79,6 +80,38 @@ def setup_steps() -> list[str]:
         "later, run the script again.",
         "5. Help: https://platform.destine.eu/contact/ (FAQ: https://platform.destine.eu/support-faq/)",
     ]
+
+
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
+def barrier_for_error(message: str) -> dict | None:
+    if re.search(r"(?i)\b401\b|unauthori[sz]ed|token", message):
+        return {
+            "blocked": "DestinE rejected the token (missing or expired)",
+            "why": "DestinE tokens are long-lived but expire after inactivity or a password "
+            "change.",
+            "user_steps": [setup_steps()[3], "Then tell the agent to retry."],
+            "agent": "Give the re-authentication step; never ask for the password in chat.",
+        }
+    if re.search(r"(?i)\b403\b|forbidden|not allowed|access denied", message):
+        return {
+            "blocked": "this DestinE account lacks upgraded access to Digital Twin data",
+            "why": "Digital Twin data requires upgraded access granted by the European Commission.",
+            "user_steps": [*setup_steps()[:3], setup_steps()[5]],
+            "agent": "Give these steps; offer open-data or cds-ads alternatives meanwhile.",
+        }
+    return None
 
 
 # --- requests -------------------------------------------------------------------------------------
@@ -287,23 +320,26 @@ def main(argv=None) -> int:
         print("error: " + "; ".join(errs), file=sys.stderr)
         return 2
     if not token_source():
-        print(
-            "error: no DestinE token. Run `python3 destine.py setup` for how to request access "
-            "and authenticate.",
-            file=sys.stderr,
+        return blocked(
+            {
+                "blocked": "no DestinE token on this machine",
+                "why": "Digital Twin data needs upgraded DestinE access and a token in "
+                "~/.polytopeapirc-destine.",
+                "user_steps": setup_steps(),
+                "agent": "Offer these steps once; the request itself can still be "
+                "prepared (destine.py request).",
+            }
         )
-        return 4
     try:
         retrieve(req, a.output)
     except ImportError as e:
         print(f"error: {e}. Run with `uv run destine.py retrieve …`.", file=sys.stderr)
         return 3
     except Exception as e:  # polytope-client errors (401: re-authenticate; 403: no upgraded access)
-        print(
-            f"error: {str(e).splitlines()[-1] if str(e) else e!r} — on 401 re-run "
-            "desp-authentication.py; on 403 check your upgraded access.",
-            file=sys.stderr,
-        )
+        b = barrier_for_error(str(e))
+        if b:
+            return blocked(b)
+        print(f"error: {str(e).splitlines()[-1] if str(e) else e!r}", file=sys.stderr)
         return 2
     print(f"saved {a.output}\nattribution: {attribution(req['dataset'])['text']}")
     return 0

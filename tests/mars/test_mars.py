@@ -313,3 +313,26 @@ def test_cli_check_without_credentials_offers_setup(tmp_path):
         env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
     )
     assert "mars.py setup" in json.loads(out.stdout)["offer"]
+
+
+def test_barriers_mars():
+    rights = mars.barrier_for_error("User 'x' has no access to class=od stream=enfo")
+    assert "Computing Representative" in "\n".join(rights["user_steps"])
+    key = mars.barrier_for_error("HTTP 403: Invalid API key or key expired")
+    assert "https://api.ecmwf.int/v1/key/" in "\n".join(key["user_steps"])
+    assert mars.barrier_for_error("No data available") is None
+
+
+def test_lint_points_tigge_and_s2s_to_ecds():
+    errs = "\n".join(mars.lint({**HRES, "class": "ti"})["errors"])
+    assert "ecds.ecmwf.int" in errs
+
+
+def test_cli_retrieve_without_access_is_blocked(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "retrieve", "retrieve,class=od", "-o", str(tmp_path / "o")],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+    )
+    assert out.returncode == 4 and "BLOCKED:" in out.stderr and "api.ecmwf.int/v1/key" in out.stderr

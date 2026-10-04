@@ -5,7 +5,7 @@ compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 of
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 <!--
@@ -21,6 +21,7 @@ SPDX-License-Identifier: Apache-2.0
 - Templates (lint-clean starting points)
 - Efficiency rules (tape)
 - Licence and attribution
+- When blocked (legal or technical barriers)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -106,3 +107,17 @@ reads each tape file once:
   information <year>" + DOI 10.24381/cds.adbb2d47.
 
 `lint` prints the applicable line; end the answer with it.
+
+## When blocked
+
+Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the user, and what
+the agent should do) whenever a legal or technical barrier stops access. Relay the user's
+steps in full and follow the agent instruction; never work around a barrier with another
+provider's data, and never ask for passwords or keys in chat.
+
+| Barrier | Report |
+|---|---|
+| no key / no client | `mars.py setup` steps; lint, estimate, plan still work offline |
+| key rejected or expired | renew at https://api.ecmwf.int/v1/key/ (keys last a year) |
+| no MARS rights (403, "no access") | Computing Representative or service agreement; offer free alternatives |
+| TIGGE / S2S | moved to the ECMWF Data Store: accept the TIGGE/S2S licence there |

@@ -191,3 +191,9 @@ def test_next_hours_window_open_data(odp):
 
 def test_access_note_offers_instructions(odp, tmp_path):
     assert "instructions" in odp.access_note(1_000_000, env={}, home=tmp_path)
+
+
+def test_earthkit_barrier(odp):
+    b = odp.earthkit_barrier("No module named 'earthkit'")
+    s = "\n".join(b["user_steps"])
+    assert "https://docs.astral.sh/uv" in s and "WSL" in s and "odcatalog.py download" in b["agent"]

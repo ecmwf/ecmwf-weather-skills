@@ -9,6 +9,12 @@ Accepted, open work only. Finished work is recorded in `CHANGELOG.md`; design in
 
 ## Before the first public release
 
+- [ ] **ECMWF Data Store (ECDS) access** — https://ecds.ecmwf.int (TIGGE, S2S forecasts and
+      reforecasts): full support in `cds-ads` (search, describe, validate, licence check,
+      retrieve) with TIGGE/S2S request templates and eval cases; same ECMWF token as CDS/ADS
+      (url `https://ecds.ecmwf.int/api`); the TIGGE and S2S licences must be accepted per
+      account. `cds.py --store ecds` is already wired for check, setup and licence steps.
+
 - [ ] **DestinE (needs upgraded access — reminder for the maintainer):** once a DestinE token is
       set up in `~/.polytopeapirc-destine`, verify the `destine` request templates live
       (Climate DT on LUMI and MN5, Extremes DT), confirm token expiry behaviour, then run the

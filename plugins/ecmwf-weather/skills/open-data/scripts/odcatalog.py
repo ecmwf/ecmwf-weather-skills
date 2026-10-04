@@ -282,6 +282,34 @@ def range_jobs(per_step) -> list[tuple[str, int, int]]:
     ]
 
 
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
+def no_run_barrier(source: str) -> dict:
+    return {
+        "blocked": f"no published ECMWF Open Data run found on '{source}'",
+        "why": "the server or the network is unavailable, or publication is delayed.",
+        "user_steps": [
+            "1. Check the network can reach https://data.ecmwf.int/forecasts/ "
+            "(proxies and firewalls often block it).",
+            "2. Retry with a mirror: --source aws or --source google.",
+            "3. Service status and announcements: https://status.ecmwf.int",
+        ],
+        "agent": "Retry once with --source aws (then google); if all fail, report the "
+        "steps above instead of using another provider's data.",
+    }
+
+
 def latest_run(
     model: str = "ifs",
     stream: str = "oper",
@@ -459,8 +487,7 @@ def main(argv=None) -> int:
         if a.cmd == "latest":
             run = latest_run(a.model, a.stream, step=0 if a.partial else None, source=a.source)
             if run is None:
-                print("error: no published run found in the last 72 h", file=sys.stderr)
-                return 2
+                return blocked(no_run_barrier(a.source), a.json, code=2)
             data = {
                 "model": a.model,
                 "stream": a.stream,

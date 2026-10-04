@@ -27,6 +27,9 @@ metadata:
 ## Quick start
 Run `scripts/demo.py` from the user's working directory; write files there, never inside the
 skill directory.
+
+## When blocked
+Relay the script's BLOCKED report.
 """
 
 
@@ -54,6 +57,7 @@ def test_good_skill_has_no_problems(tmp_path):
         (lambda s: s.replace("## Contents", "## Stuff"), "table of contents"),
         (lambda s: s + "See references\\details.md\n", "backslash"),
         (lambda s: s.replace("never inside the\nskill directory", "anywhere"), "skill directory"),
+        (lambda s: s.replace("## When blocked", "## Other"), "When blocked"),
         (lambda s: s.replace("references/details.md", "nothing"), "not linked"),
     ],
 )

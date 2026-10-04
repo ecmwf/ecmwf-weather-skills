@@ -351,6 +351,38 @@ def composite(images: list[bytes]) -> bytes:
 # --- tokens -----------------------------------------------------------------------------------
 
 
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
+class NoKey(Exception):
+    """--token key without an ECMWF API key."""
+
+
+KEY_BARRIER = {
+    "blocked": "this request asks for non-public layers but no ECMWF API key was found",
+    "why": "only token=public layers are open; others need a personal ECMWF key.",
+    "user_steps": [
+        "1. Create an ECMWF account: open https://api.ecmwf.int/v1/key/, Login, "
+        "'Register new user'.",
+        "2. Log in and open https://api.ecmwf.int/v1/key/ to see your key.",
+        '3. Save ~/.ecmwfapirc ({"url": "https://api.ecmwf.int/v1", "key": "<key>", '
+        '"email": "<email>"}) and chmod 600 it — or set ECMWF_API_KEY.',
+        "4. Access to restricted layers depends on your account; ask https://support.ecmwf.int",
+    ],
+    "agent": "Use the public layers (wms.py layers --public) now and offer these steps.",
+}
+
+
 def resolve_token(arg: str | None) -> str:
     """'public' unless asked for 'key': then ECMWF_API_KEY or ~/.ecmwfapirc."""
     if arg != "key":
@@ -360,9 +392,7 @@ def resolve_token(arg: str | None) -> str:
     rc = Path.home() / ".ecmwfapirc"
     if rc.exists():
         return json.loads(rc.read_text())["key"]
-    raise ValueError(
-        "--token key needs ECMWF_API_KEY or ~/.ecmwfapirc (get a key at https://api.ecmwf.int/v1/key/)"
-    )
+    raise NoKey()
 
 
 def resolve_time(valid: str | None, time: str | None) -> str | None:
@@ -582,6 +612,8 @@ def main(argv=None) -> int:
                 )
             )
             return 0
+    except NoKey:
+        return blocked(KEY_BARRIER, getattr(a, "json", False))
     except (
         ValueError,
         RuntimeError,

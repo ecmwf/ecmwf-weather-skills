@@ -135,3 +135,18 @@ def test_cli_request_prints_address_and_request(tmp_path):
     d = json.loads(out.stdout)
     assert d["address"] == "polytope.mn5.apps.dte.destination-earth.eu"
     assert d["request"]["model"] == "ifs-nemo" and d["errors"] == []
+
+
+def test_barriers_destine():
+    assert "desp-authentication.py" in "\n".join(
+        dt.barrier_for_error("401 Unauthorized")["user_steps"]
+    )
+    assert "access-policy-upgrade" in "\n".join(dt.barrier_for_error("403 Forbidden")["user_steps"])
+
+
+def test_cli_retrieve_without_token_is_blocked(tmp_path):
+    req = tmp_path / "r.json"
+    req.write_text(json.dumps(dt.template("extremes-dt")))
+    out = cli("retrieve", str(req), "-o", str(tmp_path / "o"), home=tmp_path)
+    assert out.returncode == 4 and "BLOCKED:" in out.stderr
+    assert "access-policy-upgrade" in out.stderr

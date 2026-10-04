@@ -34,6 +34,19 @@ def _meta(field, key, default=None):
     return field.get(f"metadata.{key}", default=default)
 
 
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
 def summarise(fl) -> dict:
     params: dict[str, dict] = {}
     base, valid = set(), set()
@@ -98,12 +111,23 @@ def main(argv=None) -> int:
     try:
         import earthkit.data as ekd
     except ImportError:
-        print(
-            "error: earthkit-data not installed — run with `uv run ekinspect.py …` or "
-            "pip install 'earthkit-data>=1.2'",
-            file=sys.stderr,
+        return blocked(
+            {
+                "blocked": "the earthkit components this script needs are not installed",
+                "why": "decoding GRIB needs earthkit (eccodes wheels for Linux/macOS).",
+                "user_steps": [
+                    "1. Install uv: https://docs.astral.sh/uv/getting-started/installation/ "
+                    "(curl -LsSf https://astral.sh/uv/install.sh | sh), then re-run with "
+                    "`uv run ekinspect.py …` — it installs exactly what is needed.",
+                    "2. Without uv: pip install 'earthkit-data>=1.2'",
+                    "3. On Windows use WSL (earthkit has no Windows wheels).",
+                ],
+                "agent": "Run the script with `uv run`; if uv cannot be installed, give these "
+                "steps.",
+            },
+            a.json,
+            code=3,
         )
-        return 3
     with contextlib.redirect_stdout(sys.stderr):
         fl = ekd.from_source("file", a.path).to_fieldlist()
         s = summarise(fl)

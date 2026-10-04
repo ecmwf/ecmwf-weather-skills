@@ -46,6 +46,13 @@ STORES = {
         "abbr": "C3S",
         "rc": ".cdsapirc",
     },
+    "ecds": {
+        "api": "https://ecds.ecmwf.int/api",
+        "name": "ECMWF Data Store",
+        "service": "ECMWF",
+        "abbr": "ECDS",
+        "rc": ".cdsapirc",
+    },
     "ads": {
         "api": "https://ads.atmosphere.copernicus.eu/api",
         "name": "Atmosphere Data Store",
@@ -56,11 +63,75 @@ STORES = {
 }
 
 
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
+def licence_steps(store: str, dataset: str, labels: list[str]) -> list[str]:
+    """Detailed steps to accept dataset licences (only the user can do this)."""
+    host = STORES[store]["api"].removesuffix("/api")
+    return [
+        f"1. Log in at {host} (Login, top right) with your ECMWF account.",
+        f"2. Open {host}/datasets/{dataset}?tab=download#manage-licences",
+        "3. Scroll to the bottom of the download form, to 'Terms of use'.",
+        f"4. Read and click Accept for: {', '.join(labels)}. (Accepted once per account; it "
+        "covers every dataset using the same licence.)",
+        f"5. Confirm under {host}/profile?tab=licences, then tell the agent to re-run the request.",
+    ]
+
+
+def licence_barrier(store: str, dataset: str, res: dict) -> dict | None:
+    missing = (res.get("licences") or {}).get("missing")
+    if not missing:
+        return None
+    return {
+        "blocked": f"dataset licence not accepted: {', '.join(missing)}",
+        "why": "Copernicus/ECMWF data stores refuse downloads (HTTP 403) until the account "
+        "holder accepts the dataset's terms of use — a legal step only the user can do.",
+        "user_steps": licence_steps(store, dataset, missing),
+        "agent": "Show these steps to the user verbatim; do not retry the download until the "
+        "user confirms they accepted; meanwhile offer the validated request.",
+    }
+
+
+def key_barrier(store: str) -> dict:
+    return {
+        "blocked": f"no {store.upper()} API key",
+        "why": "downloads need a personal access token from a (free) ECMWF account.",
+        "user_steps": setup_steps(store),
+        "agent": "Say once what the key unlocks and offer these steps; give them when the "
+        "user accepts. Meanwhile validate the request without a key "
+        "(cds.py validate / era5-point --dry-run).",
+    }
+
+
+def barrier_for_error(store: str, dataset: str, message: str) -> dict | None:
+    """Map a data-store error to a barrier with instructions (None if not an access barrier)."""
+    if re.search(r"(?i)licen[cs]e|terms of use|required licences", message):
+        b = licence_barrier(store, dataset, {"licences": {"missing": ["the dataset licence"]}})
+        return b
+    if re.search(r"(?i)\b401\b|unauthori[sz]ed|invalid (token|key)|authentication", message):
+        b = key_barrier(store)
+        b["blocked"] = f"{store.upper()} rejected the API key"
+        b["why"] = "the token is missing, mistyped or for another account."
+        return b
+    return None
+
+
 def setup_steps(store: str = "cds") -> list[str]:
     """Exact steps to obtain and install a CDS/ADS key (verified 2026-10)."""
     s = STORES[store]
     host = s["api"].removesuffix("/api")
-    rc = "~/.cdsapirc" if store == "cds" else "~/.adsapirc"
+    rc = "~/.adsapirc" if store == "ads" else "~/.cdsapirc"
     return [
         f"1. Create a free ECMWF account: open {host}, click Login, then 'Register new user' "
         "(one ECMWF account works for CDS, ADS and the ECMWF Data Store).",
@@ -70,9 +141,12 @@ def setup_steps(store: str = "cds") -> list[str]:
         + (
             "\n   (CDS also reads the CDSAPI_URL and CDSAPI_KEY environment variables.)"
             if store == "cds"
+            else "\n   (The same personal access token as CDS/ADS; keep CDS in ~/.cdsapirc and set "
+            "CDSAPI_URL=https://ecds.ecmwf.int/api for ECDS.)"
+            if store == "ecds"
             else "\n   (ADS's own page says ~/.cdsapirc; earthkit reads ADS only from ~/.adsapirc.)"
         ),
-        "4. Accept the dataset's licence once (requests fail with 403 until you do): open "
+        "4. Accept the dataset's licence once (downloads fail with HTTP 403 until you do): open "
         f"{host}/datasets/<dataset-id>?tab=download#manage-licences while logged in, scroll to "
         "'Terms of use' at the bottom and click Accept. ERA5 and most Copernicus datasets use "
         "the 'CC-BY licence' — accepting it once covers all of them. Accepted licences are "
@@ -105,6 +179,10 @@ def credentials(store: str, env=os.environ, home: Path | None = None) -> str | N
         rc = Path(env.get("CDSAPI_RC", home / ".cdsapirc"))
         if rc.exists() and "ads." not in rc.read_text():
             return "~/.cdsapirc"
+        return None
+    if store == "ecds":  # same ECMWF token as CDS/ADS; only the url differs
+        if env.get("CDSAPI_KEY") or Path(env.get("CDSAPI_RC", home / ".cdsapirc")).exists():
+            return "~/.cdsapirc or CDSAPI_KEY (use url https://ecds.ecmwf.int/api via CDSAPI_URL)"
         return None
     if (home / ".adsapirc").exists():
         return "~/.adsapirc"
@@ -149,7 +227,7 @@ def required_licences(form: list) -> list[dict]:
 
 
 def _token(store: str, env, home: Path) -> str | None:
-    if store == "cds" and env.get("CDSAPI_KEY"):
+    if store in ("cds", "ecds") and env.get("CDSAPI_KEY"):
         return env["CDSAPI_KEY"]
     for rc in (
         (home / ".adsapirc", home / ".cdsapirc")
@@ -253,6 +331,11 @@ def form_options(form: list) -> dict:
 
 def attribution(store: str, year: int | None = None) -> str:
     year = year or datetime.now(timezone.utc).year
+    if store == "ecds":  # TIGGE/S2S: ECMWF-hosted, not Copernicus; terms in each dataset licence
+        return (
+            f"Data: © {year} ECMWF and the contributing centres, via the ECMWF Data Store; "
+            "used under the dataset licence (cds.py describe shows it)."
+        )
     return (
         f"Generated using {STORES[store]['service']} information {year}. Neither the European "
         "Commission nor ECMWF is responsible for any use that may be made of the Copernicus "
@@ -369,6 +452,21 @@ def _print(obj, as_json: bool, text: str):
     print(json.dumps(obj, indent=2) if as_json else text)
 
 
+def apply_costing(res: dict, c: dict) -> dict:
+    """Record the server's costing and turn its verdict (size limit, validity) into errors."""
+    res["cost"] = c
+    if c.get("request_is_valid") is False:
+        res["valid"] = False
+        res["errors"].append(f"server rejected the request: {c.get('invalid_reason', '?')}")
+    if c.get("cost", 0) > c.get("limit", float("inf")):
+        res["valid"] = False
+        res["errors"].append(
+            f"request too large: cost {c['cost']} > limit {c['limit']} — split it "
+            "(e.g. by year) or shrink area/variables"
+        )
+    return res
+
+
 def _validate_and_cost(store, dataset, request) -> dict:
     coll = get_collection(store, dataset)
     form = get_form(coll)
@@ -382,14 +480,7 @@ def _validate_and_cost(store, dataset, request) -> dict:
     }
     if not errs:
         try:
-            res["cost"] = costing(store, dataset, request)
-            c = res["cost"]
-            if c.get("cost", 0) > c.get("limit", float("inf")):
-                res["valid"] = False
-                res["errors"].append(
-                    f"request too large: cost {c['cost']} > limit {c['limit']} — split it "
-                    "(e.g. by year) or shrink area/variables"
-                )
+            apply_costing(res, costing(store, dataset, request))
         except urllib.error.HTTPError as e:
             body = e.read()[:300].decode(errors="replace")
             res["errors"].append(f"server rejected the request (HTTP {e.code}): {body}")
@@ -461,11 +552,12 @@ def main(argv=None) -> int:
             res = {
                 "cds": credentials("cds"),
                 "ads": credentials("ads"),
+                "ecds": credentials("ecds"),
                 "how_to_get_a_key": KEY_HELP,
                 "offer": (
                     "If a key is missing, say once what it would unlock and offer step-by-step "
-                    "setup instructions (python3 cds.py setup [--store ads]); give them only if "
-                    "the user accepts."
+                    "setup instructions (python3 cds.py setup [--store ads|ecds]); "
+                    "give them only if the user accepts."
                 ),
                 "keyless_alternatives": (
                     "CAMS forecasts: opencharts-wms skill (composition_* WMS layers, "
@@ -523,13 +615,7 @@ def main(argv=None) -> int:
 
         needs_key = a.cmd == "retrieve" or (a.cmd == "era5-point" and not a.dry_run)
         if needs_key and not credentials(a.store):
-            print(
-                f"error: no {a.store.upper()} credentials (~/{STORES[a.store]['rc']}"
-                f"{' or CDSAPI_URL/CDSAPI_KEY' if a.store == 'cds' else ''}). {KEY_HELP} "
-                "Validate the request without a key: cds.py validate / era5-point --dry-run.",
-                file=sys.stderr,
-            )
-            return 4
+            return blocked(key_barrier(a.store), a.json)
 
         res = _validate_and_cost(a.store, dataset, req)
         if a.cmd == "validate" or (a.cmd == "era5-point" and a.dry_run) or not res["valid"]:
@@ -544,7 +630,14 @@ def main(argv=None) -> int:
                 ]
             )
             _print(res, a.json, text)
+            lb = licence_barrier(a.store, dataset, res)
+            if lb:  # the request is fine but the account can't download it yet
+                blocked(lb)
             return 0 if res["valid"] else 2
+
+        lb = licence_barrier(a.store, dataset, res)
+        if lb:
+            return blocked(lb, a.json)
 
         out = a.output or f"{dataset}.{'csv' if req.get('data_format') == 'csv' else 'nc'}"
         retrieve(a.store, dataset, req, out)
@@ -566,8 +659,9 @@ def main(argv=None) -> int:
         return 2
     except Exception as e:  # earthkit/cdsapi errors: licence not accepted, queue failures
         msg = str(e)
-        if re.search(r"(?i)licen[cs]e|terms", msg):
-            msg += " — accept the dataset licence on its web page (Download tab), then retry."
+        b = barrier_for_error(a.store, getattr(a, "dataset", None) or "<dataset-id>", msg)
+        if b:
+            return blocked(b, a.json)
         print(f"error: {msg}", file=sys.stderr)
         return 2
 

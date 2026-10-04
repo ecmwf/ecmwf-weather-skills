@@ -240,3 +240,14 @@ def test_live_getmap_returns_exactly_the_requested_size(tmp_path):
         )
         assert out.returncode == 0, out.stderr
         assert struct.unpack(">II", png.read_bytes()[16:24]) == (1024, 768), bbox
+
+
+def test_token_key_without_key_is_blocked(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "layers", "--token", "key"],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+        timeout=60,
+    )
+    assert out.returncode == 4 and "BLOCKED:" in out.stderr and "api.ecmwf.int/v1/key" in out.stderr

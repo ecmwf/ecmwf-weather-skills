@@ -35,6 +35,7 @@ import argparse
 import contextlib
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -401,6 +402,32 @@ def fetch_latest(lat, lon, end_step, ensemble, date=None, time=None) -> tuple[di
 # --- CLI ------------------------------------------------------------------------------------------
 
 
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
+def barrier_for_error(message: str) -> dict | None:
+    if re.search(r"(?i)\b40[13]\b|unauthori[sz]ed|forbidden|rejected the credentials", message):
+        return {
+            "blocked": "Polytope refused this account",
+            "why": "the key is invalid or the account has no Polytope access (granted to "
+            "users at Member and Co-operating State national weather services).",
+            "user_steps": setup_steps(),
+            "agent": "Answer from the open-data skill now (odpoint.py) and give these steps; "
+            "do not retry Polytope until the user confirms access.",
+        }
+    return None
+
+
 def setup_steps() -> list[str]:
     """Exact steps to obtain ECMWF Polytope credentials (verified 2026-10)."""
     return [
@@ -485,13 +512,17 @@ def main(argv=None) -> int:
     if a.lat is None or a.lon is None:
         ap.error("--lat and --lon are required (or use --check)")
     if not credentials():
-        print(
-            "error: no Polytope credentials "
-            "(POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc). "
-            "Use the open-data skill: uv run <open-data>/scripts/odpoint.py --lat LAT --lon LON",
-            file=sys.stderr,
+        return blocked(
+            {
+                "blocked": "no Polytope credentials on this machine",
+                "why": "Polytope needs an ECMWF key and an account with Polytope access.",
+                "user_steps": setup_steps(),
+                "agent": "Answer now with the open-data skill "
+                "(uv run <open-data>/scripts/odpoint.py --lat LAT --lon LON) and "
+                "offer these steps once.",
+            },
+            a.json,
         )
-        return 4
     try:
         end = int(a.steps.split("-")[-1])
         if a.next_hours:
@@ -503,6 +534,9 @@ def main(argv=None) -> int:
         print(f"error: {e}. Run with `uv run ptpoint.py …`.", file=sys.stderr)
         return 3
     except RuntimeError as e:
+        b = barrier_for_error(str(e))
+        if b:
+            return blocked(b, a.json)
         print(f"error: {e}", file=sys.stderr)
         return 2
 
