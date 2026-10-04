@@ -11,6 +11,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-04
+
+### Added
+
+- `cds.py validate` / `era5-point --dry-run` check, with the user's key, whether the dataset's
+  licence is accepted and print the exact page to accept it
+  (`…/datasets/<id>?tab=download#manage-licences`); `cds.py setup` explains the step. ERA5 uses
+  the "CC-BY licence", accepted once per account.
+- README: "Tested models" (recommended: Claude Opus and Sonnet, Codex GPT-6.x and GPT-5.6;
+  Claude Haiku not recommended) and how to accept Copernicus licences.
+- AGENTS.md: never exfiltrate, display or commit credentials; `test_no_secrets.py` blocks
+  credential-shaped values in tracked files.
+
 ## [0.1.4] - 2026-10-04
 
 ### Added
@@ -156,7 +169,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.4...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.1...0.1.2

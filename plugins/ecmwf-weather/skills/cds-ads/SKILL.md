@@ -5,7 +5,7 @@ compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.4"
+  version: "0.1.5"
 ---
 
 <!--
@@ -52,8 +52,11 @@ files there, never inside the skill directory. Paths are relative to this skill.
   reports which one is present.
 - `validate` checks keys and values locally and asks the server for cost vs limit; a request over
   the limit must be split (by year or month) or reduced (area, variables).
-- Licences: each dataset's licence must be accepted once on its web page (Download tab) — the
-  API refuses otherwise, and the script says so.
+- Licences: each dataset's licence must be accepted once, or downloads fail with 403. With a
+  key, `validate` checks the account and prints the exact page
+  (`…/datasets/<id>?tab=download#manage-licences`, "Terms of use" at the bottom → Accept).
+  ERA5 uses the "CC-BY licence"; accepting it once covers every CC-BY dataset. Relay the page
+  to the user — only they can accept it.
 - Requests queue on the server; large ERA5 grids can take minutes to hours. Prefer the
   time-series and daily/monthly derived datasets when they answer the question.
 

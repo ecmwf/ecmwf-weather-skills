@@ -228,3 +228,44 @@ def test_cli_setup(tmp_path):
         [sys.executable, str(SCRIPT), "setup", "--store", "ads"], capture_output=True, text=True
     )
     assert out.returncode == 0 and "ads.atmosphere.copernicus.eu/how-to-api" in out.stdout
+
+
+# --- dataset licences ------------------------------------------------------------------------
+
+
+def test_required_licences_from_form():
+    lic = cds.required_licences(FORM_SL)
+    assert lic == [{"id": "cc-by", "revision": 1, "label": "CC-BY licence"}]
+
+
+def test_licence_status_and_accept_url():
+    accepted = {"licences": [{"id": "terms-of-use-cds", "revision": 11}]}
+    st = cds.licence_status("cds", "reanalysis-era5-single-levels", FORM_SL, accepted)
+    assert st["missing"] == ["CC-BY licence"]
+    assert st["accept_at"] == (
+        "https://cds.climate.copernicus.eu/datasets/"
+        "reanalysis-era5-single-levels?tab=download#manage-licences"
+    )
+    ok = {"licences": [{"id": "cc-by", "revision": 1}]}
+    assert cds.licence_status("cds", "x", FORM_SL, ok)["missing"] == []
+
+
+def test_accepted_licences_sends_token_header_only(tmp_path):
+    seen = {}
+
+    def fetch(url, headers):
+        seen.update(url=url, headers=headers)
+        return {"licences": []}
+
+    (tmp_path / ".cdsapirc").write_text(
+        "url: https://cds.climate.copernicus.eu/api\nkey: abc-123\n"
+    )
+    cds.accepted_licences("cds", env={}, home=tmp_path, fetch=fetch)
+    assert seen["url"] == "https://cds.climate.copernicus.eu/api/profiles/v1/account/licences"
+    assert seen["headers"] == {"PRIVATE-TOKEN": "abc-123"}
+    assert cds.accepted_licences("cds", env={}, home=tmp_path / "none", fetch=fetch) is None
+
+
+def test_setup_names_the_licence_page():
+    s = "\n".join(cds.setup_steps("cds"))
+    assert "?tab=download#manage-licences" in s and "CC-BY licence" in s

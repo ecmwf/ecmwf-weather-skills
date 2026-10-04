@@ -128,6 +128,16 @@ python3 cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
         --start 1991-01-01 --end 2020-12-31 --dry-run            # validate + cost, no key
 ```
 
+## Tested models
+
+Every skill is evaluated with fresh agents on 21 tasks (`make evals`).
+
+| Agent | Models | Result |
+|---|---|---|
+| Claude Code | Opus, Sonnet | recommended — pass all cases |
+| Codex | GPT-6.1-Sol, GPT-6-Astra, GPT-6-Sol, GPT-6-Luna, GPT-5.6-Terra, GPT-5.6-Sol, GPT-5.6-Luna | recommended — pass all cases |
+| Claude Code | Haiku | **not recommended** — unreliable at executing the skills' instructions (often answers without running the scripts) |
+
 ## Credentials (optional)
 
 | Service | Environment | File |
@@ -142,6 +152,12 @@ python3 cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
 Polytope and MARS access depend on your account (ECMWF Member and Co-operating States, licensed
 users). Scripts check credentials by name and never print them. When a key is missing, the agent
 offers step-by-step instructions to obtain it.
+
+**Copernicus licences:** CDS and ADS refuse downloads (HTTP 403) until you accept the dataset's
+licence once: open `https://cds.climate.copernicus.eu/datasets/<dataset-id>?tab=download#manage-licences`
+while logged in, scroll to "Terms of use" and click Accept. ERA5 uses the "CC-BY licence";
+accepting it once covers all CC-BY datasets. Your accepted licences are listed at
+<https://cds.climate.copernicus.eu/profile?tab=licences>.
 
 ## Data licences and attribution
 

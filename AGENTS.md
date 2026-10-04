@@ -33,6 +33,19 @@ Agent Skills for ECMWF data. Design: `PLAN.md`. Open work: `TODO.md`. Done work:
   ("the parallel Range fetcher", not "the M1 speed-up"). Git history records chronology.
 - **`make all` is the gate.** Run it before every commit; it must be green.
 
+## Credentials — NEVER exfiltrate
+
+- **NEVER** exfiltrate user or developer credentials: never send them anywhere other than the
+  service they belong to, never display them in chat, logs, eval transcripts or command lines,
+  and never place them in the repository (code, tests, fixtures, docs, commit messages).
+- Check credentials by **name and presence only**. When a script needs a secret, it reads the
+  file itself and passes it in headers or environment variables of a child process; output is
+  limited to status (exit code, HTTP status, account id).
+- Don't `cat`, `grep` or print `~/.ecmwfapirc`, `~/.cdsapirc`, `~/.adsapirc`,
+  `~/.polytopeapirc*`, `~/.destineapirc` or similar; describe them by key names and value
+  shapes only. Never ask users to paste a secret into chat or onto a command line.
+- `tests/tooling/test_no_secrets.py` blocks credential-shaped values in tracked files.
+
 ## Layout
 
 - Skills live only in `plugins/ecmwf-weather/skills/<name>/` (`SKILL.md`, `references/`, `scripts/`).
@@ -244,6 +257,14 @@ expectations are meaningful for it.
   script feature — add it, then re-measure.
 - Strong and weak models differ most in recovering from tool gaps; fix the tools so weaker
   models get the same result without compensating.
+
+**Model recommendation.** Neither the Agent Skills standard nor the plugin manifests have a
+field for recommending models (Claude Code's `model:` frontmatter *forces* a model and breaks
+portable packaging, so it is not used). Recommendations live in the README ("Tested models"),
+backed by eval results. **Claude Haiku is unreliable at executing these skills' instructions**:
+it often answers from the skill text without running the scripts or loading the right skill
+(e.g. `mars-access`, `destine-request` below 2-of-3). Record it as such; don't contort skill
+text for it.
 
 **Current status** (2026-10-03): Claude Code Opus 19/19, Sonnet 19/19, Haiku meets the 2-of-3
 rule on every case; Codex GPT-6.1-Sol, GPT-6-Astra/Sol/Luna, GPT-5.6-Terra/Sol/Luna 19/19
