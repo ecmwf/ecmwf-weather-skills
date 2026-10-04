@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-04
+
 ### Fixed
 
 - `cds.py validate` always states the licence result: `accepted` (confirmed on the account),
@@ -292,7 +294,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.2.1...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.2.2...HEAD
+[0.2.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.8...0.2.0
 [0.1.8]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.7...0.1.8
