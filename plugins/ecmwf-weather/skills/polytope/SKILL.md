@@ -16,17 +16,20 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Polytope
 
 ## Contents
-- Access check (line 34)
-- Point forecast and ensemble workflow (line 48)
-- Other features (line 74)
-- Licence and attribution (line 84)
-- When blocked (line 91)
+- Access check (line 37)
+- Point forecast and ensemble workflow (line 51)
+- Other features (line 77)
+- Licence and attribution (line 87)
+- When blocked (line 94)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
-~10 KB and takes ~2 s, versus ~300 MB from Open Data. Access is for users at ECMWF Member and
-Co-operating States' national services (ECMWF key from https://api.ecmwf.int/v1/key/) and
-Destination Earth accounts. Operational data covers roughly the last 2 days of runs.
+~10 KB and takes ~2 s, versus ~300 MB from Open Data. Any authenticated ECMWF user can use it,
+with the same credentials as `~/.ecmwfapirc` (key from https://api.ecmwf.int/v1/key/). Some
+datasets are restricted to Member and Co-operating States, ECMWF commercial data clients and
+researchers under a research licence (https://www.ecmwf.int/en/forecasts/datasets), and not all
+datasets are available via Polytope. Operational data covers roughly the last 2 days of runs.
+Destination Earth data is a separate service: the `destine` skill.
 
 Use ECMWF sources only — never substitute a third-party weather API; if no ECMWF route works,
 say so.
@@ -105,4 +108,4 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 | Barrier | Report |
 |---|---|
 | no credentials | `ptpoint.py --setup` steps; answer with `open-data` meanwhile |
-| 401/403 | key invalid or no Polytope access: Computing Representative / support |
+| 401/403 | key invalid, or dataset restricted (Member/Co-operating States, commercial, research licence) or not on Polytope |

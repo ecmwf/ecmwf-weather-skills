@@ -117,12 +117,13 @@ def access_note(nbytes: int, env=os.environ, home: Path | None = None) -> str:
     if polytope_available(env, home):
         return (
             f"Downloaded {size} of global Open Data fields for one point. ECMWF API credentials "
-            "were found — if your account has Polytope access (member-state users), the "
+            "were found — Polytope is available to authenticated ECMWF users, and the "
             "polytope skill can extract this point server-side in a few KB."
         )
     return (
         f"Answered from free ECMWF Open Data ({size} of global fields downloaded for one point). "
-        "With ECMWF Polytope access (member-state users) this would be a single point request "
+        "With an ECMWF account (Polytope, same key as the Web API) this would be a single "
+        "point request "
         "of a few KB — offer instructions to obtain it (polytope skill: ptpoint.py --setup)."
     )
 

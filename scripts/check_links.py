@@ -31,7 +31,6 @@ IGNORE = {
     "https://ai4edataeuwest.blob.core.windows.net/ecmwf": (
         "Azure mirror needs a SAS token (documented)"
     ),
-    "https://github.com/ecmwf/ecmwf-weather-skills": "this repository — 404 until published",
 }
 IGNORE_HOSTS = ("http://127.0.0.1", "http://localhost")
 # Hosts that need credentials or only accept API calls; reachability (any HTTP answer) is enough.

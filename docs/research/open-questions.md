@@ -63,7 +63,10 @@ complies, (b) unusable on maps.
 
 - `polytope.ecmwf.int`, collection `ecmwf-mars` (operational od ~2 days + AIFS-single open-data
   section); DestinE servers with `destination-earth`.
-- **No keyless access.** Member/co-operating-state NMHS users with ECMWF key; DestinE needs DESP.
+- **No keyless access.** Any authenticated ECMWF user (same credentials as `~/.ecmwfapirc`); some
+  datasets restricted to Member/Co-operating States, commercial clients and research licences
+  (https://www.ecmwf.int/en/forecasts/datasets); not all datasets on Polytope. Confirmed by
+  ECMWF (2026-10). DestinE needs DESP.
 - Features: `timeseries`, `verticalprofile`, `polygon`, `boundingbox`, `trajectory`, `circle`,
   `position`; output CoverageJSON.
 - polytope-client 0.7.10: env `POLYTOPE_USER_KEY`, `POLYTOPE_USER_EMAIL`, `POLYTOPE_ADDRESS`

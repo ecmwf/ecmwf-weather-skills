@@ -272,7 +272,12 @@ def test_setup_steps_polytope():
         '"user_email"',
         '"user_key"',
         "~/.polytopeapirc",
-        "Computing Representative",
+        "~/.ecmwfapirc",
+        "Any authenticated ECMWF user",
+        "https://www.ecmwf.int/en/forecasts/datasets",
+        "research licence",
+        "commercial",
+        "not all datasets",
         "https://support.ecmwf.int",
     ):
         assert must in s, must
@@ -289,9 +294,9 @@ def test_cli_check_offers_setup(tmp_path):
 
 
 def test_barriers_polytope():
-    assert "Computing Representative" in "\n".join(
-        pt.barrier_for_error("HTTP 403 Forbidden")["user_steps"]
-    )
+    b = pt.barrier_for_error("HTTP 403 Forbidden")
+    assert "https://www.ecmwf.int/en/forecasts/datasets" in "\n".join(b["user_steps"])
+    assert "restricted" in b["why"]
     assert pt.barrier_for_error("no data for date") is None
 
 

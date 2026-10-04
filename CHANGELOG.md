@@ -11,6 +11,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- ECMWF logo as the plugin icon (Codex `logo` / `composerIcon`), used with ECMWF approval;
+  licensed separately (`LicenseRef-ECMWF-Logo`), not Apache-2.0.
+
+### Changed
+
+- Polytope access wording, confirmed by ECMWF: available to any authenticated ECMWF user with the
+  same credentials as `~/.ecmwfapirc`; some datasets are restricted to Member and Co-operating
+  States, ECMWF commercial data clients and researchers under a research licence
+  (https://www.ecmwf.int/en/forecasts/datasets); not all datasets are available via Polytope.
+- Attribution wording confirmed by ECMWF; IPR and sensitive-information review completed.
+- `check_links.py` checks the repository URL (public from this release).
+- `make fmt` refreshes SKILL.md Contents line numbers first, so a lint error elsewhere no
+  longer blocks it.
+
 ## [0.2.0] - 2026-10-04
 
 Pre-publication release: findings of the open-source and security audits

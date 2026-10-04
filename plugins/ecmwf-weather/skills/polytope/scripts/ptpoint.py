@@ -423,8 +423,9 @@ def barrier_for_error(message: str) -> dict | None:
     if re.search(r"(?i)\b40[13]\b|unauthori[sz]ed|forbidden|rejected the credentials", message):
         return {
             "blocked": "Polytope refused this account",
-            "why": "the key is invalid or the account has no Polytope access (granted to "
-            "users at Member and Co-operating State national weather services).",
+            "why": "the key is invalid, or the requested dataset is restricted (Member and "
+            "Co-operating States, commercial data clients, research licence) or not available "
+            "via Polytope.",
             "user_steps": setup_steps(),
             "agent": "Answer from the open-data skill now (odpoint.py) and give these steps; "
             "do not retry Polytope until the user confirms access.",
@@ -442,10 +443,12 @@ def setup_steps() -> list[str]:
         '   {"user_email": "<email>", "user_key": "<key>"}\n'
         "   (without this file Polytope falls back to ~/.ecmwfapirc; or set POLYTOPE_USER_EMAIL "
         "and POLYTOPE_USER_KEY)",
-        "4. Access itself is granted to users at Member and Co-operating State national weather "
-        "services — ask your Computing Representative "
-        "(https://www.ecmwf.int/en/about/contact-us/computing-representatives) or "
-        "https://support.ecmwf.int. Without it, use the open-data skill.",
+        "4. Any authenticated ECMWF user can use Polytope. Some datasets are restricted to "
+        "Member and Co-operating States, ECMWF commercial data clients, and researchers under a "
+        "research licence (see https://www.ecmwf.int/en/forecasts/datasets); not all datasets "
+        "are available via Polytope. For access to restricted data ask "
+        "https://support.ecmwf.int (Member/Co-operating State users: your Computing "
+        "Representative). Meanwhile, use the open-data skill.",
         "5. Check: uv run ptpoint.py --check",
         "Destination Earth Digital Twin data uses a different account and token: "
         "the destine skill.",

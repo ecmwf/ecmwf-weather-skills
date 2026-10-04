@@ -58,9 +58,9 @@ lint: ## Skill best-practice lint, ruff, formatting, REUSE licence headers
 	$(REUSE) lint
 
 fmt: ## Apply ruff formatting, safe fixes, and refresh SKILL.md Contents line numbers
+	$(PY) scripts/check_skills.py --fix
 	$(RUFF) format .
 	$(RUFF) check --fix .
-	$(PY) scripts/check_skills.py --fix
 
 check: ## Consistency: manifests/versions, generated docs, plugin manifest (if claude CLI present)
 	$(PY) scripts/validate_packaging.py

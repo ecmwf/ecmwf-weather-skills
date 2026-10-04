@@ -43,6 +43,8 @@
       "Get the latest ECMWF IFS forecast for my city.",
       "Build a web map with ECMWF WMS layers and a clicked-point meteogram.",
       "Download ERA5 temperature for a region and plot it."
-    ]
+    ],
+    "composerIcon": "./assets/ecmwf-logo.svg",
+    "logo": "./assets/ecmwf-logo.svg"
   }
 }
