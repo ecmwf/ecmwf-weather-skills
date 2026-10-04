@@ -5,7 +5,7 @@ compatibility: Skill instructions are provider-neutral. Scripts use uv (PEP 723 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.2.1"
+  version: "0.2.2"
 ---
 
 <!--
