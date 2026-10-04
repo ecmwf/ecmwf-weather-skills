@@ -655,6 +655,12 @@ def main(argv=None) -> int:
         )
         return 3
     except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+        if isinstance(e, (urllib.error.URLError, ConnectionError, TimeoutError)) and not isinstance(
+            e, urllib.error.HTTPError
+        ):
+            import ecmwf_status  # sibling script
+
+            return blocked(ecmwf_status.network_barrier(a.store, str(e)), a.json, code=2)
         print(f"error: {e}", file=sys.stderr)
         return 2
     except Exception as e:  # earthkit/cdsapi errors: licence not accepted, queue failures

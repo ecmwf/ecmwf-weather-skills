@@ -16,6 +16,12 @@ RUFF    ?= $(UV) run --with ruff==0.16.10 ruff
 REUSE   ?= $(UV) run --with reuse==6.2.0 reuse
 PLUGIN  := plugins/ecmwf-weather
 
+# Caches so repeated runs don't re-download: Open Data byte ranges (immutable per run, pruned
+# after 3 days) and MIR interpolation weights. Packages are cached by uv itself.
+CACHE   ?= $(CURDIR)/.cache
+export ECMWF_SKILLS_CACHE ?= $(CACHE)/data
+export MIR_CACHE_PATH ?= $(CACHE)/mir
+
 # `make version X.Y.Z` (positional) or `make version VERSION=X.Y.Z`. A VERSION inherited from
 # the environment is ignored so a stray shell variable can never bump the release.
 ifeq ($(origin VERSION),environment)
@@ -28,7 +34,7 @@ $(eval $(VERSION):;@:)
 endif
 endif
 
-.PHONY: help setup all lint fmt check test test-earthkit test-live test-all evals docs \
+.PHONY: help setup all lint fmt check test test-earthkit test-live test-all evals docs clean-cache \
         docs-check references references-check links dist version version-check clean
 
 help: ## Show this help
@@ -50,9 +56,10 @@ lint: ## Skill best-practice lint, ruff, formatting, REUSE licence headers
 	$(RUFF) format --check .
 	$(REUSE) lint
 
-fmt: ## Apply ruff formatting and safe fixes
+fmt: ## Apply ruff formatting, safe fixes, and refresh SKILL.md Contents line numbers
 	$(RUFF) format .
 	$(RUFF) check --fix .
+	$(PY) scripts/check_skills.py --fix
 
 check: ## Consistency: manifests/versions, generated docs, plugin manifest (if claude CLI present)
 	$(PY) scripts/validate_packaging.py
@@ -113,6 +120,9 @@ version-check: ## Verify every manifest and SKILL.md agree on the version
 	$(PY) scripts/validate_packaging.py
 
 # ── Cleanup ──────────────────────────────────────────────────────────────────
+
+clean-cache: ## Remove the download and MIR caches (.cache/)
+	rm -rf $(CACHE)
 
 clean: ## Remove build outputs, caches and eval transcripts (never sources)
 	rm -rf dist evals/runs .pytest_cache .ruff_cache

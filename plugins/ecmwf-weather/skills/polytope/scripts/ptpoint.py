@@ -40,6 +40,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import ecmwf_status  # sibling script: what ECMWF says about service status
+
 UTC = timezone.utc
 ADDRESS = os.environ.get("POLYTOPE_ADDRESS", "polytope.ecmwf.int")
 COLLECTION = "ecmwf-mars"
@@ -416,6 +418,8 @@ def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
 
 
 def barrier_for_error(message: str) -> dict | None:
+    if ecmwf_status.NETWORK_ERROR.search(message):
+        return ecmwf_status.network_barrier("polytope", message.splitlines()[-1][:200])
     if re.search(r"(?i)\b40[13]\b|unauthori[sz]ed|forbidden|rejected the credentials", message):
         return {
             "blocked": "Polytope refused this account",

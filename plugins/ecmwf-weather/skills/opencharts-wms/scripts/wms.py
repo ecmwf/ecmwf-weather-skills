@@ -612,13 +612,21 @@ def main(argv=None) -> int:
                 )
             )
             return 0
+    except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+        if not isinstance(e, urllib.error.HTTPError):
+            import ecmwf_status  # sibling script
+
+            return blocked(
+                ecmwf_status.network_barrier("wms", str(e)), getattr(a, "json", False), code=2
+            )
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     except NoKey:
         return blocked(KEY_BARRIER, getattr(a, "json", False))
     except (
         ValueError,
         RuntimeError,
         OSError,
-        urllib.error.URLError,
         ET.ParseError,
     ) as e:
         print(f"error: {e}", file=sys.stderr)

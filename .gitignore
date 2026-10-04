@@ -16,3 +16,4 @@ regen.log
 .venv/
 evals/runs/
 !tests/fixtures/*.grib2
+.cache/

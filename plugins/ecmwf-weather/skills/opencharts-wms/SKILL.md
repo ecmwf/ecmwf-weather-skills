@@ -5,7 +5,7 @@ compatibility: wms.py, opencharts.py and webmap.py need only Python 3 (standard 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.6"
+  version: "0.1.7"
 ---
 
 <!--
@@ -16,14 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF maps — WMS, OpenCharts, web maps
 
 ## Contents
-- Choose the route
-- Web map workflow (flagship)
-- WMS — layers, images, values
-- OpenCharts — official chart images
-- Rules the server enforces
-- Access and tokens
-- Attribution (required)
-- When blocked (legal or technical barriers)
+- Choose the route (line 29)
+- Web map workflow (line 48)
+- WMS (line 65)
+- OpenCharts (line 83)
+- Rules the server enforces (line 89)
+- Access and tokens (line 100)
+- Attribution (line 106)
+- When blocked (line 115)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -118,6 +118,10 @@ Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the use
 the agent should do) whenever a legal or technical barrier stops access. Relay the user's
 steps in full and follow the agent instruction; never work around a barrier with another
 provider's data, and never ask for passwords or keys in chat.
+
+If a service can't be reached, the report includes what ECMWF's own status service says
+(`scripts/ecmwf_status.py <service>` where present; https://status.ecmwf.int). Say whether ECMWF
+reports an outage or maintenance, or that the problem is likely local (network, proxy).
 
 | Barrier | Report |
 |---|---|

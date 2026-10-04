@@ -5,7 +5,7 @@ compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — eart
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.6"
+  version: "0.1.7"
 ---
 
 <!--
@@ -16,11 +16,11 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Polytope
 
 ## Contents
-- Access check (always first)
-- Point forecast and ensemble workflow
-- Other features (profiles, areas, routes)
-- Licence and attribution (operational data is not CC BY)
-- When blocked (legal or technical barriers)
+- Access check (line 34)
+- Point forecast and ensemble workflow (line 48)
+- Other features (line 74)
+- Licence and attribution (line 84)
+- When blocked (line 91)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -94,6 +94,10 @@ Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the use
 the agent should do) whenever a legal or technical barrier stops access. Relay the user's
 steps in full and follow the agent instruction; never work around a barrier with another
 provider's data, and never ask for passwords or keys in chat.
+
+If a service can't be reached, the report includes what ECMWF's own status service says
+(`scripts/ecmwf_status.py <service>` where present; https://status.ecmwf.int). Say whether ECMWF
+reports an outage or maintenance, or that the problem is likely local (network, proxy).
 
 | Barrier | Report |
 |---|---|

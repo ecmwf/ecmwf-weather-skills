@@ -11,6 +11,30 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-04
+
+### Added
+
+- ECMWF service status on network failures: `ecmwf_status.py` (in every skill that calls ECMWF
+  services) reads ECMWF's own status data — the components behind https://status.ecmwf.int,
+  active maintenance sessions and CDS/ADS/ECDS notices — and BLOCKED reports say whether ECMWF
+  reports an outage or maintenance or the problem is likely local. Covers Open Data, Web API /
+  MARS, Polytope, WMS, OpenCharts, CDS, ADS, ECDS; DestinE (no status feed) links its notices.
+- SKILL.md Contents list every section with its line number so agents can read ahead from the
+  top of the file; `check_skills.py` verifies the numbers and `--fix` (run by `make fmt`)
+  refreshes them; Contents must end within the first 50 lines.
+- Opt-in Open Data download cache (`ECMWF_SKILLS_CACHE`), enabled by the Makefile for live tests
+  and evals: a repeated 10-day point forecast drops from ~46 s to ~26 s. MIR cache in `.cache/`.
+- Offline tests fail if they open a network connection.
+
+### Fixed
+
+- No Open Data run found while `data.ecmwf.int` is unreachable is reported as a network problem
+  with ECMWF's status, not as missing data.
+- `ek-meteogram` eval accepts skill paths without a trailing slash (`cd …/skills/open-data`).
+
+Evaluation: Claude Sonnet 21/21, Opus 21/21, Haiku 16/21 (not recommended).
+
 ## [0.1.6] - 2026-10-04
 
 ### Added
@@ -192,7 +216,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.6...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.7...HEAD
+[0.1.7]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.3...0.1.4

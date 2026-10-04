@@ -21,7 +21,8 @@ metadata:
 # Demo
 
 ## Contents
-- Quick start
+- Quick start (line 16)
+- When blocked (line 20)
 - Details — `references/details.md`
 
 ## Quick start
@@ -102,7 +103,7 @@ def test_time_sensitive_wording_flagged(tmp_path):
 
 
 def test_time_sensitive_allowed_in_old_patterns(tmp_path):
-    ok = GOOD + "\n## Old patterns\nBefore 13 May 2026 the stream was scda.\n"
+    ok = cs.fix_contents(GOOD + "\n## Old patterns\nBefore 13 May 2026 the stream was scda.\n")
     assert cs.check_skill(make_skill(tmp_path, ok)) == []
 
 
@@ -111,3 +112,38 @@ def test_time_sensitive_allowed_in_old_patterns(tmp_path):
 )
 def test_repo_skills_pass_lint(skill):
     assert cs.check_skill(SKILLS / skill) == []
+
+
+# --- table of contents with line numbers -----------------------------------------------------
+
+
+def test_wrong_line_number_detected(tmp_path):
+    bad = GOOD.replace("- Quick start (line 16)", "- Quick start (line 12)")
+    assert any(
+        "line" in p and "Quick start" in p for p in cs.check_skill(make_skill(tmp_path, bad))
+    )
+
+
+def test_section_missing_from_contents_detected(tmp_path):
+    bad = GOOD.replace("- When blocked (line 20)\n", "")
+    assert any("When blocked" in p for p in cs.check_skill(make_skill(tmp_path, bad)))
+
+
+def test_fix_contents_regenerates_numbers_and_is_idempotent():
+    stale = GOOD.replace("(line 16)", "(line 3)").replace("- When blocked (line 20)\n", "")
+    assert cs.fix_contents(stale) == GOOD
+    assert cs.fix_contents(GOOD) == GOOD
+
+
+def test_fix_contents_keeps_reference_bullets_and_adds_new_sections():
+    text = cs.fix_contents(GOOD + "\n## Extra\nmore\n")
+    assert "- Extra (line " in text and "- Details — `references/details.md`" in text
+    n = int(text.split("- Extra (line ")[1].split(")")[0])
+    assert text.splitlines()[n - 1] == "## Extra"
+
+
+def test_contents_must_end_near_the_top(tmp_path):
+    late = GOOD.replace("# Demo\n", "# Demo\n" + "intro line\n" * 60)
+    assert any(
+        "first 50 lines" in p for p in cs.check_skill(make_skill(tmp_path, cs.fix_contents(late)))
+    )

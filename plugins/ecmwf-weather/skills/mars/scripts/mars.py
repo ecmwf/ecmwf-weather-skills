@@ -35,6 +35,8 @@ import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import ecmwf_status  # sibling script: what ECMWF says about service status
+
 REQUIRED = ("class", "stream", "type", "levtype", "param", "date", "time")
 FORECAST_TYPES = {"fc", "pf", "cf", "em", "es", "ep", "fcmean", "fcmax", "fcmin"}
 # MARS retrieve keywords accepted by lint. Anything else is almost always a mistake carried
@@ -411,6 +413,8 @@ def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
 
 def barrier_for_error(message: str) -> dict | None:
     """Map a Web API / MARS error to a barrier with instructions (None if not an access one)."""
+    if ecmwf_status.NETWORK_ERROR.search(message):
+        return ecmwf_status.network_barrier("webapi", message.splitlines()[-1][:200])
     if re.search(r"(?i)invalid (api )?key|key (has )?expired|\b401\b|authenti", message):
         return {
             "blocked": "the ECMWF Web API rejected the key",

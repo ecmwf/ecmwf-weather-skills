@@ -5,7 +5,7 @@ compatibility: scripts/destine.py check, setup and request run on plain Python 3
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.6"
+  version: "0.1.7"
 ---
 
 <!--
@@ -16,12 +16,12 @@ SPDX-License-Identifier: Apache-2.0
 # Destination Earth Digital Twins
 
 ## Contents
-- Access check (always first)
-- No access yet — offer the request instructions
-- Request workflow
-- Which server holds the data
-- Licence and attribution (restricted)
-- When blocked (legal or technical barriers)
+- Access check (line 33)
+- No access yet (line 41)
+- Request workflow (line 57)
+- Which server holds the data (line 79)
+- Licence and attribution (line 90)
+- When blocked (line 99)
 - References — `references/requests.md` (keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -102,6 +102,10 @@ Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the use
 the agent should do) whenever a legal or technical barrier stops access. Relay the user's
 steps in full and follow the agent instruction; never work around a barrier with another
 provider's data, and never ask for passwords or keys in chat.
+
+If a service can't be reached, the report includes what ECMWF's own status service says
+(`scripts/ecmwf_status.py <service>` where present; https://status.ecmwf.int). Say whether ECMWF
+reports an outage or maintenance, or that the problem is likely local (network, proxy).
 
 | Barrier | Report |
 |---|---|

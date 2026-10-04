@@ -30,6 +30,8 @@ import re
 import sys
 from pathlib import Path
 
+import ecmwf_status  # sibling script: what ECMWF says about service status
+
 TOKEN_FILE = ".polytopeapirc-destine"
 TOKEN_ENV = "DESTINE_POLYTOPE_KEY"
 LUMI = "polytope.lumi.apps.dte.destination-earth.eu"
@@ -96,6 +98,8 @@ def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
 
 
 def barrier_for_error(message: str) -> dict | None:
+    if ecmwf_status.NETWORK_ERROR.search(message):
+        return ecmwf_status.network_barrier("destine", message.splitlines()[-1][:200])
     if re.search(r"(?i)\b401\b|unauthori[sz]ed|token", message):
         return {
             "blocked": "DestinE rejected the token (missing or expired)",

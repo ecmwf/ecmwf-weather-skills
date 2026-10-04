@@ -5,7 +5,7 @@ compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scri
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.6"
+  version: "0.1.7"
 ---
 
 <!--
@@ -16,14 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Open Data
 
 ## Contents
-- Scripts — which one to run
-- Point forecast workflow
-- Facts to get right (models, runs, streams, parameters)
-- Dependencies — earthkit first, standard-library fallback
-- Credentials and better routes
-- Attribution (required)
-- Old patterns (pre-50r1 streams)
-- When blocked (legal or technical barriers)
+- Scripts (line 33)
+- Point forecast workflow (line 53)
+- Facts to get right (line 74)
+- Dependencies — earthkit first (line 90)
+- Credentials and better routes (line 104)
+- Attribution (line 119)
+- When blocked (line 128)
+- Old patterns (line 145)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -131,6 +131,10 @@ Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the use
 the agent should do) whenever a legal or technical barrier stops access. Relay the user's
 steps in full and follow the agent instruction; never work around a barrier with another
 provider's data, and never ask for passwords or keys in chat.
+
+If a service can't be reached, the report includes what ECMWF's own status service says
+(`scripts/ecmwf_status.py <service>` where present; https://status.ecmwf.int). Say whether ECMWF
+reports an outage or maintenance, or that the problem is likely local (network, proxy).
 
 | Barrier | Report |
 |---|---|

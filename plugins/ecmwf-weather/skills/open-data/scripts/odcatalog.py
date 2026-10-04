@@ -31,6 +31,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 UTC = timezone.utc
 USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-skills)"
@@ -261,15 +262,64 @@ def fetch_range(url: str, start: int, end: int, retries: int = RANGE_RETRIES) ->
     raise RuntimeError("unreachable")
 
 
+# Open Data files never change once published (each run has its own URL), so a byte range can
+# be cached safely; data.ecmwf.int keeps a run ~2-3 days, so entries older than that are pruned.
+CACHE_ENV = "ECMWF_SKILLS_CACHE"
+CACHE_MAX_AGE_S = 3 * 86400
+
+
+def cache_dir(env=None) -> Path | None:
+    """Opt-in download cache: $ECMWF_SKILLS_CACHE/open-data (the Makefile sets it for tests)."""
+    import os
+
+    env = os.environ if env is None else env
+    return Path(env[CACHE_ENV]) / "open-data" if env.get(CACHE_ENV) else None
+
+
+def prune_cache(d: Path, max_age_s: float = CACHE_MAX_AGE_S) -> None:
+    cutoff = time.time() - max_age_s
+    for f in d.glob("*"):
+        if f.is_file() and f.stat().st_mtime < cutoff:
+            f.unlink(missing_ok=True)
+
+
+def _cached(fetch, cache: Path | None):
+    if cache is None:
+        return fetch
+    import hashlib
+
+    cache.mkdir(parents=True, exist_ok=True)
+    prune_cache(cache)
+
+    def get(url, start, end):
+        f = cache / hashlib.sha256(f"{url}#{start}-{end}".encode()).hexdigest()
+        if f.exists():
+            return f.read_bytes()
+        data = fetch(url, start, end)
+        tmp = f.with_suffix(".part")
+        tmp.write_bytes(data)
+        tmp.replace(f)  # atomic: parallel workers never see a half-written entry
+        return data
+
+    return get
+
+
 def download_ranges(
-    jobs: list[tuple[str, int, int]], output, workers: int = DEFAULT_WORKERS, fetch=fetch_range
+    jobs: list[tuple[str, int, int]],
+    output,
+    workers: int = DEFAULT_WORKERS,
+    fetch=fetch_range,
+    cache: Path | None = None,
 ) -> int:
-    """Download (url, start, end) byte ranges in parallel; write them in order. Returns bytes."""
+    """Download (url, start, end) byte ranges in parallel; write them in order. Returns bytes.
+
+    With `cache` (or $ECMWF_SKILLS_CACHE) ranges already downloaded are read from disk."""
     from concurrent.futures import ThreadPoolExecutor
 
+    get = _cached(fetch, cache if cache is not None else cache_dir())
     with ThreadPoolExecutor(clamp_workers(workers)) as ex, open(output, "wb") as fh:
         n = 0
-        for chunk in ex.map(lambda j: fetch(*j), jobs):
+        for chunk in ex.map(lambda j: get(*j), jobs):
             fh.write(chunk)
             n += len(chunk)
     return n
@@ -295,7 +345,26 @@ def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
     return code
 
 
-def no_run_barrier(source: str) -> dict:
+def _network_error(e: BaseException) -> bool:
+    """Connection-level failure (not an HTTP error answer from a reachable server)."""
+    import urllib.error
+
+    if isinstance(e, urllib.error.HTTPError):
+        return False
+    return isinstance(e, (urllib.error.URLError, ConnectionError, TimeoutError))
+
+
+def no_run_barrier(source: str, exists=None) -> dict:
+    """No run found: an unreachable server gets a network report with ECMWF's status."""
+    exists = exists or http_exists
+    if not exists(ROOTS[source] + ("/" if source == "ecmwf" else "")):
+        import ecmwf_status  # sibling script
+
+        return ecmwf_status.network_barrier("open-data", f"{ROOTS[source]} is unreachable")
+    return _no_run_barrier(source)
+
+
+def _no_run_barrier(source: str) -> dict:
     return {
         "blocked": f"no published ECMWF Open Data run found on '{source}'",
         "why": "the server or the network is unavailable, or publication is delayed.",
@@ -621,6 +690,10 @@ def main(argv=None) -> int:
         )
         return 0
     except (ValueError, RuntimeError, urllib.error.URLError) as e:
+        if _network_error(e):
+            import ecmwf_status
+
+            return blocked(ecmwf_status.network_barrier("open-data", str(e)), a.json, code=2)
         print(f"error: {e}", file=sys.stderr)
         return 2
 
