@@ -6,7 +6,7 @@
   "expect": [
     {
       "kind": "skill",
-      "name": "mars"
+      "name": "ecmwf-mars"
     },
     {
       "kind": "final",

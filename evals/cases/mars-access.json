@@ -4,9 +4,21 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "mars"},
-    {"kind": "command", "pattern": "mars\\.py\\s+check"},
-    {"kind": "final", "pattern": "(?i)web api|ecmwfapirc"},
-    {"kind": "final_not", "pattern": "[0-9a-f]{32}"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-mars"
+    },
+    {
+      "kind": "command",
+      "pattern": "mars\\.py\\s+check"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)web api|ecmwfapirc"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "[0-9a-f]{32}"
+    }
   ]
 }

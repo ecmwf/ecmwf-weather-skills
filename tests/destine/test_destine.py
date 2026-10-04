@@ -7,8 +7,8 @@ import sys
 import pytest
 from conftest import SKILLS, load_script
 
-dt = load_script("destine", "destine")
-SCRIPT = SKILLS / "destine" / "scripts" / "destine.py"
+dt = load_script("ecmwf-destine", "destine")
+SCRIPT = SKILLS / "ecmwf-destine" / "scripts" / "destine.py"
 
 
 def cli(*args, home):

@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location(
-    "ecmwf_status", ROOT / "plugins/ecmwf-weather/skills/open-data/scripts/ecmwf_status.py"
+    "ecmwf_status", ROOT / "plugins/ecmwf-weather/skills/ecmwf-open-data/scripts/ecmwf_status.py"
 )
 assert _spec and _spec.loader
 st = importlib.util.module_from_spec(_spec)

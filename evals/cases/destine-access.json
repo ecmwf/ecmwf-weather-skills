@@ -6,7 +6,7 @@
   "expect": [
     {
       "kind": "skill",
-      "name": "destine"
+      "name": "ecmwf-destine"
     },
     {
       "kind": "command",

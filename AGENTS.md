@@ -132,8 +132,8 @@ Makefile wraps the scripts below, so there is one source of truth for each comma
 | `make clean` | remove build outputs, caches, eval transcripts — never sources |
 | `make setup` | `uv sync` and the pre-push hook (a human action: it changes git config) |
 
-- **Generated files — never hand-edit**: `docs/skills.md` (`make docs`), `open-data/references/fields.md`,
-  `opencharts-wms/references/layer-catalog.md`, `earthkit/references/versions.md`. Change the
+- **Generated files — never hand-edit**: `docs/skills.md` (`make docs`), `ecmwf-open-data/references/fields.md`,
+  `ecmwf-opencharts-wms/references/layer-catalog.md`, `ecmwf-earthkit/references/versions.md`. Change the
   renderer in `scripts/regenerate_references.py` instead. They omit volatile facts (valid times)
   so they only change when a catalogue does.
 - **Pre-push hook**: `.githooks/pre-push` runs `make all`. Enable once per clone with
@@ -322,7 +322,7 @@ rule on every case; Codex GPT-6.1-Sol, GPT-6-Astra/Sol/Luna, GPT-5.6-Terra/Sol/L
 (GPT-6-Sol 18/19 on one run, grader fixed). `gpt-5.6-astra` does not exist in Codex.
 0.1.4 (21 cases): Sonnet 21/21; Codex GPT-5.6-Luna 21/21 after one fix; new cases pass on all
 ten models except Haiku, which stays below 2-of-3 on `destine-request` and `mars-access` (it
-answers from the skill text without running the script). `destine` evals with a real token
+answers from the skill text without running the script). `destine-*` evals with a real token
 are pending upgraded access (TODO.md).
 0.1.7 (21 cases): Claude Sonnet 21/21, Opus 21/21, Haiku 16/21 (not recommended).
 Gemini needs `GEMINI_API_KEY`.
@@ -404,7 +404,7 @@ separate status or plan files.
 1. **earthkit inventory** — every `earthkit-*` package on PyPI and in `github.com/ecmwf`: latest
    version, purpose, dependencies, download size; keep only **≥ 1.0**; map each job to one
    component (`docs/research/earthkit-components.md`; `make references` refreshes
-   `earthkit/references/versions.md`).
+   `ecmwf-earthkit/references/versions.md`).
 2. **Live services** — Open Data layout and streams, WMS capabilities, OpenCharts API, Polytope
    and DestinE access, client environment variables, licences and attribution
    (`docs/research/open-questions.md`); `make check-endpoints`.

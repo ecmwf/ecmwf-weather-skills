@@ -4,11 +4,29 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "destine"},
-    {"kind": "command", "pattern": "destine\\.py\\s+request"},
-    {"kind": "final", "pattern": "polytope\\.mn5\\.apps\\.dte\\.destination-earth\\.eu"},
-    {"kind": "final", "pattern": "climate-dt"},
-    {"kind": "final", "pattern": "(?i)european commission"},
-    {"kind": "command_not", "pattern": "destine\\.py\\s+retrieve"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-destine"
+    },
+    {
+      "kind": "command",
+      "pattern": "destine\\.py\\s+request"
+    },
+    {
+      "kind": "final",
+      "pattern": "polytope\\.mn5\\.apps\\.dte\\.destination-earth\\.eu"
+    },
+    {
+      "kind": "final",
+      "pattern": "climate-dt"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)european commission"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "destine\\.py\\s+retrieve"
+    }
   ]
 }

@@ -9,12 +9,12 @@ import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
 GRIB = FIXTURES / "ifs-sfc-5deg-20261002-00z.grib2"
-SCRIPT = SKILLS / "open-data" / "scripts" / "odpoint.py"
+SCRIPT = SKILLS / "ecmwf-open-data" / "scripts" / "odpoint.py"
 
 
 @pytest.fixture(scope="module")
 def odp():
-    return load_script("open-data", "odpoint")
+    return load_script("ecmwf-open-data", "odpoint")
 
 
 # --- pure helpers (no earthkit needed: module must import without it) ------------------------
@@ -45,12 +45,12 @@ def test_access_note_without_credentials_mentions_size_and_polytope(odp, tmp_pat
 
 def test_access_note_with_polytope_key(odp, tmp_path):
     note = odp.access_note(198_000_000, env={"POLYTOPE_USER_KEY": "x"}, home=tmp_path)
-    assert "polytope skill" in note.lower()
+    assert "ecmwf-polytope skill" in note.lower()
 
 
 def test_access_note_with_ecmwfapirc(odp, tmp_path):
     (tmp_path / ".ecmwfapirc").write_text("{}")
-    assert "polytope skill" in odp.access_note(1, env={}, home=tmp_path).lower()
+    assert "ecmwf-polytope skill" in odp.access_note(1, env={}, home=tmp_path).lower()
 
 
 def test_default_fetcher_is_parallel(odp):

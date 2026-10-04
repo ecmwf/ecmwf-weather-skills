@@ -40,8 +40,8 @@ testpaths = ["tests"]
 pythonpath = [
     "tests",
     "scripts",
-    "plugins/ecmwf-weather/skills/open-data/scripts",
-    "plugins/ecmwf-weather/skills/destine/scripts",
+    "plugins/ecmwf-weather/skills/ecmwf-open-data/scripts",
+    "plugins/ecmwf-weather/skills/ecmwf-destine/scripts",
 ]
 addopts = "-m 'not live and not earthkit' -ra"
 markers = [

@@ -10,12 +10,12 @@ import urllib.error
 import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
-cds = load_script("cds-ads", "cds")
+cds = load_script("ecmwf-cds-ads", "cds")
 FORM_TS = json.loads((FIXTURES / "cds-form-era5-ts.json").read_text())
 FORM_SL = json.loads((FIXTURES / "cds-form-era5-sl.json").read_text())
 COLL_TS = json.loads((FIXTURES / "cds-collection-era5-ts.json").read_text())
 SEARCH = json.loads((FIXTURES / "cds-search-era5.json").read_text())
-SCRIPT = SKILLS / "cds-ads" / "scripts" / "cds.py"
+SCRIPT = SKILLS / "ecmwf-cds-ads" / "scripts" / "cds.py"
 
 
 # --- credentials (names only) -------------------------------------------------------------------

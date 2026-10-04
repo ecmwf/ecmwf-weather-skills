@@ -4,9 +4,21 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "open-data"},
-    {"kind": "command", "pattern": "odcatalog\\.py.*latest"},
-    {"kind": "final", "pattern": "(?i)(00|06|12|18) ?(UTC|Z)"},
-    {"kind": "final_not", "pattern": "scda"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-open-data"
+    },
+    {
+      "kind": "command",
+      "pattern": "odcatalog\\.py.*latest"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)(00|06|12|18) ?(UTC|Z)"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "scda"
+    }
   ]
 }

@@ -10,7 +10,7 @@ from datetime import date, datetime, timezone
 import pytest
 from conftest import SKILLS, load_script
 
-od = load_script("open-data", "odcatalog")
+od = load_script("ecmwf-open-data", "odcatalog")
 UTC = timezone.utc
 
 
@@ -222,7 +222,7 @@ def test_attribution_contains_required_parts():
 
 
 def run_cli(*args):
-    script = SKILLS / "open-data" / "scripts" / "odcatalog.py"
+    script = SKILLS / "ecmwf-open-data" / "scripts" / "odcatalog.py"
     out = subprocess.run([sys.executable, str(script), *args], capture_output=True, text=True)
     return out
 

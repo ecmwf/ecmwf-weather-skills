@@ -10,7 +10,7 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 ## Publication
 
 - [ ] **URGENT — before submitting to the Claude or OpenAI directories:** upload one skill to
-      claude.ai (Customize → Skills; one skill folder zipped at the root, e.g. `open-data`) and
+      claude.ai (Customize → Skills; one skill folder zipped at the root, e.g. `ecmwf-open-data`) and
       try a prompt in Chat/Cowork. Their cloud sandboxes may not reach `data.ecmwf.int` and the
       other ECMWF hosts or install earthkit with `uv`; if not, most skills only produce "cannot
       reach" reports there. Record what works, and state the limitation in the listing (or
@@ -26,12 +26,12 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 ## Data sources
 
 - [ ] **ECMWF Data Store (ECDS) access** — https://ecds.ecmwf.int (TIGGE, S2S forecasts and
-      reforecasts): full support in `cds-ads` (search, describe, validate, licence check,
+      reforecasts): full support in `ecmwf-cds-ads` (search, describe, validate, licence check,
       retrieve) with TIGGE/S2S request templates and eval cases; same ECMWF token as CDS/ADS
       (url `https://ecds.ecmwf.int/api`). `cds.py --store ecds` already handles check, setup and
       licence steps.
 - [ ] **DestinE (needs upgraded access — reminder for the maintainer):** once a DestinE token is
-      set up in `~/.polytopeapirc-destine`, verify the `destine` request templates live
+      set up in `~/.polytopeapirc-destine`, verify the `ecmwf-destine` request templates live
       (Climate DT on LUMI and MN5, Extremes DT), confirm token expiry behaviour, then run the
       `destine-*` evals on Claude Code (Haiku, Sonnet, Opus) and Codex (GPT-6.1-Sol …
       GPT-5.6-Luna) and add a live test

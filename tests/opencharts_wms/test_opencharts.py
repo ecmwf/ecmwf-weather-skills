@@ -10,11 +10,11 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
-oc = load_script("opencharts-wms", "opencharts")
+oc = load_script("ecmwf-opencharts-wms", "opencharts")
 SEARCH = json.loads((FIXTURES / "opencharts-search-trimmed.json").read_text())
 SCHEMA = json.loads((FIXTURES / "opencharts-schema.json").read_text())
 PRODUCT = json.loads((FIXTURES / "opencharts-product.json").read_text())
-SCRIPT = SKILLS / "opencharts-wms" / "scripts" / "opencharts.py"
+SCRIPT = SKILLS / "ecmwf-opencharts-wms" / "scripts" / "opencharts.py"
 
 
 def test_search_matches_name_and_title_all_words():

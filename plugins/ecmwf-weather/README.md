@@ -16,13 +16,13 @@ https://github.com/ecmwf/ecmwf-weather-skills
 
 | Skill | What it does |
 |---|---|
-| `open-data` | Latest runs, fields, download sizes and point forecasts from free ECMWF Open Data |
-| `earthkit` | Inspect, process and plot GRIB/NetCDF files; maps and meteograms |
-| `opencharts-wms` | WMS map layers and images, official ECMWF charts, a local interactive web map |
-| `polytope` | Point, ensemble and area extraction for authenticated ECMWF users |
-| `cds-ads` | Find, validate, cost and download ERA5, CAMS and ECMWF Data Store datasets |
-| `mars` | Check, size, plan and retrieve requests from the ECMWF MARS archive |
-| `destine` | Destination Earth Digital Twin data via DestinE Polytope (upgraded access on request) |
+| `ecmwf-open-data` | Latest runs, fields, download sizes and point forecasts from free ECMWF Open Data |
+| `ecmwf-earthkit` | Inspect, process and plot GRIB/NetCDF files; maps and meteograms |
+| `ecmwf-opencharts-wms` | WMS map layers and images, official ECMWF charts, a local interactive web map |
+| `ecmwf-polytope` | Point, ensemble and area extraction for authenticated ECMWF users |
+| `ecmwf-cds-ads` | Find, validate, cost and download ERA5, CAMS and ECMWF Data Store datasets |
+| `ecmwf-mars` | Check, size, plan and retrieve requests from the ECMWF MARS archive |
+| `ecmwf-destine` | Destination Earth Digital Twin data via DestinE Polytope (upgraded access on request) |
 
 ## What runs, and what it sends
 

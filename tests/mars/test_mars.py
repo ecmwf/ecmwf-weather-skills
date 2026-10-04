@@ -8,8 +8,8 @@ import sys
 
 from conftest import FIXTURES, SKILLS, load_script
 
-mars = load_script("mars", "mars")
-SCRIPT = SKILLS / "mars" / "scripts" / "mars.py"
+mars = load_script("ecmwf-mars", "mars")
+SCRIPT = SKILLS / "ecmwf-mars" / "scripts" / "mars.py"
 
 HRES = {
     "class": "od",

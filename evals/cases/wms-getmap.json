@@ -6,7 +6,7 @@
   "expect": [
     {
       "kind": "skill",
-      "name": "opencharts-wms"
+      "name": "ecmwf-opencharts-wms"
     },
     {
       "kind": "command",

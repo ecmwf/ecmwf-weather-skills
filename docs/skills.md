@@ -11,21 +11,21 @@ Agents read `SKILL.md` first; this page is for humans browsing the repository.
 
 ## Contents
 
-- [`cds-ads`](#cds-ads)
-- [`destine`](#destine)
-- [`earthkit`](#earthkit)
-- [`mars`](#mars)
-- [`open-data`](#open-data)
-- [`opencharts-wms`](#opencharts-wms)
-- [`polytope`](#polytope)
+- [`ecmwf-cds-ads`](#ecmwf-cds-ads)
+- [`ecmwf-destine`](#ecmwf-destine)
+- [`ecmwf-earthkit`](#ecmwf-earthkit)
+- [`ecmwf-mars`](#ecmwf-mars)
+- [`ecmwf-open-data`](#ecmwf-open-data)
+- [`ecmwf-opencharts-wms`](#ecmwf-opencharts-wms)
+- [`ecmwf-polytope`](#ecmwf-polytope)
 
-## `cds-ads`
+## `ecmwf-cds-ads`
 
 Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (historical weather since 1940, hourly point time series, climate normals), seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates requests and costs them without an account; tells the user exactly how to get a key when one is missing.
 
 **Requirements:** scripts/cds.py runs on plain Python 3 for check, search, describe, validate and era5-point --dry-run (public CDS/ADS APIs). Downloads use uv (PEP 723 inline dependency earthkit-data[cds]) and a CDS/ADS key. Network access to cds.climate.copernicus.eu / ads.atmosphere.copernicus.eu.
 
-Source: [`../plugins/ecmwf-weather/skills/cds-ads/SKILL.md`](../plugins/ecmwf-weather/skills/cds-ads/SKILL.md)
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-cds-ads/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-cds-ads/SKILL.md)
 
 | Script | Purpose |
 |---|---|
@@ -36,13 +36,13 @@ Source: [`../plugins/ecmwf-weather/skills/cds-ads/SKILL.md`](../plugins/ecmwf-we
 |---|---|
 | `references/datasets.md` | CDS / ADS datasets and requests |
 
-## `destine`
+## `ecmwf-destine`
 
 Handles any Destination Earth question — load it first; it prepares requests by running scripts/destine.py. Accesses Destination Earth (DestinE) Digital Twin data — the Climate Change Adaptation Digital Twin (Climate DT, multi-decadal IFS-FESOM, IFS-NEMO and ICON simulations and SSP3-7.0 projections), the Weather-Induced Extremes Digital Twin (Extremes DT, high-resolution forecasts of the last ~15 days) and On-Demand Extremes — through the DestinE Polytope service. Use when a task mentions Destination Earth, DestinE, Digital Twins, Climate DT, Extremes DT, nextGEMS, the DestinE Platform (DESP), desp-authentication, upgraded access, or polytope.lumi / polytope.mn5 addresses. Explains how to request the required upgraded access when the user has none; checks the token, builds and routes requests, and retrieves data.
 
 **Requirements:** scripts/destine.py check, setup and request run on plain Python 3 offline. retrieve needs uv (PEP 723 inline dependency polytope-client), an approved DestinE upgraded-access account and network access to *.apps.dte.destination-earth.eu.
 
-Source: [`../plugins/ecmwf-weather/skills/destine/SKILL.md`](../plugins/ecmwf-weather/skills/destine/SKILL.md)
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md)
 
 | Script | Purpose |
 |---|---|
@@ -53,13 +53,13 @@ Source: [`../plugins/ecmwf-weather/skills/destine/SKILL.md`](../plugins/ecmwf-we
 |---|---|
 | `references/requests.md` | DestinE Polytope requests |
 
-## `earthkit`
+## `ecmwf-earthkit`
 
 Handles any local GRIB (.grib, .grib2) or NetCDF (.nc) file — load this skill first, before trying xarray, cfgrib, eccodes, grib_ls or pip. Reads, inspects, processes and plots them with ECMWF's earthkit Python components (earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, earthkit-transforms, earthkit-plots), installing only what each task needs. Use for any GRIB or NetCDF file the user has — what's in it, which parameters, levels and steps, a map of a field from it, a meteogram, conversion to xarray or pandas, nearest gridpoint, regridding, wind speed, relative humidity, dewpoint, thermal-comfort indices, unit conversion, daily or country aggregation Also use when GRIB fails to decode, eccodes is missing, or earthkit 0.x code breaks on 1.x.
 
 **Requirements:** Skill instructions are provider-neutral. Scripts use uv (PEP 723 inline dependencies) on Linux or macOS; earthkit ships eccodes as binary wheels, so no system install is needed. No Windows wheels — use WSL.
 
-Source: [`../plugins/ecmwf-weather/skills/earthkit/SKILL.md`](../plugins/ecmwf-weather/skills/earthkit/SKILL.md)
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-earthkit/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-earthkit/SKILL.md)
 
 | Script | Purpose |
 |---|---|
@@ -72,13 +72,13 @@ Source: [`../plugins/ecmwf-weather/skills/earthkit/SKILL.md`](../plugins/ecmwf-w
 | `references/recipes.md` | earthkit recipes (1.x) |
 | `references/versions.md` | earthkit components and ECMWF clients — latest versions |
 
-## `mars`
+## `ecmwf-mars`
 
 Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 
 **Requirements:** scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 
-Source: [`../plugins/ecmwf-weather/skills/mars/SKILL.md`](../plugins/ecmwf-weather/skills/mars/SKILL.md)
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md)
 
 | Script | Purpose |
 |---|---|
@@ -89,13 +89,13 @@ Source: [`../plugins/ecmwf-weather/skills/mars/SKILL.md`](../plugins/ecmwf-weath
 |---|---|
 | `references/keywords.md` | MARS keywords and requests |
 
-## `open-data`
+## `ecmwf-open-data`
 
-Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the opencharts-wms skill; when the user has or mentions an ECMWF account, use the polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
+Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
 
 **Requirements:** scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
 
-Source: [`../plugins/ecmwf-weather/skills/open-data/SKILL.md`](../plugins/ecmwf-weather/skills/open-data/SKILL.md)
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-open-data/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-open-data/SKILL.md)
 
 | Script | Purpose |
 |---|---|
@@ -109,13 +109,13 @@ Source: [`../plugins/ecmwf-weather/skills/open-data/SKILL.md`](../plugins/ecmwf-
 | `references/catalog.md` | Open Data catalogue |
 | `references/fields.md` | Open Data fields |
 
-## `opencharts-wms`
+## `ecmwf-opencharts-wms`
 
-Builds ECMWF weather maps — map images and tile layers from the ECMWF ecCharts WMS (mean sea level pressure, 500 hPa geopotential, 850 hPa temperature and wind, ensemble mean and spread, tropical cyclones, CAMS air quality), official OpenCharts forecast charts as PNG/PDF, and ready-made interactive web maps (Leaflet) with a time slider, legends, click values and a 10-day meteogram on click. Use when a task asks for an ECMWF weather map or chart, WMS GetCapabilities, GetMap, GetLegend or GetFeatureInfo URLs, layer names, styles or valid times, adding ECMWF layers to Leaflet, MapLibre or OpenLayers, or building a weather web map or dashboard (always start from scripts/webmap.py). Not for a map of a local GRIB or NetCDF file — that is the earthkit skill.
+Builds ECMWF weather maps — map images and tile layers from the ECMWF ecCharts WMS (mean sea level pressure, 500 hPa geopotential, 850 hPa temperature and wind, ensemble mean and spread, tropical cyclones, CAMS air quality), official OpenCharts forecast charts as PNG/PDF, and ready-made interactive web maps (Leaflet) with a time slider, legends, click values and a 10-day meteogram on click. Use when a task asks for an ECMWF weather map or chart, WMS GetCapabilities, GetMap, GetLegend or GetFeatureInfo URLs, layer names, styles or valid times, adding ECMWF layers to Leaflet, MapLibre or OpenLayers, or building a weather web map or dashboard (always start from scripts/webmap.py). Not for a map of a local GRIB or NetCDF file — that is the ecmwf-earthkit skill.
 
-**Requirements:** wms.py, opencharts.py and webmap.py need only Python 3 (standard library); `uv run wms.py getmap -o` adds Pillow to composite background and coastlines. Meteograms in the web map use the open-data and earthkit skills (uv, earthkit). Network access to eccharts.ecmwf.int, charts.ecmwf.int and data.ecmwf.int.
+**Requirements:** wms.py, opencharts.py and webmap.py need only Python 3 (standard library); `uv run wms.py getmap -o` adds Pillow to composite background and coastlines. Meteograms in the web map use the open-data and ecmwf-earthkit skills (uv, earthkit). Network access to eccharts.ecmwf.int, charts.ecmwf.int and data.ecmwf.int.
 
-Source: [`../plugins/ecmwf-weather/skills/opencharts-wms/SKILL.md`](../plugins/ecmwf-weather/skills/opencharts-wms/SKILL.md)
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-opencharts-wms/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-opencharts-wms/SKILL.md)
 
 | Script | Purpose |
 |---|---|
@@ -130,13 +130,13 @@ Source: [`../plugins/ecmwf-weather/skills/opencharts-wms/SKILL.md`](../plugins/e
 | `references/layers.md` | ecCharts WMS layers |
 | `references/webmap.md` | Web map — customise, deploy, other libraries |
 
-## `polytope`
+## `ecmwf-polytope`
 
-Extracts just the data needed from ECMWF's operational forecasts with Polytope feature extraction — hourly point time series (meteograms), 50-member ensemble percentiles at a point, vertical profiles, polygons, bounding boxes, circles and trajectories — in kilobytes instead of downloading global fields. Use when the user has ECMWF credentials (POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc) and asks for a forecast or meteogram at a place, forecast uncertainty, ensemble spread, percentiles or likely ranges at a location (preferred over open-data for any ensemble question at a point), weather along a route or inside a region, Polytope requests or errors, the earthkit polytope source, or whether they have Polytope access. Falls back to the open-data skill when there are no credentials.
+Extracts just the data needed from ECMWF's operational forecasts with Polytope feature extraction — hourly point time series (meteograms), 50-member ensemble percentiles at a point, vertical profiles, polygons, bounding boxes, circles and trajectories — in kilobytes instead of downloading global fields. Use when the user has ECMWF credentials (POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc) and asks for a forecast or meteogram at a place, forecast uncertainty, ensemble spread, percentiles or likely ranges at a location (preferred over open-data for any ensemble question at a point), weather along a route or inside a region, Polytope requests or errors, the earthkit polytope source, or whether they have Polytope access. Falls back to the ecmwf-open-data skill when there are no credentials.
 
 **Requirements:** scripts/ptpoint.py needs uv (PEP 723 inline dependencies — earthkit-data[polytope,covjsonkit], earthkit-meteo, earthkit-utils) and network access to polytope.ecmwf.int. `--check` without credentials runs on plain Python 3.
 
-Source: [`../plugins/ecmwf-weather/skills/polytope/SKILL.md`](../plugins/ecmwf-weather/skills/polytope/SKILL.md)
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-polytope/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-polytope/SKILL.md)
 
 | Script | Purpose |
 |---|---|

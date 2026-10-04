@@ -4,10 +4,25 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "cds-ads"},
-    {"kind": "command", "pattern": "cds\\.py\\s+(search|describe)"},
-    {"kind": "final", "pattern": "reanalysis-era5-land"},
-    {"kind": "final", "pattern": "(?i)CC[- ]BY|licen[cs]e"},
-    {"kind": "final", "pattern": "10\\.24381/"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-cds-ads"
+    },
+    {
+      "kind": "command",
+      "pattern": "cds\\.py\\s+(search|describe)"
+    },
+    {
+      "kind": "final",
+      "pattern": "reanalysis-era5-land"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)CC[- ]BY|licen[cs]e"
+    },
+    {
+      "kind": "final",
+      "pattern": "10\\.24381/"
+    }
   ]
 }

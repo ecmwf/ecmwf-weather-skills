@@ -4,9 +4,21 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "polytope"},
-    {"kind": "command", "pattern": "ptpoint\\.py.*--check"},
-    {"kind": "final_not", "pattern": "[0-9a-f]{32}"},
-    {"kind": "final", "pattern": "(?i)open data"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-polytope"
+    },
+    {
+      "kind": "command",
+      "pattern": "ptpoint\\.py.*--check"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "[0-9a-f]{32}"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)open data"
+    }
   ]
 }
