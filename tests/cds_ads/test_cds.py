@@ -368,3 +368,52 @@ def test_server_rejection_makes_request_invalid():
         },
     )
     assert res["valid"] is False and "non-empty" in res["errors"][0]
+
+
+def test_form_link_must_be_https(monkeypatch):
+    monkeypatch.setattr(cds, "_http", lambda url, body=None: [])
+    with pytest.raises(ValueError, match="https"):
+        cds.get_form({"links": [{"rel": "form", "href": "http://example.org/form.json"}]})
+    assert (
+        cds.get_form({"links": [{"rel": "form", "href": "https://cds.climate.copernicus.eu/f"}]})
+        == []
+    )
+
+
+def test_unpack_zip_download(tmp_path):
+    import zipfile
+
+    src = tmp_path / "dl.zip"
+    with zipfile.ZipFile(src, "w") as z:
+        z.writestr("reanalysis-era5-single-levels-timeseries-sfc_x.csv", "valid_time,t2m\n")
+    out = tmp_path / "lisbon.csv"
+    assert cds.unpack_download(src, out) == [out]
+    assert out.read_text().startswith("valid_time,t2m")
+
+
+def test_unpack_multi_member_zip_into_directory(tmp_path):
+    import zipfile
+
+    src = tmp_path / "dl.zip"
+    with zipfile.ZipFile(src, "w") as z:
+        z.writestr("a.nc", "A")
+        z.writestr("b.nc", "B")
+    files = cds.unpack_download(src, tmp_path / "out.nc")
+    assert sorted(f.name for f in files) == ["a.nc", "b.nc"] and files[0].parent.name == "out"
+
+
+def test_unpack_plain_file_is_copied(tmp_path):
+    src = tmp_path / "x.grib"
+    src.write_bytes(b"GRIB")
+    assert cds.unpack_download(src, tmp_path / "y.grib")[0].read_bytes() == b"GRIB"
+
+
+def test_unpack_rejects_path_traversal(tmp_path):
+    import zipfile
+
+    src = tmp_path / "evil.zip"
+    with zipfile.ZipFile(src, "w") as z:
+        z.writestr("../../etc/x", "A")
+        z.writestr("ok.nc", "B")
+    with pytest.raises(ValueError, match="unsafe"):
+        cds.unpack_download(src, tmp_path / "o.nc")

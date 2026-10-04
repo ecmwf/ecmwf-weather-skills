@@ -48,7 +48,7 @@ complies, (b) unusable on maps.
 - 124 named layers: ~15 public met (`z500_public`, `t850_public`, `ws850_public`, `msl_public`,
   ENS mean/spread, cyclone strike probabilities), ~90 CAMS `composition_*`, plus `background`,
   `foreground`, `boundaries`, `grid`, `rivers`.
-- **No public 2 m temperature or precipitation WMS layers** — affects the flagship demo (see PLAN §8).
+- **No public 2 m temperature or precipitation WMS layers** — affects the flagship demo (the web map pairs WMS layers with Open Data meteograms).
 - CRS EPSG:4326 (lat,lon axis order in 1.3.0), 3857, polar. `time` dimension (ISO8601 valid time).
   `GetLegend` per style.
 - CORS reflected on GET. GetMap responds 302 → `/streaming/…png` (follow redirects).

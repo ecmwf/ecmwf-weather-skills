@@ -251,3 +251,18 @@ def test_token_key_without_key_is_blocked(tmp_path):
         timeout=60,
     )
     assert out.returncode == 4 and "BLOCKED:" in out.stderr and "api.ecmwf.int/v1/key" in out.stderr
+
+
+def test_redirects_to_plain_http_are_refused():
+    import urllib.request
+
+    h = wms.HttpsOnlyRedirects()
+    req = urllib.request.Request("https://eccharts.ecmwf.int/wms/")
+    with pytest.raises(urllib.error.URLError, match="https"):
+        h.redirect_request(req, None, 302, "Found", {}, "http://evil.example/x.png")
+    assert (
+        h.redirect_request(
+            req, None, 302, "Found", {}, "https://eccharts.ecmwf.int/streaming/x.png"
+        )
+        is not None
+    )

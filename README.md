@@ -207,7 +207,7 @@ Agreement.
 
 - [`docs/skills.md`](docs/skills.md) — skill catalogue: scripts and references per skill
 - [`AGENTS.md`](AGENTS.md) — conventions, skill-authoring rules, testing method (for humans and agents)
-- [`PLAN.md`](PLAN.md) — design and decisions; [`docs/research/`](docs/research/) — service and earthkit research
+- [`docs/research/`](docs/research/) — service and earthkit research
 - [`TODO.md`](TODO.md) — open work; [`CHANGELOG.md`](CHANGELOG.md) — release history
 - [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), [`SECURITY.md`](SECURITY.md)
 

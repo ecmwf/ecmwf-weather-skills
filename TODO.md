@@ -5,40 +5,36 @@ SPDX-License-Identifier: Apache-2.0
 
 # TODO
 
-Accepted, open work only. Finished work is recorded in `CHANGELOG.md`; design in `PLAN.md`.
+Accepted, open work only — remove items when done. Finished work is recorded in `CHANGELOG.md`.
 
-## Before the first public release
+## Publication
+
+- [ ] Confirm with ECMWF: attribution wording and logo use per data source (agents relay this
+      wording to users), public WMS token policy and public surface layers (2t, tp), Polytope
+      access for non-member-state users
+- [ ] IPR / sensitive-information review (ecmwf/codex `Legal/Open-Sourcing-Software.md`)
+- [ ] After switching to public: enable private vulnerability reporting (GitHub only offers it
+      on public repositories); remove the repository URL from `check_links.py` IGNORE
+- [ ] Plugin icon in `plugins/ecmwf-weather/assets/` (needs ECMWF communications approval)
+- [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow
+
+## Data sources
 
 - [ ] **ECMWF Data Store (ECDS) access** — https://ecds.ecmwf.int (TIGGE, S2S forecasts and
       reforecasts): full support in `cds-ads` (search, describe, validate, licence check,
       retrieve) with TIGGE/S2S request templates and eval cases; same ECMWF token as CDS/ADS
-      (url `https://ecds.ecmwf.int/api`); the TIGGE and S2S licences must be accepted per
-      account. `cds.py --store ecds` is already wired for check, setup and licence steps.
-
+      (url `https://ecds.ecmwf.int/api`). `cds.py --store ecds` already handles check, setup and
+      licence steps.
 - [ ] **DestinE (needs upgraded access — reminder for the maintainer):** once a DestinE token is
       set up in `~/.polytopeapirc-destine`, verify the `destine` request templates live
       (Climate DT on LUMI and MN5, Extremes DT), confirm token expiry behaviour, then run the
       `destine-*` evals on Claude Code (Haiku, Sonnet, Opus) and Codex (GPT-6.1-Sol …
       GPT-5.6-Luna) and add a live test
 - [ ] Live-check the setup instructions end to end with a fresh ECMWF account (CDS, ADS, Web API)
-
-- [ ] Claude Code skill evals on Haiku, Sonnet and Opus (`make evals MODEL=…`)
-- [ ] Live download tests: `cds.py retrieve` / `era5-point` with CDS and ADS keys; confirm ERA5
-      time-series CSV column names
-- [ ] Live `mars.py retrieve` end to end; verify `levelist=all` level counts per class
-- [ ] Confirm with ECMWF: attribution wording and logo use per data source; public WMS token
-      policy and public surface layers (2t, tp); Polytope access for non-member-state users
-- [ ] Plugin icon in `plugins/ecmwf-weather/assets/` (needs ECMWF communications approval)
-- [ ] Open-sourcing checklist (ecmwf/codex `Legal/Open-Sourcing-Software.md`): Head of
-      Development approval, IPR / sensitive-information audit, `open-source-audit` and security
-      audits filed in `ecmwf/repo-audits`; then switch the repository to public
-- [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow; remove the repository URL from
-      `check_links.py` IGNORE once public
+- [ ] Verify `levelist=all` level counts per class against MARS
 
 ## Improvements
 
-- [ ] Meteogram: align the precipitation panel x-axis with the other panels; higher-contrast
-      ensemble median line; normalise precipitation to mm/h where step length changes
 - [ ] Web map: use Polytope for click meteograms when `ptpoint.py --check` passes; otherwise
       keep a warm earthkit process so clicks after the first take seconds, not ~20 s
 - [ ] `odcatalog.py latest`: link the ECMWF dissemination schedule

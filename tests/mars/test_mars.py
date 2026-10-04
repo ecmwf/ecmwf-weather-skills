@@ -336,3 +336,16 @@ def test_cli_retrieve_without_access_is_blocked(tmp_path):
         env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
     )
     assert out.returncode == 4 and "BLOCKED:" in out.stderr and "api.ecmwf.int/v1/key" in out.stderr
+
+
+def test_relative_dates_become_absolute_for_retrieval():
+    from datetime import date
+
+    today = date(2026, 10, 4)
+    assert mars.absolute_dates({"date": "-2"}, today)["date"] == "2026-10-02"
+    assert mars.absolute_dates({"date": "-3/to/-1"}, today)["date"] == "2026-10-01/to/2026-10-03"
+    assert mars.absolute_dates({"date": "-1/-2"}, today)["date"] == "2026-10-03/2026-10-02"
+    assert (
+        mars.absolute_dates({"date": "2024-03-01/to/2024-03-31"}, today)["date"]
+        == "2024-03-01/to/2024-03-31"
+    )

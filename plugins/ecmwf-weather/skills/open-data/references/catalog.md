@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 # Open Data catalogue
 
 Verify against the live server before relying on details — `python3 scripts/odcatalog.py fields`
-lists exactly what a run contains. (This file will be regenerated weekly; see the repo PLAN §6.)
+lists exactly what a run contains. (The generated companion `fields.md` is refreshed weekly.)
 
 ## Roots
 

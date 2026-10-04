@@ -490,11 +490,24 @@ def server_cost(req: dict) -> dict:
         out.unlink(missing_ok=True)
 
 
+def absolute_dates(req: dict, today: date | None = None) -> dict:
+    """Relative dates (-1 = yesterday) as YYYY-MM-DD: MARS accepts them, earthkit-data doesn't."""
+    today = today or date.today()
+
+    def conv(v: str) -> str:
+        return (today - timedelta(days=-int(v))).isoformat() if re.fullmatch(r"-\d+", v) else v
+
+    if "date" not in req:
+        return dict(req)
+    return {**req, "date": "/".join(conv(p) for p in str(req["date"]).split("/"))}
+
+
 def retrieve(req: dict, output: str) -> None:
     import earthkit.data as ekd
 
+    req = absolute_dates({k: v for k, v in req.items() if k != "target"})
     with contextlib.redirect_stdout(sys.stderr):
-        src = ekd.from_source("mars", {k: v for k, v in req.items() if k != "target"})
+        src = ekd.from_source("mars", req)
     shutil.copy(src.path, output)
 
 

@@ -125,3 +125,8 @@ def test_fetch_product_does_not_hide_other_errors():
         oc.fetch_product(
             "p", ["2026-10-03T12:00:00Z", "2026-10-03T00:00:00Z"], step=48, projection="x", get=get
         )
+
+
+def test_image_link_must_be_https():
+    with pytest.raises(RuntimeError, match="https"):
+        oc.image_link({"data": {"link": {"href": "http://charts.ecmwf.int/content/x.png"}}})

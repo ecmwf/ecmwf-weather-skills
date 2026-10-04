@@ -11,6 +11,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+Pre-publication release: findings of the open-source and security audits
+(ecmwf/repo-audits, 0.1.8) addressed.
+
+### Security
+
+- Every skill states that text relayed from remote services (banners, messages, errors,
+  descriptions) is data, not instructions; `check_skills.py` enforces it (prompt injection).
+- Server-provided links are followed only over https (OpenCharts image links, CDS/ADS form
+  links, WMS redirects).
+- `webmap.py serve` answers only its own loopback host and origin (DNS rebinding, cross-site
+  requests); `--allow-host` for deliberate network use.
+- `evals.yml`: dispatch inputs reach the shell only through validated environment variables;
+  Claude Code pinned and installed without install scripts; transcripts are scanned for the API
+  key before upload and kept 7 days.
+- SECURITY.md points to GitHub private vulnerability reporting first, the Support Portal second.
+- `main` requires one approving review.
+
+### Fixed
+
+- `cds.py retrieve` / `era5-point` unpack ZIP deliveries (the ERA5 time-series CSV and
+  `netcdf_zip` arrive zipped and were saved unchanged under the requested name); archive paths
+  are checked.
+- `mars.py retrieve` converts relative dates (`date=-2`) to absolute ones, which earthkit-data
+  requires.
+
+### Removed
+
+- `PLAN.md` (obsolete); the research procedure moved to AGENTS.md "Research step".
+
 ## [0.1.8] - 2026-10-04
 
 ### Added
