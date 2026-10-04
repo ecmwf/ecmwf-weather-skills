@@ -22,6 +22,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
   `make release-publish VERSION=X.Y.Z` (checks, tag, GitHub release); `scripts/release.py`.
   The procedure is documented in AGENTS.md "Releasing".
 
+### Fixed
+
+- Makefile tests run in a clean make environment: inside `make release-prepare` the inherited
+  `VERSION` made `make version` set the version instead of printing it (found by the first
+  release run).
+
 ## [0.1.7] - 2026-10-04
 
 ### Added
