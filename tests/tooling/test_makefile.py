@@ -3,6 +3,7 @@
 """The top-level Makefile is the single, deterministic entry point."""
 
 import json
+import os
 import shutil
 import subprocess
 
@@ -32,9 +33,19 @@ REQUIRED = [
 ]
 
 
+# Make passes command-line variables to nested makes through MAKEFLAGS (e.g. VERSION during
+# `make release-prepare VERSION=X.Y.Z`); run each test make in a clean make environment.
+MAKE_ENV = {
+    k: v
+    for k, v in os.environ.items()
+    if k not in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKEOVERRIDES", "VERSION")
+}
+
+
 def make(*args, cwd=ROOT):
     return subprocess.run(
         ["make", "--no-print-directory", *args],
+        env=MAKE_ENV,
         cwd=cwd,
         capture_output=True,
         text=True,
@@ -135,3 +146,23 @@ def test_release_targets_require_a_version():
     for t in ("release-prepare", "release-publish"):
         out = make(t)
         assert out.returncode != 0 and "VERSION=X.Y.Z" in out.stdout + out.stderr
+
+
+def test_tests_are_isolated_from_an_enclosing_make(monkeypatch):
+    # Simulate running inside `make release-prepare VERSION=1.2.3`.
+    monkeypatch.setenv("MAKEFLAGS", " -- VERSION=1.2.3")
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKEOVERRIDES", "VERSION")
+    }
+    cur = json.loads((ROOT / "plugins/ecmwf-weather/.claude-plugin/plugin.json").read_text())
+    out = subprocess.run(
+        ["make", "--no-print-directory", "version"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert out.stdout.strip() == cur["version"]
