@@ -347,15 +347,43 @@ Agents NEVER commit, push, merge or open a PR without explicit user approval.
 
 ## Version control and releases
 
-- Semantic Versioning `MAJOR.MINOR.MICRO`. **Never bump MAJOR unless the user says so.**
-  MINOR for new features or skills, MICRO for fixes and documentation.
+- Semantic Versioning `MAJOR.MINOR.MICRO`. **Never bump MAJOR unless the user says so**
+  (`release.py` refuses without `ALLOW_MAJOR=1`). MINOR for new features or skills, MICRO for
+  fixes and documentation.
 - **Never prefix tags or releases with `v`** (`0.2.0`, not `v0.2.0`).
-- The version lives in both plugin manifests and every `SKILL.md`; change it only with
-  `make version X.Y.Z` and verify with `make version-check`.
-- Release: `[Unreleased]` complete → `make version X.Y.Z` → move the entries under
-  `## [X.Y.Z] - YYYY-MM-DD` → `make all` and `make test-all` → commit → `git tag X.Y.Z` on a
-  clean tree → push the tag and create the GitHub release. Stop and warn if anything is
-  uncommitted.
+- The version lives in both plugin manifests and every `SKILL.md`; only the release targets (or
+  `make version X.Y.Z`) change it; `make version-check` verifies it.
+
+### Releasing — the only path
+
+Releases go through two Makefile targets; never tag, bump or edit the changelog by hand.
+Agents run them only when the maintainer asks for a release.
+
+1. **Before**: every change is merged into `main` through its own PR, each with entries under
+   `## [Unreleased]` in `CHANGELOG.md`.
+2. **`make release-prepare VERSION=X.Y.Z`** (from an up-to-date, clean `main`):
+   1. `release.py preflight` — on `main`, clean tree, identical to `origin/main`, tag absent,
+      version newer than the current one (MAJOR only with `ALLOW_MAJOR=1`), `[Unreleased]` not
+      empty. Any problem stops the release.
+   2. Gates: `make all` (lint, consistency, offline tests), `test-earthkit`, `test-live`
+      (real ECMWF services), **`check-endpoints`** (every ECMWF status feed, status component
+      and service host the skills depend on still exists) and `references-check` (generated
+      references match the live catalogues — if not, `make references` in a PR first).
+   3. Branch `release/X.Y.Z`; `bump_version.py --set X.Y.Z` (manifests + every SKILL.md);
+      `release.py changelog X.Y.Z` (moves `[Unreleased]` under `## [X.Y.Z] - <today>` and
+      updates the compare links); `make docs all`.
+   4. Commits `chore: release X.Y.Z`, pushes, opens the release PR with the changelog section
+      as its body (the `cla` workflow adds the CLA declaration).
+3. **Merge the release PR** once the required checks are green.
+4. **`make release-publish VERSION=X.Y.Z`**: switches to `main`, pulls, `release.py
+   publish-check` (clean `main` = `origin/main`, manifests at X.Y.Z, changelog section present,
+   tag absent), creates the annotated tag `X.Y.Z`, pushes it, creates the GitHub release from
+   the changelog section, deletes the local release branch.
+
+If a step fails, fix the cause in a normal PR and start again from step 2 — never skip a gate.
+Endpoint drift (`check-endpoints`) means ECMWF moved or renamed something: update
+`ecmwf_status.SERVICES`, `check_endpoints.PROBES` or the script URLs first. Agents must not
+change git config, force-push or delete remote tags.
 
 ## Tracking work done
 

@@ -186,7 +186,8 @@ make test-earthkit  # GRIB decoding tests on recorded fixtures
 make test-live      # against live ECMWF services
 make evals AGENT=codex   # fresh agents with only this plugin loaded must solve real tasks
 make docs           # regenerate docs/skills.md
-make version 0.2.0  # set the version everywhere
+make check-endpoints      # ECMWF endpoints the skills rely on still exist
+make release-prepare VERSION=0.2.0   # maintainers: see AGENTS.md "Releasing"
 ```
 
 How the three test layers and the agent evals work: [`AGENTS.md`](AGENTS.md#testing-tdd).

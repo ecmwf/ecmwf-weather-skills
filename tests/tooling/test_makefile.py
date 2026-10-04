@@ -26,6 +26,9 @@ REQUIRED = [
     "dist",
     "clean",
     "setup",
+    "check-endpoints",
+    "release-prepare",
+    "release-publish",
 ]
 
 
@@ -91,3 +94,44 @@ def test_clean_dry_run_never_deletes_tracked_sources():
     assert "dist" in out.stdout and "evals/runs" in out.stdout
     for protected in ("plugins", "tests/fixtures", "scripts"):
         assert f"rm -rf {protected}" not in out.stdout
+
+
+def test_release_prepare_runs_every_gate_then_bumps_and_opens_a_pr():
+    out = make("-n", "release-prepare", "VERSION=9.9.9")
+    assert out.returncode == 0, out.stderr
+    o = out.stdout
+    order = [
+        "release.py preflight 9.9.9",
+        "pytest",
+        "check_endpoints.py",
+        "regenerate_references.py --check",
+        "git switch -c release/9.9.9",
+        "bump_version.py --set 9.9.9",
+        "release.py changelog 9.9.9",
+        "scripts/gen_docs.py\n",  # the regenerate step, not the earlier --check
+        'git commit -m "chore: release 9.9.9"',
+        "gh pr create",
+    ]
+    pos = [o.find(x) for x in order]
+    assert all(p >= 0 for p in pos), [x for x, p in zip(order, pos, strict=True) if p < 0]
+    assert pos == sorted(pos), "steps out of order"
+
+
+def test_release_publish_tags_only_after_checks():
+    o = make("-n", "release-publish", "VERSION=9.9.9").stdout
+    pos = [
+        o.find(x)
+        for x in (
+            "release.py publish-check 9.9.9",
+            "git tag -a 9.9.9",
+            "git push origin 9.9.9",
+            "gh release create 9.9.9",
+        )
+    ]
+    assert all(p >= 0 for p in pos) and pos == sorted(pos)
+
+
+def test_release_targets_require_a_version():
+    for t in ("release-prepare", "release-publish"):
+        out = make(t)
+        assert out.returncode != 0 and "VERSION=X.Y.Z" in out.stdout + out.stderr
