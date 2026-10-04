@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import atexit
 import contextlib
+import importlib
 import json
 import os
 import sys
@@ -43,7 +44,10 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import odcatalog as oc  # stdlib sibling script (latest run, sizes, attribution)
+# Never write __pycache__ into the installed skill (it may be read-only, and skills must
+# not be modified); sibling scripts are imported below.
+sys.dont_write_bytecode = True
+oc = importlib.import_module("odcatalog")  # stdlib sibling script (latest run, sizes, attribution)
 
 UTC = timezone.utc
 # A run is published ~7 h after base time and replaced 6 h later (up to ~13 h old).

@@ -76,6 +76,41 @@ def parse_transcript(agent: str, raw: str) -> dict:
                 t["final"] = item.get("text", "")
             elif ev.get("type") in ("error", "turn.failed"):
                 t["error"] = json.dumps(ev)[:300]
+        elif agent == "opencode":
+            part = ev.get("part", {})
+            if ev.get("type") == "tool_use" and part.get("type") == "tool":
+                inp = part.get("state", {}).get("input", {})
+                if part.get("tool") == "skill":
+                    t["skills"].add(str(inp.get("name", "")))
+                elif part.get("tool") == "bash":
+                    # opencode passes the directory separately; keep it with the command
+                    wd = inp.get("workdir")
+                    cmd = inp.get("command", "")
+                    t["commands"].append(f"cd {wd} && {cmd}" if wd else cmd)
+                    t["skills"] |= _skills_from_text(json.dumps(inp))
+                else:
+                    t["skills"] |= _skills_from_text(json.dumps(inp))
+            elif ev.get("type") == "text" and part.get("text"):
+                t["final"] = part["text"]  # the last text part is the answer
+            elif ev.get("type") == "error":
+                t["error"] = json.dumps(ev.get("error", ev))[:300]
+        elif agent == "pi":
+            if ev.get("type") == "tool_execution_start":
+                args = ev.get("args", {})
+                if ev.get("toolName") == "bash":
+                    t["commands"].append(args.get("command", ""))
+                t["skills"] |= _skills_from_text(json.dumps(args))
+            elif (
+                ev.get("type") == "message_end" and ev.get("message", {}).get("role") == "assistant"
+            ):
+                m = ev["message"]
+                if m.get("stopReason") == "error":
+                    t["error"] = str(m.get("errorMessage", "error"))[:300]
+                text = "".join(
+                    c.get("text", "") for c in m.get("content", []) if c.get("type") == "text"
+                )
+                if text.strip():
+                    t["final"] = text
     if agent == "gemini":  # one pretty-printed JSON document, possibly after banner lines
         i = raw.find("{")
         try:
@@ -162,6 +197,15 @@ def new_run_dir(base: Path, stamp: str | None = None) -> Path:
     raise RuntimeError(f"cannot create a run directory under {base}")
 
 
+def note_startup_failure(t: dict, rc: int, stderr: str) -> dict:
+    """A non-zero exit with no answer and no commands means the agent never ran (missing
+    login or API key, bad model name) — report it as an error, not a skill failure."""
+    if t["error"] is None and rc != 0 and not t["final"] and not t["commands"]:
+        lines = [ln for ln in (stderr or "").strip().splitlines() if ln.strip()]
+        t["error"] = (lines[0] if lines else f"agent exited with code {rc}")[:300]
+    return t
+
+
 def summary_line(results: list[dict]) -> str:
     passed = sum(r["passed"] for r in results)
     errors = sum(1 for r in results if r.get("error"))
@@ -224,6 +268,16 @@ def agent_command(
         ]
     elif agent == "gemini":
         cmd = ["gemini", "-p", prompt, "-o", "json", "--approval-mode", "yolo"]
+    elif agent == "opencode":
+        # Skills come from <workdir>/.agents/skills (prepare_workdir); --auto approves tools.
+        cmd = ["opencode", "run", "--format", "json", "--auto", "--dir", str(workdir)]
+        cmd += ["-m", model] if model else []
+        return [*cmd, prompt]
+    elif agent == "pi":
+        # pi runs tools without approval; skills are passed explicitly, no session is saved.
+        cmd = ["pi", "--mode", "json", "--no-session", "--skill", str(plugin / "skills")]
+        cmd += ["--model", model] if model else []
+        return [*cmd, prompt]
     else:
         raise ValueError(agent)
     if model:
@@ -237,8 +291,8 @@ def prepare_workdir(agent: str, case: dict, plugin: Path = PLUGIN) -> Path:
     wd = Path(tempfile.mkdtemp(prefix=f"ecmwf-eval-{case['id']}-"))
     for src, dst in case.get("setup", {}).get("copy", {}).items():
         shutil.copy(ROOT / src, wd / dst)
-    if agent in ("codex", "gemini"):
-        d = wd / (".agents/skills" if agent == "codex" else ".gemini/skills")
+    if agent in ("codex", "gemini", "opencode"):
+        d = wd / (".gemini/skills" if agent == "gemini" else ".agents/skills")
         d.mkdir(parents=True)
         for s in (plugin / "skills").iterdir():
             if (s / "SKILL.md").exists():
@@ -271,7 +325,7 @@ def run_case(agent: str, case: dict, outdir: Path, model: str | None, attempt: i
     (outdir / f"{name}.jsonl").write_text(raw)
     if err:
         (outdir / f"{name}.stderr").write_text(err)
-    t = parse_transcript(agent, raw)
+    t = note_startup_failure(parse_transcript(agent, raw), rc, err)
     results = grade(t, case["expect"], wd)
     return {
         "id": case["id"],
@@ -293,7 +347,9 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("--agent", default="claude", choices=["claude", "codex", "gemini"])
+    ap.add_argument(
+        "--agent", default="claude", choices=["claude", "codex", "gemini", "opencode", "pi"]
+    )
     ap.add_argument("--case", action="append", help="case id (repeatable)")
     ap.add_argument("--model")
     ap.add_argument("--repeat", type=int, default=1)

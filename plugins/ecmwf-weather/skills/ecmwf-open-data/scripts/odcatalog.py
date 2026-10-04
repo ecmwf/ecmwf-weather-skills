@@ -33,6 +33,11 @@ import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+# Never write __pycache__ into the installed skill (it may be read-only, and skills must
+# not be modified); sibling scripts are imported below.
+sys.dont_write_bytecode = True
+
+
 UTC = timezone.utc
 USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-skills)"
 

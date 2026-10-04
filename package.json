@@ -1,0 +1,10 @@
+{
+  "name": "ecmwf-weather-skills",
+  "private": true,
+  "description": "ECMWF Agent Skills — installable as a pi package: pi install git:github.com/ecmwf/ecmwf-weather-skills",
+  "license": "Apache-2.0",
+  "keywords": ["pi-package", "agent-skills", "ecmwf"],
+  "pi": {
+    "skills": ["./plugins/ecmwf-weather/skills"]
+  }
+}

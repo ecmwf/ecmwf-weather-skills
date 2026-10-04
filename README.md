@@ -87,6 +87,27 @@ codex plugin marketplace add ecmwf/ecmwf-weather-skills
 codex plugin add ecmwf-weather@ecmwf
 ```
 
+### opencode
+
+```bash
+npx skills add ecmwf/ecmwf-weather-skills -g -a opencode --skill '*' -y   # all projects
+npx skills add ecmwf/ecmwf-weather-skills -a opencode --skill '*' -y      # this project only
+opencode debug skill        # lists the seven ecmwf-* skills
+```
+
+opencode also reads `~/.claude/skills`, `~/.agents/skills` and `~/.config/opencode/skills`, so
+a copy in any of them works.
+
+### pi
+
+```bash
+pi install git:github.com/ecmwf/ecmwf-weather-skills                 # as a pi package
+npx skills add ecmwf/ecmwf-weather-skills -g -a pi --skill '*' -y      # or into ~/.pi/agent/skills
+```
+
+pi runs tools without asking for approval by default; these skills download ECMWF data and run
+Python scripts.
+
 ### Other skills-compatible agents
 
 With the [skills CLI](https://skills.sh):
@@ -138,12 +159,14 @@ python3 ecmwf-cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
 
 ## Tested models
 
-Every skill is evaluated with fresh agents on 21 tasks (`make evals`).
+Every skill is evaluated with fresh agents on 21 tasks (`make evals AGENT=claude|codex|opencode|pi`).
 
 | Agent | Models | Result |
 |---|---|---|
 | Claude Code | Opus, Sonnet | recommended — pass all cases |
 | Codex | GPT-6.1-Sol, GPT-6-Astra, GPT-6-Sol, GPT-6-Luna, GPT-5.6-Terra, GPT-5.6-Sol, GPT-5.6-Luna | recommended — pass all cases |
+| opencode | Claude Opus 4.8, GPT-6-Luna | works — passes the cases run so far |
+| pi | — | installs and loads all skills; model runs not yet evaluated |
 | Claude Code | Haiku | **not recommended** — unreliable at executing the skills' instructions (often answers without running the scripts) |
 
 ## Credentials (optional)

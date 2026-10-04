@@ -258,3 +258,129 @@ def test_run_dirs_are_unique_within_the_same_second(tmp_path):
     a = re_.new_run_dir(tmp_path, stamp="20261004-020916")
     b = re_.new_run_dir(tmp_path, stamp="20261004-020916")
     assert a != b and a.is_dir() and b.is_dir()
+
+
+OPENCODE_STREAM = "\n".join(
+    json.dumps(x)
+    for x in [
+        {"type": "step_start", "part": {"type": "step-start"}},
+        {
+            "type": "tool_use",
+            "part": {
+                "type": "tool",
+                "tool": "skill",
+                "state": {"input": {"name": "ecmwf-open-data"}},
+            },
+        },
+        {
+            "type": "tool_use",
+            "part": {
+                "type": "tool",
+                "tool": "bash",
+                "state": {
+                    "input": {
+                        "command": "python3 scripts/odcatalog.py latest --json",
+                        "workdir": "/p/.agents/skills/ecmwf-open-data",
+                    }
+                },
+            },
+        },
+        {"type": "text", "part": {"type": "text", "text": "Thinking..."}},
+        {"type": "text", "part": {"type": "text", "text": "Latest run 00 UTC. Data: © ECMWF"}},
+    ]
+)
+
+PI_STREAM = "\n".join(
+    json.dumps(x)
+    for x in [
+        {
+            "type": "tool_execution_start",
+            "toolName": "read",
+            "args": {"path": "/x/skills/ecmwf-mars/SKILL.md"},
+        },
+        {
+            "type": "tool_execution_start",
+            "toolName": "bash",
+            "args": {"command": "python3 /x/skills/ecmwf-mars/scripts/mars.py lint r.mars"},
+        },
+        {
+            "type": "message_end",
+            "message": {
+                "role": "assistant",
+                "content": [{"type": "text", "text": "class=od, lint clean"}],
+            },
+        },
+    ]
+)
+
+
+def test_parse_opencode_stream():
+    t = re_.parse_transcript("opencode", OPENCODE_STREAM)
+    assert t["skills"] == {"ecmwf-open-data"}
+    assert any("odcatalog.py latest" in c for c in t["commands"])
+    assert t["final"].startswith("Latest run") and t["error"] is None
+
+
+def test_parse_opencode_error():
+    raw = json.dumps(
+        {"type": "error", "error": {"name": "ProviderAuthError", "data": {"message": "no key"}}}
+    )
+    assert "ProviderAuthError" in re_.parse_transcript("opencode", raw)["error"]
+
+
+def test_parse_pi_stream():
+    t = re_.parse_transcript("pi", PI_STREAM)
+    assert t["skills"] == {"ecmwf-mars"}
+    assert any("mars.py lint" in c for c in t["commands"])
+    assert t["final"] == "class=od, lint clean" and t["error"] is None
+
+
+def test_parse_pi_error():
+    raw = json.dumps(
+        {
+            "type": "message_end",
+            "message": {
+                "role": "assistant",
+                "content": [],
+                "stopReason": "error",
+                "errorMessage": "No API key for provider",
+            },
+        }
+    )
+    assert "No API key" in re_.parse_transcript("pi", raw)["error"]
+
+
+def test_opencode_and_pi_commands(tmp_path):
+    oc = re_.agent_command("opencode", "hi", tmp_path, {}, model="anthropic/claude-opus-4-8")
+    assert oc[:2] == ["opencode", "run"] and "--auto" in oc and "--format" in oc
+    assert (
+        oc[oc.index("--dir") + 1] == str(tmp_path)
+        and oc[oc.index("-m") + 1] == "anthropic/claude-opus-4-8"
+    )
+    pi = re_.agent_command("pi", "hi", tmp_path, {}, plugin=tmp_path / "plug", model="x/y")
+    assert pi[0] == "pi" and pi[pi.index("--mode") + 1] == "json" and "--no-session" in pi
+    assert pi[pi.index("--skill") + 1] == str(tmp_path / "plug" / "skills")
+    assert pi[pi.index("--model") + 1] == "x/y"
+
+
+def test_opencode_workdir_gets_project_skills(tmp_path):
+    plugin = re_.plugin_copy(tmp_path)
+    wd = re_.prepare_workdir("opencode", {"id": "c"}, plugin)
+    assert (wd / ".agents" / "skills" / "ecmwf-open-data" / "SKILL.md").exists()
+
+
+def test_opencode_commands_include_their_workdir():
+    t = re_.parse_transcript("opencode", OPENCODE_STREAM)
+    cmd = next(c for c in t["commands"] if "odcatalog" in c)
+    assert cmd.startswith("cd /p/.agents/skills/ecmwf-open-data && ")
+    ok = re_.grade(t, [{"kind": "command", "pattern": r"skills/ecmwf-open-data\b.*odcatalog"}])
+    assert ok[0]["ok"]
+
+
+def test_agent_that_exits_without_doing_anything_is_an_error():
+    t = {"skills": set(), "commands": [], "final": "", "error": None}
+    re_.note_startup_failure(t, 1, "No API key found for the selected model.\\nUse /login")
+    assert "No API key" in t["error"]
+    worked = {"skills": set(), "commands": ["ls"], "final": "", "error": None}
+    re_.note_startup_failure(worked, 1, "boom")
+    assert worked["error"] is None

@@ -38,6 +38,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
+# Never write __pycache__ into the installed skill (it may be read-only, and skills must
+# not be modified); sibling scripts are imported below.
+sys.dont_write_bytecode = True
+
+
 STORES = {
     "cds": {
         "api": "https://cds.climate.copernicus.eu/api",

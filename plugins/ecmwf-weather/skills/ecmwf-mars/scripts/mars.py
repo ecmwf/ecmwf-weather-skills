@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import calendar
 import contextlib
+import importlib
 import json
 import os
 import re
@@ -35,7 +36,12 @@ import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-import ecmwf_status  # sibling script: what ECMWF says about service status
+# Never write __pycache__ into the installed skill (it may be read-only, and skills must
+# not be modified); sibling scripts are imported below.
+sys.dont_write_bytecode = True
+ecmwf_status = importlib.import_module(
+    "ecmwf_status"
+)  # sibling script: what ECMWF says about service status
 
 REQUIRED = ("class", "stream", "type", "levtype", "param", "date", "time")
 FORECAST_TYPES = {"fc", "pf", "cf", "em", "es", "ep", "fcmean", "fcmax", "fcmin"}
