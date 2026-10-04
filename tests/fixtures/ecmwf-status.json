@@ -1,0 +1,207 @@
+{
+  "nodes": [
+    {
+      "node": {
+        "Title": "ACQUISITION",
+        "Last notification": "System Session Ends: BOLOGNA DC - ADC - NSS-930 - GSLB (F5 DNS) service migration",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "Aviso",
+        "Last notification": " CCI, EWC, CDS back to operational  ",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "CONNECTIVITY",
+        "Last notification": "System Session Ends: [Bonn Offices] VMware to Proxmox VMs migration -  session 2/2",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "Data Stores",
+        "Last notification": "System Session Ended: Data Stores Service - Live Migration at CCI2",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "DISSEMINATION",
+        "Last notification": "Product Dissemination 00z Completed",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "ECACCESS",
+        "Last notification": "HPC, general-purpose ecFlow servers, Linux VDI, ECCMD services restored",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "ECFS",
+        "Last notification": "System Session Ends: ECFS Server systematic caching setup",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "EFAS",
+        "Last notification": "System Session Ended: WEB - EFAS filesystem migration",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "EMAIL",
+        "Last notification": "Sympa email list service fully restored.",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "European Weather Cloud",
+        "Last notification": "System Session Ends: Failover test in CCI2",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "GLOFAS",
+        "Last notification": "System Session Ends: WEB - EFAS filesystem upgrade",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "HPC",
+        "Last notification": " HPC: Lustre filesystem h2resw01 aka &quot;r4&quot; supporting $SCRATCH, $HPCPERM and",
+        "Status": "Degraded"
+      }
+    },
+    {
+      "node": {
+        "Title": "INTERNET",
+        "Last notification": "System Session Ends: [Bonn Offices] Power Maintenance / Network &amp; Server Shutdown (25-26/09)",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "JupyterHub",
+        "Last notification": "System Session Completed: JupyterHUB regular update",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "Learning platform",
+        "Last notification": "System Session Ends: Update to learning.ecmwf.int database",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "MARS",
+        "Last notification": "System Session Ended: Firmware update on IBMLIB09",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "MSACCESS",
+        "Last notification": "UPDATE: Power restored - Working to restore services",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "NEXHub",
+        "Last notification": "System Session Ended: NEXHUB/ExpERT ",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "PERM access",
+        "Last notification": "$PERM access now available to all Users.",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "prepIFS",
+        "Last notification": "System Session Completed: Upgrade NEXHub/prepIFS-related ecFlow servers",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "Product Requirements",
+        "Last notification": "UPDATE: Power restored - Working to restore services",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "RMDCN",
+        "Last notification": "System Session Ends: BOLOGNA DC - ADC - NSS-930 - GSLB (F5 DNS) service migration",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "Support Portal",
+        "Last notification": "System Session Ends: ADC - DH1 vCMP hosts and guests upgrade",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "TELEPHONY",
+        "Last notification": "System Session ENDED: Bologna DC - DDI - Infoblox grid master cluster failback",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "Teleport",
+        "Last notification": "System Session Ends: Teleport - Raising certificates TTL",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "VDESK (LINUX VDI)",
+        "Last notification": "System Session Ended: Renewal of VDI TLS certificates",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "WDQMS",
+        "Last notification": "System Session Completed: WDQMS - New release",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "WebMARS",
+        "Last notification": "Queues on webMARS private are back to normal",
+        "Status": "Ok"
+      }
+    },
+    {
+      "node": {
+        "Title": "WEB-SERVICES",
+        "Last notification": "EcCharts temporary degraded = RESOLVED",
+        "Status": "Ok"
+      }
+    }
+  ]
+}

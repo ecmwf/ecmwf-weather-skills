@@ -11,7 +11,9 @@ https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
 Checks what can be checked mechanically:
   - frontmatter: name (<=64, lowercase/digits/hyphens, matches directory, no reserved words),
     description (non-empty, <=1024 chars, third person, no ': ' which breaks YAML scalars)
-  - SKILL.md body < 500 lines and starts with a "## Contents" table of contents
+  - SKILL.md body < 500 lines and starts with a "## Contents" table of contents listing every
+    "## " section with its line number ("- Section (line N)") so an agent that reads only the
+    top of the file can jump to a section; `--fix` regenerates the numbers
   - every references/*.md is linked from SKILL.md; references don't link other references
     (one level deep); references over 100 lines have a "## Contents" section
   - no Windows-style backslash paths
@@ -70,6 +72,76 @@ def _strip_old_patterns(body: str) -> str:
     return re.split(r"^## Old patterns\s*$", body, flags=re.M)[0]
 
 
+CONTENTS_WITHIN = 50
+TOC_ENTRY = re.compile(r"^- (?P<title>.+) \(line (?P<line>\d+)\)$")
+
+
+def _contents_span(lines: list[str]) -> tuple[int, int] | None:
+    """Indices (start, end) of the bullet block under '## Contents' (end exclusive)."""
+    try:
+        h = next(i for i, ln in enumerate(lines) if ln.strip() == "## Contents")
+    except StopIteration:
+        return None
+    i = h + 1
+    while i < len(lines) and (lines[i].startswith("- ") or lines[i].startswith("  ")):
+        i += 1
+    return h + 1, i
+
+
+def fix_contents(text: str) -> str:
+    """Rewrite the Contents bullets: one per '## ' section with its absolute line number;
+    bullets pointing at reference files are kept after them."""
+    for _ in range(3):  # numbers depend on the bullet count; converges in two passes
+        lines = text.split("\n")
+        span = _contents_span(lines)
+        if span is None:
+            return text
+        a, b = span
+        keep = [ln for ln in lines[a:b] if "`references/" in ln]
+        headings = [
+            (i, ln[3:].strip())
+            for i, ln in enumerate(lines)
+            if ln.startswith("## ") and ln.strip() != "## Contents" and i >= b
+        ]
+        n_new = len(headings) + len(keep)
+        shift = n_new - (b - a)
+        bullets = [f"- {t} (line {i + 1 + shift})" for i, t in headings]
+        new = "\n".join(lines[:a] + bullets + keep + lines[b:])
+        if new == text:
+            break
+        text = new
+    return text
+
+
+def check_contents(text: str) -> list[str]:
+    p: list[str] = []
+    lines = text.split("\n")
+    span = _contents_span(lines)
+    if span is None:
+        return p
+    if span[1] > CONTENTS_WITHIN:
+        p.append(
+            f"Contents ends at line {span[1]} — keep it within the first {CONTENTS_WITHIN} "
+            "lines (agents often read only the top of a skill)"
+        )
+    listed = {}
+    for ln in lines[span[0] : span[1]]:
+        m = TOC_ENTRY.match(ln)
+        if m:
+            listed[m["title"]] = int(m["line"])
+    for i, ln in enumerate(lines):
+        if ln.startswith("## ") and ln.strip() != "## Contents" and i >= span[1]:
+            title = ln[3:].strip()
+            if title not in listed:
+                p.append(f"Contents is missing section '{title}' — run check_skills.py --fix")
+            elif listed[title] != i + 1:
+                p.append(
+                    f"Contents says '{title}' is at line {listed[title]}, it is at line "
+                    f"{i + 1} — run check_skills.py --fix"
+                )
+    return p
+
+
 def check_skill(skill_dir: Path) -> list[str]:
     p: list[str] = []
     skill_md = skill_dir / "SKILL.md"
@@ -110,6 +182,7 @@ def check_skill(skill_dir: Path) -> list[str]:
         p.append(
             f"SKILL.md body is {len(body_lines)} lines (keep under {MAX_BODY_LINES}, i.e. 500)"
         )
+    p += check_contents(text)
     head = "\n".join(body_lines[:15])
     if not re.search(r"^## Contents\s*$", head, re.M):
         p.append(
@@ -145,6 +218,14 @@ def check_skill(skill_dir: Path) -> list[str]:
 
 
 def main() -> int:
+    if "--fix" in sys.argv[1:]:
+        for d in sorted(SKILLS.iterdir()):
+            f = d / "SKILL.md"
+            if f.exists():
+                t = f.read_text()
+                if fix_contents(t) != t:
+                    f.write_text(fix_contents(t))
+                    print(f"fixed contents: {d.name}")
     bad = 0
     for d in sorted(SKILLS.iterdir()):
         if not (d / "SKILL.md").exists():

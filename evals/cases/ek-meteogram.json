@@ -6,7 +6,7 @@
   "expect": [
     {
       "kind": "command",
-      "pattern": "skills/(open-data|polytope)/"
+      "pattern": "skills/(open-data|polytope)\\b"
     },
     {
       "kind": "command",

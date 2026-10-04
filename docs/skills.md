@@ -30,6 +30,7 @@ Source: [`../plugins/ecmwf-weather/skills/cds-ads/SKILL.md`](../plugins/ecmwf-we
 | Script | Purpose |
 |---|---|
 | `scripts/cds.py` | Copernicus Climate (CDS) and Atmosphere (ADS) Data Stores — discover, validate, retrieve |
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 
 | Reference | Purpose |
 |---|---|
@@ -46,6 +47,7 @@ Source: [`../plugins/ecmwf-weather/skills/destine/SKILL.md`](../plugins/ecmwf-we
 | Script | Purpose |
 |---|---|
 | `scripts/destine.py` | Destination Earth (DestinE) Digital Twin data via the DestinE Polytope service |
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 
 | Reference | Purpose |
 |---|---|
@@ -80,6 +82,7 @@ Source: [`../plugins/ecmwf-weather/skills/mars/SKILL.md`](../plugins/ecmwf-weath
 
 | Script | Purpose |
 |---|---|
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 | `scripts/mars.py` | MARS archive helper — lint, estimate, plan, cost and retrieve MARS requests |
 
 | Reference | Purpose |
@@ -96,6 +99,7 @@ Source: [`../plugins/ecmwf-weather/skills/open-data/SKILL.md`](../plugins/ecmwf-
 
 | Script | Purpose |
 |---|---|
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 | `scripts/odcatalog.py` | ECMWF Open Data catalogue helper — standard library only |
 | `scripts/odpoint.py` | Point forecast from ECMWF Open Data — nearest gridpoint time series |
 
@@ -115,6 +119,7 @@ Source: [`../plugins/ecmwf-weather/skills/opencharts-wms/SKILL.md`](../plugins/e
 
 | Script | Purpose |
 |---|---|
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 | `scripts/opencharts.py` | ECMWF OpenCharts — find and download official ECMWF forecast charts (PNG/PDF). Stdlib only |
 | `scripts/webmap.py` | Build and serve an ECMWF forecast web map with click-for-meteogram. Stdlib only |
 | `scripts/wms.py` | ECMWF ecCharts WMS helper — layers, times, GetMap/GetLegend/GetFeatureInfo |
@@ -135,6 +140,7 @@ Source: [`../plugins/ecmwf-weather/skills/polytope/SKILL.md`](../plugins/ecmwf-w
 
 | Script | Purpose |
 |---|---|
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 | `scripts/ptpoint.py` | Point forecast via ECMWF Polytope — server-side extraction, a few KB instead of global fields |
 
 | Reference | Purpose |

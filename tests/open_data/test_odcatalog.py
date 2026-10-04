@@ -288,5 +288,39 @@ def test_live_latest_and_estimate():
 
 
 def test_no_run_barrier():
-    b = od.no_run_barrier("ecmwf")
+    b = od.no_run_barrier("ecmwf", exists=lambda url: True)  # server reachable, no run
     assert "--source aws" in "\n".join(b["user_steps"]) + b["agent"]
+
+
+def test_download_ranges_cache_avoids_refetching(tmp_path):
+    calls = []
+
+    def fetch(url, start, end):
+        calls.append((url, start, end))
+        return f"{url}:{start}-{end};".encode()
+
+    jobs = [("u1", 0, 9), ("u2", 0, 4)]
+    cache = tmp_path / "cache"
+    od.download_ranges(jobs, tmp_path / "a.grib2", fetch=fetch, cache=cache)
+    od.download_ranges(jobs, tmp_path / "b.grib2", fetch=fetch, cache=cache)
+    assert len(calls) == 2
+    assert (tmp_path / "a.grib2").read_bytes() == (tmp_path / "b.grib2").read_bytes()
+
+
+def test_cache_dir_from_environment(tmp_path):
+    assert od.cache_dir(env={}) is None
+    assert od.cache_dir(env={"ECMWF_SKILLS_CACHE": str(tmp_path)}) == tmp_path / "open-data"
+
+
+def test_cache_prunes_old_entries(tmp_path):
+    import os
+    import time
+
+    d = tmp_path / "open-data"
+    d.mkdir()
+    old, new = d / "old", d / "new"
+    old.write_bytes(b"x")
+    new.write_bytes(b"y")
+    os.utime(old, (time.time() - 5 * 86400,) * 2)
+    od.prune_cache(d)
+    assert not old.exists() and new.exists()

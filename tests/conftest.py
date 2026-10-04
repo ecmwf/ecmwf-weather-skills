@@ -27,3 +27,27 @@ def load_script(skill: str, name: str):
 @pytest.fixture
 def fixtures() -> Path:
     return FIXTURES
+
+
+@pytest.fixture(autouse=True)
+def _no_network_unless_live(request, monkeypatch):
+    """Offline tests must not touch the network (loopback is allowed for local servers).
+
+    Tests marked `live` may. This keeps `make test` fast and deterministic and catches code
+    paths that silently go online (AGENTS.md -> Testing)."""
+    if request.node.get_closest_marker("live"):
+        return
+    import socket
+
+    real = socket.socket.connect
+
+    def guarded(self, address):
+        host = address[0] if isinstance(address, tuple) else address
+        if host not in ("127.0.0.1", "::1", "localhost") and not str(host).startswith("/"):
+            raise RuntimeError(
+                f"offline test tried to connect to {host!r}; mark it live or "
+                "inject the network call"
+            )
+        return real(self, address)
+
+    monkeypatch.setattr(socket.socket, "connect", guarded)

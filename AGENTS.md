@@ -66,6 +66,12 @@ current and future data source.
   barriers and the reports that cover them.
 - Agents relay the user steps in full, never ask for secrets in chat, and never route around a
   barrier with another provider's data.
+- **Unreachable services**: on a connection failure, scripts call `ecmwf_status.network_barrier()`,
+  which reports what ECMWF publishes (https://apps.ecmwf.int/status/status — the data behind
+  https://status.ecmwf.int — maintenance sessions, and CDS/ADS/ECDS `/api/catalogue/v1/messages`)
+  so the user learns whether ECMWF knows of an outage. `ecmwf_status.py` is copied into every
+  skill that calls ECMWF services; a test keeps the copies identical — edit the open-data copy
+  and copy it. Map new services in its `SERVICES` table.
 - A new data source is not done until its barriers have `blocked()` reports and tests.
 
 ## Layout
@@ -147,8 +153,12 @@ Enforced by `python3 scripts/check_skills.py` (runs in the default `uv run pytes
 - `name` ≤ 64 chars, lowercase/digits/hyphens, equals the directory, no "anthropic"/"claude".
 - `description` ≤ 1024 chars, **third person** ("Finds…", not "Find…"/"I can…"), states what
   the skill does **and** when to use it with concrete trigger terms; no `: `, no XML tags.
-- Every `SKILL.md` **starts with a short `## Contents` table of contents** listing its sections
-  and its reference files.
+- Every `SKILL.md` **starts with a short `## Contents` table of contents** — one bullet per `##`
+  section with its absolute line number, `- Section (line N)`, then the reference files —
+  ending within the first 50 lines. Agents often read only the top of a skill; the line numbers
+  let them read just the section they need. **After editing a SKILL.md run `make fmt`** (or
+  `python3 scripts/check_skills.py --fix`) to refresh the numbers; `make lint` fails if any is
+  stale.
 - `SKILL.md` body < 500 lines; detail goes to `references/`, linked **one level deep** from
   `SKILL.md` (references never link other references). References > 100 lines get their own
   `## Contents`.
@@ -196,6 +206,17 @@ uv run --group earthkit pytest -m earthkit        # offline tests that decode GR
   in sync when a script's dependencies change.
 - Scripts emitting `--json` must keep stdout clean: library banners (earthkit/ecmwf-opendata licence
   notices) are redirected to stderr. A `--json` CLI test guards this.
+
+**Caching — keep test runs fast and offline:**
+
+- Offline tests (`make test`) never download: they use recorded fixtures in `tests/fixtures/`.
+  An autouse guard in `tests/conftest.py` fails any non-`live` test that opens a non-loopback
+  connection — inject the network call instead (`fetch=`, `exists=`).
+- Python packages (earthkit, eccodes wheels) are cached by uv; nothing is reinstalled per run.
+- `make test-earthkit`, `test-live` and `evals` export `ECMWF_SKILLS_CACHE=.cache/data` (Open Data
+  byte ranges — immutable per run, pruned after 3 days) and `MIR_CACHE_PATH=.cache/mir`.
+  `make clean-cache` empties them. Users can set `ECMWF_SKILLS_CACHE` too.
+- Never commit downloaded data; add small trimmed fixtures instead.
 
 ### 2. Live tests — real ECMWF services, before release / weekly CI
 
@@ -295,6 +316,7 @@ rule on every case; Codex GPT-6.1-Sol, GPT-6-Astra/Sol/Luna, GPT-5.6-Terra/Sol/L
 ten models except Haiku, which stays below 2-of-3 on `destine-request` and `mars-access` (it
 answers from the skill text without running the script). `destine` evals with a real token
 are pending upgraded access (TODO.md).
+0.1.7 (21 cases): Claude Sonnet 21/21, Opus 21/21, Haiku 16/21 (not recommended).
 Gemini needs `GEMINI_API_KEY`.
 
 **Read transcripts, not just verdicts.** A PASS can hide a struggling agent: the first

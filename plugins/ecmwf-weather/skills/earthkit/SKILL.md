@@ -5,7 +5,7 @@ compatibility: Skill instructions are provider-neutral. Scripts use uv (PEP 723 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.6"
+  version: "0.1.7"
 ---
 
 <!--
@@ -16,13 +16,13 @@ SPDX-License-Identifier: Apache-2.0
 # earthkit — decode, process, plot
 
 ## Contents
-- Component per job (install only what the task needs)
-- Bundled scripts
-- Writing your own code
-- Key 1.x pitfalls
-- Fallback without earthkit
-- Attribution (required)
-- When blocked (legal or technical barriers)
+- Component per job (≥ 1.0 only) (line 34)
+- Bundled scripts (line 50)
+- Writing your own code (line 67)
+- Key 1.x pitfalls (short list) (line 87)
+- Fallback without earthkit (line 97)
+- Attribution (line 103)
+- When blocked (line 110)
 - References — `references/recipes.md` (code per job), `references/pitfalls.md` (0.x → 1.x breakages), `references/versions.md` (generated: latest versions, ≥ 1.0 eligibility)
 
 earthkit is ECMWF's Python toolkit. It is split into components; **install only what the task
@@ -113,6 +113,10 @@ Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the use
 the agent should do) whenever a legal or technical barrier stops access. Relay the user's
 steps in full and follow the agent instruction; never work around a barrier with another
 provider's data, and never ask for passwords or keys in chat.
+
+If a service can't be reached, the report includes what ECMWF's own status service says
+(`scripts/ecmwf_status.py <service>` where present; https://status.ecmwf.int). Say whether ECMWF
+reports an outage or maintenance, or that the problem is likely local (network, proxy).
 
 | Barrier | Report |
 |---|---|

@@ -5,7 +5,7 @@ compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.6"
+  version: "0.1.7"
 ---
 
 <!--
@@ -16,12 +16,12 @@ SPDX-License-Identifier: Apache-2.0
 # Copernicus CDS and ADS
 
 ## Contents
-- Workflow (check → find → validate → retrieve)
-- ERA5 at a point (history, climate normals)
-- CAMS air quality without a key
-- Processing the download
-- Attribution and citation (required)
-- When blocked (legal or technical barriers)
+- Workflow (line 29)
+- ERA5 at a point (line 64)
+- CAMS air quality without a key (line 77)
+- Processing the download (line 84)
+- Attribution and citation (line 89)
+- When blocked (line 100)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -103,6 +103,10 @@ Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the use
 the agent should do) whenever a legal or technical barrier stops access. Relay the user's
 steps in full and follow the agent instruction; never work around a barrier with another
 provider's data, and never ask for passwords or keys in chat.
+
+If a service can't be reached, the report includes what ECMWF's own status service says
+(`scripts/ecmwf_status.py <service>` where present; https://status.ecmwf.int). Say whether ECMWF
+reports an outage or maintenance, or that the problem is likely local (network, proxy).
 
 | Barrier | Report |
 |---|---|

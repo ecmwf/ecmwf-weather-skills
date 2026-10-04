@@ -55,6 +55,19 @@ def _get_bytes(url: str) -> bytes:
 # --- catalogue --------------------------------------------------------------------------------
 
 
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
 def search(products: list[dict], text: str = "", model: str | None = None) -> list[dict]:
     """All words of `text` must appear in name+title; best (shortest-name) matches first."""
     words = [w.lower() for w in text.replace("metre", "m").split()]
@@ -239,11 +252,17 @@ def main(argv=None) -> int:
         desc = resp["data"].get("attributes", {}).get("description", "")
         print(f"saved {a.output}\n{desc}\nAttribution: {attribution()}")
         return 0
+    except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+        if not isinstance(e, urllib.error.HTTPError):
+            import ecmwf_status  # sibling script
+
+            return blocked(ecmwf_status.network_barrier("opencharts", str(e)), code=2)
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     except (
         ValueError,
         RuntimeError,
         OSError,
-        urllib.error.URLError,
         KeyError,
         StopIteration,
     ) as e:

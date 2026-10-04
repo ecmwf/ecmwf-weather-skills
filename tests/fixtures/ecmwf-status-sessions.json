@@ -1,0 +1,199 @@
+{
+  "nodes": [
+    {
+      "node": {
+        "Title": "Upgrading mars client bundle",
+        "Start Time": "1790587800",
+        "Nid": "44662",
+        "Services": "MARS",
+        "Duration": "10",
+        "Impact": "No impact expected"
+      }
+    },
+    {
+      "node": {
+        "Title": "Firmware update on IBMLIB09",
+        "Start Time": "1790755200",
+        "Nid": "44664",
+        "Services": "MARS",
+        "Duration": "120",
+        "Impact": "Service Degraded"
+      }
+    },
+    {
+      "node": {
+        "Title": "Intervention on SpectraLogic library (SPECTRALIB05)",
+        "Start Time": "1790755200",
+        "Nid": "44666",
+        "Services": "MARS",
+        "Duration": "540",
+        "Impact": "Service Degraded"
+      }
+    },
+    {
+      "node": {
+        "Title": "ECPDS ACQ, DISS &amp; AUX Update",
+        "Start Time": "1790758800",
+        "Nid": "44654",
+        "Services": "DISSEMINATION",
+        "Duration": "30",
+        "Impact": "Definite Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "NEXHUB/ExpERT",
+        "Start Time": "1790758800",
+        "Nid": "44640",
+        "Services": "NEXHub",
+        "Duration": "60",
+        "Impact": "Service Degraded"
+      }
+    },
+    {
+      "node": {
+        "Title": "BOLOGNA DC - ADC - NSS-930 - GSLB (F5 DNS) service migration",
+        "Start Time": "1790771400",
+        "Nid": "44497",
+        "Services": {
+          "1": "ACQUISITION",
+          "2": "DISSEMINATION",
+          "3": "LIVELINK",
+          "4": "RMDCN"
+        },
+        "Duration": "180",
+        "Impact": "Definite Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "Teleport - Raising certificates TTL",
+        "Start Time": "1790841600",
+        "Nid": "44659",
+        "Services": "Teleport",
+        "Duration": "60",
+        "Impact": "Definite Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "Data Stores Service - Live Migration at CCI2",
+        "Start Time": "1790856000",
+        "Nid": "44719",
+        "Services": "Data Stores",
+        "Duration": "60",
+        "Impact": "Potential Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "Upgrade morpheus SSL certificate",
+        "Start Time": "1791190800",
+        "Nid": "44706",
+        "Services": "European Weather Cloud",
+        "Duration": "60",
+        "Impact": "Definite Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "Major update to ECMWF&#039;s licensing management to switch signing provider",
+        "Start Time": "1791194400",
+        "Nid": "44718",
+        "Services": "WEB-SERVICES",
+        "Duration": "60",
+        "Impact": "Potential Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "Update of FDB Prod config file",
+        "Start Time": "1791275400",
+        "Nid": "44687",
+        "Services": "MARS",
+        "Duration": "30",
+        "Impact": "Service Degraded"
+      }
+    },
+    {
+      "node": {
+        "Title": "ECPDS ACQ, DISS &amp; AUX Software Update",
+        "Start Time": "1791277200",
+        "Nid": "44721",
+        "Services": "DISSEMINATION",
+        "Duration": "30",
+        "Impact": "Definite Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "BOLOGNA DC - IP Fabric BAU changes",
+        "Start Time": "1791289800",
+        "Nid": "44698",
+        "Services": "CONNECTIVITY",
+        "Duration": "120",
+        "Impact": "No impact expected"
+      }
+    },
+    {
+      "node": {
+        "Title": "ECMWF Sites regular update",
+        "Start Time": "1791363600",
+        "Nid": "44661",
+        "Services": "WEB-SERVICES",
+        "Duration": "90",
+        "Impact": "Definite Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "Infoblox IPAM Grid Masters - SSL Certificate Renewal on ipam-gm-dh1 &amp; ipam-gm-dh2",
+        "Start Time": "1791363600",
+        "Nid": "44714",
+        "Services": "CONNECTIVITY",
+        "Duration": "120",
+        "Impact": "No impact expected"
+      }
+    },
+    {
+      "node": {
+        "Title": "JupyterHUB regular update",
+        "Start Time": "1791450000",
+        "Nid": "44578",
+        "Services": "JupyterHub",
+        "Duration": "15",
+        "Impact": "Service Degraded"
+      }
+    },
+    {
+      "node": {
+        "Title": "DS network - Onboard new switches in DS1",
+        "Start Time": "1791472800",
+        "Nid": "44699",
+        "Services": "CONNECTIVITY",
+        "Duration": "180",
+        "Impact": "No impact expected"
+      }
+    },
+    {
+      "node": {
+        "Title": "NEXHUB/ExpERT",
+        "Start Time": "1791802800",
+        "Nid": "44723",
+        "Services": "NEXHub",
+        "Duration": "60",
+        "Impact": "Definite Service Downtime"
+      }
+    },
+    {
+      "node": {
+        "Title": "HPC: Lustre filesystem maintenance h2resw01 serving $SCRATCH, $SCRATCHDIR, $HPCPERM, res4 and fws4",
+        "Start Time": "1792566000",
+        "Nid": "43948",
+        "Services": "HPC",
+        "Duration": "720",
+        "Impact": "Definite Service Downtime"
+      }
+    }
+  ]
+}
