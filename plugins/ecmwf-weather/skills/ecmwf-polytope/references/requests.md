@@ -30,6 +30,12 @@ Credentials: `POLYTOPE_USER_KEY` + `POLYTOPE_USER_EMAIL`, or `~/.polytopeapirc`
 (`{"user_email": …, "user_key": …}`), else `~/.ecmwfapirc`. Without them the client prompts —
 check first with `ptpoint.py --check`.
 
+## Collections available to the account
+
+`GET https://polytope.ecmwf.int/api/v1/collections` with `Authorization: EmailKey <email>:<key>`
+(or `Bearer <key>`) returns `{"message": ["cems", "ecmwf-mars", ...]}` — the collections this
+account may use. Without credentials it answers 401. `ptpoint.py --check` does this.
+
 ## Base request and data available
 
 ```python

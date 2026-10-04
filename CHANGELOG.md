@@ -11,6 +11,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- Polytope and DestinE skills ask the servers which data collections the account may use
+  (authenticated `GET /api/v1/collections`): `ptpoint.py --check` lists them in about a second
+  on plain Python (previously it made a test data request under `uv`), and point requests verify
+  `ecmwf-mars` first; `destine.py check` lists collections per data bridge (LUMI, MareNostrum 5,
+  Leonardo) and `retrieve` verifies the target bridge before requesting data. Missing or
+  rejected access produces a BLOCKED report instead of a failed request.
+- `make check-endpoints` also checks the collections endpoints exist.
+
 ## [0.3.1] - 2026-10-04
 
 ### Added
