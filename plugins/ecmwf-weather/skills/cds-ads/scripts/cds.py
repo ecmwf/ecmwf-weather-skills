@@ -72,8 +72,11 @@ def setup_steps(store: str = "cds") -> list[str]:
             if store == "cds"
             else "\n   (ADS's own page says ~/.cdsapirc; earthkit reads ADS only from ~/.adsapirc.)"
         ),
-        "4. Accept each dataset's licence once: on the dataset's page, Download tab, tick "
-        "'Terms of use' at the bottom. Requests fail until you do.",
+        "4. Accept the dataset's licence once (requests fail with 403 until you do): open "
+        f"{host}/datasets/<dataset-id>?tab=download#manage-licences while logged in, scroll to "
+        "'Terms of use' at the bottom and click Accept. ERA5 and most Copernicus datasets use "
+        "the 'CC-BY licence' — accepting it once covers all of them. Accepted licences are "
+        f"listed in your profile: {host}/profile?tab=licences",
         "5. Check: python3 cds.py check",
     ]
 
@@ -127,6 +130,67 @@ def _http(url: str, body: dict | None = None):
 
 def get_collection(store: str, dataset: str) -> dict:
     return _http(f"{STORES[store]['api']}/catalogue/v1/collections/{dataset}")
+
+
+def required_licences(form: list) -> list[dict]:
+    """Licences a dataset's form asks the user to accept (id, revision, label)."""
+    out = []
+    for w in form:
+        if w.get("type") == "LicenceWidget":
+            for lic in w.get("details", {}).get("licences", []):
+                out.append(
+                    {
+                        "id": lic["id"],
+                        "revision": lic.get("revision"),
+                        "label": lic.get("label", lic["id"]),
+                    }
+                )
+    return out
+
+
+def _token(store: str, env, home: Path) -> str | None:
+    if store == "cds" and env.get("CDSAPI_KEY"):
+        return env["CDSAPI_KEY"]
+    for rc in (
+        (home / ".adsapirc", home / ".cdsapirc")
+        if store == "ads"
+        else (Path(env.get("CDSAPI_RC", home / ".cdsapirc")),)
+    ):
+        if rc.exists():
+            text = rc.read_text()
+            if store == "cds" and "ads." in text:
+                continue
+            m = re.search(r"^key:\s*(\S+)", text, re.M)
+            if m:
+                return m.group(1)
+    return None
+
+
+def _get_with_headers(url: str, headers: dict) -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **headers})
+    with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+        return json.loads(r.read())
+
+
+def accepted_licences(
+    store: str, env=os.environ, home: Path | None = None, fetch=_get_with_headers
+) -> dict | None:
+    """The account's accepted licences (needs the key; the key itself is never returned)."""
+    token = _token(store, env, home or Path.home())
+    if not token:
+        return None
+    return fetch(f"{STORES[store]['api']}/profiles/v1/account/licences", {"PRIVATE-TOKEN": token})
+
+
+def licence_status(store: str, dataset: str, form: list, accepted: dict | None) -> dict:
+    have = {lic["id"] for lic in (accepted or {}).get("licences", [])}
+    need = required_licences(form)
+    host = STORES[store]["api"].removesuffix("/api")
+    return {
+        "required": [lic["label"] for lic in need],
+        "missing": [lic["label"] for lic in need if lic["id"] not in have] if accepted else None,
+        "accept_at": f"{host}/datasets/{dataset}?tab=download#manage-licences",
+    }
 
 
 def get_form(collection: dict) -> list:
@@ -307,7 +371,8 @@ def _print(obj, as_json: bool, text: str):
 
 def _validate_and_cost(store, dataset, request) -> dict:
     coll = get_collection(store, dataset)
-    errs = validate(request, get_form(coll))
+    form = get_form(coll)
+    errs = validate(request, form)
     res = {
         "dataset": dataset,
         "store": store,
@@ -329,6 +394,16 @@ def _validate_and_cost(store, dataset, request) -> dict:
             body = e.read()[:300].decode(errors="replace")
             res["errors"].append(f"server rejected the request (HTTP {e.code}): {body}")
             res["valid"] = False
+    try:
+        res["licences"] = licence_status(store, dataset, form, accepted_licences(store))
+    except (urllib.error.URLError, OSError, ValueError):
+        res["licences"] = licence_status(store, dataset, form, None)
+    if res["licences"]["missing"]:
+        res["warnings"] = [
+            f"licence not yet accepted: {', '.join(res['licences']['missing'])} — "
+            f"accept it at {res['licences']['accept_at']} (Terms of use, bottom), "
+            "otherwise the download fails with 403"
+        ]
     res["attribution"] = attribution(store)
     res["licence"] = coll.get("license")
     res["doi"] = coll.get("sci:doi")
@@ -464,6 +539,7 @@ def main(argv=None) -> int:
                     "request: " + json.dumps(req),
                     "valid" if res["valid"] else "INVALID:\n  " + "\n  ".join(res["errors"]),
                     f"cost: {res.get('cost')}",
+                    *[f"WARNING: {w}" for w in res.get("warnings", [])],
                     f"attribution: {res['attribution']}",
                 ]
             )
