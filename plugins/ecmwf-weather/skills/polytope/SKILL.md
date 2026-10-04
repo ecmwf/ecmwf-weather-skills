@@ -5,7 +5,7 @@ compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — eart
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.7"
+  version: "0.1.8"
 ---
 
 <!--

@@ -5,7 +5,7 @@ compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 of
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.7"
+  version: "0.1.8"
 ---
 
 <!--
