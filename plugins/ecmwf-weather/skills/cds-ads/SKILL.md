@@ -17,11 +17,11 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Workflow (line 29)
-- ERA5 at a point (line 64)
-- CAMS air quality without a key (line 77)
-- Processing the download (line 84)
-- Attribution and citation (line 89)
-- When blocked (line 100)
+- ERA5 at a point (line 67)
+- CAMS air quality without a key (line 80)
+- Processing the download (line 87)
+- Attribution and citation (line 92)
+- When blocked (line 103)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -53,11 +53,14 @@ files there, never inside the skill directory. Paths are relative to this skill.
   reports which one is present.
 - `validate` checks keys and values locally and asks the server for cost vs limit; a request over
   the limit must be split (by year or month) or reduced (area, variables).
-- Licences: each dataset's licence must be accepted once, or downloads fail with 403. With a
-  key, `validate` checks the account and prints the exact page
-  (`…/datasets/<id>?tab=download#manage-licences`, "Terms of use" at the bottom → Accept).
-  ERA5 uses the "CC-BY licence"; accepting it once covers every CC-BY dataset. Relay the page
-  to the user — only they can accept it.
+- Licences: each dataset's licence must be accepted once, or downloads fail with 403. ERA5 uses
+  the "CC-BY licence"; accepting it once covers every CC-BY dataset. `validate` always prints
+  one `licences:` line (JSON: `licences.state`) — relay it as is, don't hedge:
+  - `accepted` — confirmed on the user's account via the data-store API; say so plainly.
+  - `NOT accepted` — a BLOCKED report follows with the acceptance steps; only the user can
+    accept.
+  - `not checked` — the reason is given (no readable key, API error); pass on the reason and the
+    profile/licence page.
 - Requests queue on the server; large ERA5 grids can take minutes to hours. Prefer the
   time-series and daily/monthly derived datasets when they answer the question.
 

@@ -260,15 +260,40 @@ def accepted_licences(
     return fetch(f"{STORES[store]['api']}/profiles/v1/account/licences", {"PRIVATE-TOKEN": token})
 
 
-def licence_status(store: str, dataset: str, form: list, accepted: dict | None) -> dict:
-    have = {lic["id"] for lic in (accepted or {}).get("licences", [])}
+def licence_status(
+    store: str, dataset: str, form: list, accepted: dict | None, reason: str | None = None
+) -> dict:
+    """state: accepted (confirmed on the account), missing, or unchecked (with the reason)."""
     need = required_licences(form)
     host = STORES[store]["api"].removesuffix("/api")
-    return {
+    res = {
         "required": [lic["label"] for lic in need],
-        "missing": [lic["label"] for lic in need if lic["id"] not in have] if accepted else None,
         "accept_at": f"{host}/datasets/{dataset}?tab=download#manage-licences",
+        "profile": f"{host}/profile?tab=licences",
     }
+    if accepted is None:
+        return {
+            **res,
+            "state": "unchecked",
+            "missing": None,
+            "reason": reason or "the account's licences could not be read",
+        }
+    have = {lic["id"] for lic in accepted.get("licences", [])}
+    missing = [lic["label"] for lic in need if lic["id"] not in have]
+    return {**res, "state": "missing" if missing else "accepted", "missing": missing}
+
+
+def licence_line(st: dict) -> str:
+    """One unambiguous line for the text output — always present."""
+    names = ", ".join(st["required"]) or "none required"
+    if st["state"] == "accepted":
+        return f"licences: accepted — {names} (confirmed on your account)"
+    if st["state"] == "missing":
+        return f"licences: NOT accepted — {', '.join(st['missing'])} (accept at {st['accept_at']})"
+    return (
+        f"licences: not checked — {st['reason']}; required: {names}; check {st['profile']} "
+        f"or accept at {st['accept_at']}"
+    )
 
 
 def get_form(collection: dict) -> list:
@@ -515,9 +540,21 @@ def _validate_and_cost(store, dataset, request) -> dict:
             res["errors"].append(f"server rejected the request (HTTP {e.code}): {body}")
             res["valid"] = False
     try:
-        res["licences"] = licence_status(store, dataset, form, accepted_licences(store))
-    except (urllib.error.URLError, OSError, ValueError):
-        res["licences"] = licence_status(store, dataset, form, None)
+        accepted = accepted_licences(store)
+        reason = (
+            None
+            if accepted is not None
+            else (
+                f"no {store.upper()} key readable by this script (~/.cdsapirc / CDSAPI_KEY"
+                + (" / ~/.adsapirc" if store == "ads" else "")
+                + ")"
+            )
+        )
+        res["licences"] = licence_status(store, dataset, form, accepted, reason)
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        res["licences"] = licence_status(
+            store, dataset, form, None, f"the account's licences could not be read ({e})"
+        )
     if res["licences"]["missing"]:
         res["warnings"] = [
             f"licence not yet accepted: {', '.join(res['licences']['missing'])} — "
@@ -654,6 +691,7 @@ def main(argv=None) -> int:
                     "request: " + json.dumps(req),
                     "valid" if res["valid"] else "INVALID:\n  " + "\n  ".join(res["errors"]),
                     f"cost: {res.get('cost')}",
+                    licence_line(res["licences"]),
                     *[f"WARNING: {w}" for w in res.get("warnings", [])],
                     f"attribution: {res['attribution']}",
                 ]

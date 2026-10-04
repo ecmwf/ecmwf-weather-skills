@@ -5,6 +5,7 @@
 import json
 import subprocess
 import sys
+import urllib.error
 
 import pytest
 from conftest import FIXTURES, SKILLS, load_script
@@ -417,3 +418,61 @@ def test_unpack_rejects_path_traversal(tmp_path):
         z.writestr("ok.nc", "B")
     with pytest.raises(ValueError, match="unsafe"):
         cds.unpack_download(src, tmp_path / "o.nc")
+
+
+# --- licence status is always explicit -------------------------------------------------------
+
+
+def test_licence_states():
+    ok = cds.licence_status("cds", "d", FORM_SL, {"licences": [{"id": "cc-by"}]})
+    assert ok["state"] == "accepted" and ok["missing"] == []
+    no = cds.licence_status("cds", "d", FORM_SL, {"licences": []})
+    assert no["state"] == "missing" and no["missing"] == ["CC-BY licence"]
+    unk = cds.licence_status("cds", "d", FORM_SL, None, reason="no key readable")
+    assert unk["state"] == "unchecked" and unk["reason"] == "no key readable"
+
+
+def test_licence_line_always_states_the_result():
+    ok = cds.licence_line(cds.licence_status("cds", "d", FORM_SL, {"licences": [{"id": "cc-by"}]}))
+    assert ok.startswith("licences: accepted") and "confirmed on your account" in ok
+    no = cds.licence_line(cds.licence_status("cds", "d", FORM_SL, {"licences": []}))
+    assert no.startswith("licences: NOT accepted") and "CC-BY licence" in no
+    unk = cds.licence_line(cds.licence_status("cds", "d", FORM_SL, None, reason="HTTP 500"))
+    assert (
+        unk.startswith("licences: not checked") and "HTTP 500" in unk and "manage-licences" in unk
+    )
+
+
+@pytest.fixture
+def offline_store(monkeypatch):
+    monkeypatch.setattr(cds, "get_collection", lambda s, d: {"license": "CC-BY-4.0"})
+    monkeypatch.setattr(cds, "get_form", lambda c: FORM_TS)
+    monkeypatch.setattr(cds, "costing", lambda s, d, r: {"cost": 1.0, "limit": 10.0})
+    return monkeypatch
+
+
+REQ = {
+    "variable": ["2m_temperature"],
+    "location": {"latitude": 38.72, "longitude": -9.14},
+    "date": ["1991-01-01/2020-12-31"],
+    "data_format": "csv",
+}
+
+
+def test_validate_confirms_accepted_licence(offline_store):
+    offline_store.setattr(cds, "accepted_licences", lambda s: {"licences": [{"id": "cc-by"}]})
+    res = cds._validate_and_cost("cds", "reanalysis-era5-single-levels-timeseries", REQ)
+    assert res["licences"]["state"] == "accepted"
+
+
+def test_validate_reports_why_licence_was_not_checked(offline_store):
+    offline_store.setattr(cds, "accepted_licences", lambda s: None)
+    res = cds._validate_and_cost("cds", "x", REQ)
+    assert res["licences"]["state"] == "unchecked" and "key" in res["licences"]["reason"]
+
+    def boom(store):
+        raise urllib.error.URLError("timed out")
+
+    offline_store.setattr(cds, "accepted_licences", boom)
+    res = cds._validate_and_cost("cds", "x", REQ)
+    assert res["licences"]["state"] == "unchecked" and "timed out" in res["licences"]["reason"]
