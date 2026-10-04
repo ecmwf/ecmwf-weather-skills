@@ -269,3 +269,102 @@ def test_accepted_licences_sends_token_header_only(tmp_path):
 def test_setup_names_the_licence_page():
     s = "\n".join(cds.setup_steps("cds"))
     assert "?tab=download#manage-licences" in s and "CC-BY licence" in s
+
+
+# --- barriers: detailed instructions whenever access is blocked -------------------------------
+
+
+def test_licence_steps_are_detailed():
+    s = "\n".join(cds.licence_steps("ecds", "tigge-forecasts", ["TIGGE licence"]))
+    for must in (
+        "https://ecds.ecmwf.int",
+        "Login",
+        "tigge-forecasts?tab=download#manage-licences",
+        "Terms of use",
+        "Accept",
+        "TIGGE licence",
+        "profile?tab=licences",
+        "re-run",
+    ):
+        assert must in s, must
+
+
+def test_barrier_for_errors():
+    lic = cds.barrier_for_error(
+        "cds", "reanalysis-era5-single-levels", "403 Client Error: required licences not accepted"
+    )
+    assert "licence" in lic["blocked"].lower() and lic["user_steps"]
+    assert "until the user confirms" in lic["agent"]
+    key = cds.barrier_for_error("ads", "x", "401 Unauthorized: invalid token")
+    assert "how-to-api" in "\n".join(key["user_steps"])
+    assert cds.barrier_for_error("cds", "x", "queue is full") is None
+
+
+def test_licence_barrier_from_validation():
+    res = {"licences": {"missing": ["CC-BY licence"], "accept_at": "u"}}
+    b = cds.licence_barrier("cds", "reanalysis-era5-single-levels", res)
+    assert "CC-BY licence" in "\n".join(b["user_steps"])
+    assert cds.licence_barrier("cds", "d", {"licences": {"missing": []}}) is None
+
+
+def test_ecds_store_known():
+    assert cds.STORES["ecds"]["api"] == "https://ecds.ecmwf.int/api"
+
+
+def test_cli_retrieve_without_key_is_blocked_with_steps(tmp_path):
+    req = tmp_path / "r.json"
+    req.write_text("{}")
+    out = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "retrieve",
+            "--dataset",
+            "x",
+            "--request",
+            str(req),
+            "-o",
+            str(tmp_path / "o"),
+        ],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+    )
+    assert out.returncode == 4
+    assert "BLOCKED:" in out.stderr and "how-to-api" in out.stderr and "agent" in out.stderr.lower()
+
+
+def test_ecds_uses_the_same_token_as_cds(tmp_path):
+    (tmp_path / ".cdsapirc").write_text("url: https://cds.climate.copernicus.eu/api\nkey: t\n")
+    assert cds.credentials("ecds", env={}, home=tmp_path).startswith("~/.cdsapirc")
+    s = "\n".join(cds.setup_steps("ecds"))
+    assert "https://ecds.ecmwf.int/how-to-api" in s and "same personal access token" in s
+
+
+def test_cli_check_lists_ecds(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "check", "--json"],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+    )
+    assert "ecds" in json.loads(out.stdout)
+
+
+def test_attribution_ecds_is_not_copernicus():
+    a = cds.attribution("ecds", 2026)
+    assert "Copernicus" not in a and "ECMWF" in a
+
+
+def test_server_rejection_makes_request_invalid():
+    res = {"valid": True, "errors": []}
+    cds.apply_costing(
+        res,
+        {
+            "cost": 1.0,
+            "limit": 10.0,
+            "request_is_valid": False,
+            "invalid_reason": "request: {} should be non-empty",
+        },
+    )
+    assert res["valid"] is False and "non-empty" in res["errors"][0]

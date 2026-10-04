@@ -5,7 +5,7 @@ compatibility: wms.py, opencharts.py and webmap.py need only Python 3 (standard 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 <!--
@@ -23,6 +23,7 @@ SPDX-License-Identifier: Apache-2.0
 - Rules the server enforces
 - Access and tokens
 - Attribution (required)
+- When blocked (legal or technical barriers)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -110,3 +111,16 @@ answer with the attribution line the script printed.** The line:
 plus "ECMWF accepts no liability for errors or omissions" in apps. CAMS layers (`composition_*`)
 add "Generated using Copernicus Atmosphere Monitoring Service information <year>". The scripts
 print the line and the web map shows it. Don't use the ECMWF logo except as a link to ecmwf.int.
+
+## When blocked
+
+Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the user, and what
+the agent should do) whenever a legal or technical barrier stops access. Relay the user's
+steps in full and follow the agent instruction; never work around a barrier with another
+provider's data, and never ask for passwords or keys in chat.
+
+| Barrier | Report |
+|---|---|
+| non-public layer without a key | `wms.py`: key steps; use `--public` layers meanwhile |
+| chart step not yet available | `opencharts.py` falls back to the previous run |
+| service unreachable | say so with the URL that failed; don't substitute other providers |

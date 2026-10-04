@@ -286,3 +286,20 @@ def test_cli_check_offers_setup(tmp_path):
         env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
     )
     assert "ptpoint.py --setup" in json.loads(out.stdout)["offer"]
+
+
+def test_barriers_polytope():
+    assert "Computing Representative" in "\n".join(
+        pt.barrier_for_error("HTTP 403 Forbidden")["user_steps"]
+    )
+    assert pt.barrier_for_error("no data for date") is None
+
+
+def test_cli_point_without_credentials_is_blocked(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "--lat", "1", "--lon", "2"],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+    )
+    assert out.returncode == 4 and "BLOCKED:" in out.stderr and "odpoint.py" in out.stderr

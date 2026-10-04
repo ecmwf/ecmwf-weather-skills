@@ -5,7 +5,7 @@ compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scri
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 <!--
@@ -23,6 +23,7 @@ SPDX-License-Identifier: Apache-2.0
 - Credentials and better routes
 - Attribution (required)
 - Old patterns (pre-50r1 streams)
+- When blocked (legal or technical barriers)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -123,6 +124,19 @@ Required wherever the data or anything derived from it is shown:
   https://creativecommons.org/licenses/by/4.0/ where possible.
 - Full notice for services, apps, files and READMEs: `references/attribution.md`.
 - State modifications ("nearest gridpoint", "converted to °C").
+
+## When blocked
+
+Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the user, and what
+the agent should do) whenever a legal or technical barrier stops access. Relay the user's
+steps in full and follow the agent instruction; never work around a barrier with another
+provider's data, and never ask for passwords or keys in chat.
+
+| Barrier | Report |
+|---|---|
+| earthkit not installable (no uv, Windows) | `odpoint.py`: install steps; `odcatalog.py download` still fetches GRIB |
+| no run reachable (network, proxy, outage) | retry `--source aws`/`google`, then the network steps |
+| better data needs a key | offer `cds.py setup`, `ptpoint.py --setup`, `mars.py setup` |
 
 ## Old patterns
 

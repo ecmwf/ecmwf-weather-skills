@@ -270,6 +270,12 @@ def lint(req: dict) -> dict:
                 f"levtype=pl with {len(levels)} levels — pressure levels are hPa values "
                 "(1000/850/500 or levelist=all); 1/to/137 are model levels: use levtype=ml"
             )
+    if req.get("class") in ("ti", "s2"):
+        errs.append(
+            f"class={req['class']} (TIGGE/S2S) is no longer served through the Web API: use the "
+            "ECMWF Data Store, https://ecds.ecmwf.int (same key as CDS; accept the TIGGE/S2S "
+            "licence on the dataset page first)"
+        )
     if req.get("class") not in COMMON_CLASSES:
         warns.append(
             f"class={req.get('class')} is not a common archive — operational IFS (HRES/ENS) is "
@@ -388,6 +394,41 @@ def verify_webapi(env=os.environ, home: Path | None = None, fetch=_http_json) ->
     if status == 200:
         return {"verified": True, "account": body.get("uid")}
     return {"verified": False, "error": f"Web API rejected the key (HTTP {status})"}
+
+
+def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
+    """Report an access barrier: what blocks, why, what the user must do, what the agent does.
+
+    Every legal or technical barrier gets this report (AGENTS.md "When access is blocked")."""
+    lines = [f"BLOCKED: {b['blocked']}", f"Why: {b['why']}", "What the user needs to do:"]
+    lines += [f"  {s}" for s in b["user_steps"]]
+    lines.append(f"For the agent: {b['agent']}")
+    print("\n".join(lines), file=sys.stderr)
+    if as_json:
+        print(json.dumps({"blocked": b}, indent=2))
+    return code
+
+
+def barrier_for_error(message: str) -> dict | None:
+    """Map a Web API / MARS error to a barrier with instructions (None if not an access one)."""
+    if re.search(r"(?i)invalid (api )?key|key (has )?expired|\b401\b|authenti", message):
+        return {
+            "blocked": "the ECMWF Web API rejected the key",
+            "why": "the key is mistyped, from another account, or expired (keys last a year).",
+            "user_steps": [*setup_steps()[:3], "4. Re-run: python3 mars.py check"],
+            "agent": "Give these steps; do not retry until the user has a fresh key.",
+        }
+    if re.search(
+        r"(?i)no access|not authori[sz]ed|permission|forbidden|\b403\b|restricted", message
+    ):
+        return {
+            "blocked": "this account has no MARS rights for the requested data",
+            "why": "MARS data is licensed; a valid key alone does not grant archive access.",
+            "user_steps": [setup_steps()[3], "5. Then re-run the request."],
+            "agent": "Explain the access route; offer free alternatives (open-data for recent "
+            "forecasts, cds-ads for ERA5, ECDS for TIGGE/S2S) and do not retry.",
+        }
+    return None
 
 
 def setup_steps() -> list[str]:
@@ -534,13 +575,17 @@ def main(argv=None) -> int:
             )
             return 0
         if not any(credentials().values()):
-            print(
-                "error: no MARS access configured "
-                "(~/.ecmwfapirc or ECMWF_API_*; or a local `mars` client). "
-                "Run `mars.py check`.",
-                file=sys.stderr,
+            return blocked(
+                {
+                    "blocked": "no MARS access configured on this machine",
+                    "why": "MARS needs an ECMWF Web API key (or a local mars client) and "
+                    "an account with archive rights.",
+                    "user_steps": setup_steps(),
+                    "agent": "Offer these steps; meanwhile lint, estimate and plan work "
+                    "offline, and suggest free alternatives.",
+                },
+                a.json,
             )
-            return 4
         errs = lint(req)["errors"]
         if errs:
             print("error: fix the request first:\n  " + "\n  ".join(errs), file=sys.stderr)
@@ -563,6 +608,9 @@ def main(argv=None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     except Exception as e:  # ecmwf-api-client / MARS errors
+        b = barrier_for_error(str(e))
+        if b:
+            return blocked(b, a.json)
         print(f"error: {str(e).splitlines()[-1] if str(e) else repr(e)}", file=sys.stderr)
         return 2
 

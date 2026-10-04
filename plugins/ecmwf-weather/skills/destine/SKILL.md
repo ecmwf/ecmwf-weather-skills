@@ -5,7 +5,7 @@ compatibility: scripts/destine.py check, setup and request run on plain Python 3
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 <!--
@@ -21,6 +21,7 @@ SPDX-License-Identifier: Apache-2.0
 - Request workflow
 - Which server holds the data
 - Licence and attribution (restricted)
+- When blocked (legal or technical barriers)
 - References — `references/requests.md` (keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -94,3 +95,16 @@ original data cannot be recovered may be shared. Credit, ending the answer:
 "Based on data of the European Commission, using the Destination Earth Platform." For Climate DT
 also cite: Destination Earth Digital Twin for Climate Change Adaptation (DestinE Climate DT
 Generation 2), ECMWF, https://doi.org/10.21957/79c6af3105.
+
+## When blocked
+
+Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the user, and what
+the agent should do) whenever a legal or technical barrier stops access. Relay the user's
+steps in full and follow the agent instruction; never work around a barrier with another
+provider's data, and never ask for passwords or keys in chat.
+
+| Barrier | Report |
+|---|---|
+| no token | `destine.py setup`: register, request upgraded access, authenticate |
+| 401 | re-run `desp-authentication.py -u <user> -o ~/.polytopeapirc-destine` |
+| 403 | upgraded access not (yet) granted: `access-policy-upgrade` steps |

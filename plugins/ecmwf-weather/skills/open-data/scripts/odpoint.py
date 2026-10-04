@@ -83,6 +83,26 @@ def normalise_lon(lon: float) -> float:
     return ((lon + 180.0) % 360.0) - 180.0
 
 
+def earthkit_barrier(message: str) -> dict:
+    b = {
+        "blocked": "the earthkit components this script needs are not installed",
+        "why": "decoding GRIB needs earthkit (eccodes wheels for Linux/macOS).",
+        "user_steps": [
+            "1. Install uv: https://docs.astral.sh/uv/getting-started/installation/ "
+            "(curl -LsSf https://astral.sh/uv/install.sh | sh), then re-run with "
+            "`uv run odpoint.py …` — it installs exactly what is needed.",
+            "2. Without uv: pip install 'earthkit-data[ecmwf-opendata]>=1.2' "
+            "'earthkit-geo>=1.1' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0'",
+            "3. On Windows use WSL (earthkit has no Windows wheels).",
+        ],
+        "agent": "Run the script with `uv run`; if uv cannot be installed, give these "
+        "steps. Without earthkit, `odcatalog.py download` still fetches the "
+        "exact GRIB fields (undecoded).",
+    }
+    b["detail"] = message
+    return b
+
+
 def polytope_available(env=os.environ, home: Path | None = None) -> bool:
     home = home or Path.home()
     return (
@@ -340,15 +360,13 @@ def main(argv=None) -> int:
                     fl = ekd.from_source("file", tmp_path).to_fieldlist()
                 len(fl)  # force download/decode inside the redirect
     except ImportError as e:
-        print(
-            f"error: earthkit not available ({e}). Run with `uv run odpoint.py ...`, or "
-            "pip install 'earthkit-data[ecmwf-opendata]>=1.2' 'earthkit-geo>=1.1' "
-            "'earthkit-meteo>=1.2' 'earthkit-utils>=1.0'. Without earthkit, odcatalog.py can "
-            "still download the GRIB fields but cannot decode them.",
-            file=sys.stderr,
-        )
-        return 3
-    except (ValueError, RuntimeError, OSError) as e:
+        return oc.blocked(earthkit_barrier(str(e)), a.json, code=3)
+    except RuntimeError as e:
+        if "no published run" in str(e):
+            return oc.blocked(oc.no_run_barrier(a.source), a.json, code=2)
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    except (ValueError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 

@@ -157,7 +157,12 @@ offers step-by-step instructions to obtain it.
 licence once: open `https://cds.climate.copernicus.eu/datasets/<dataset-id>?tab=download#manage-licences`
 while logged in, scroll to "Terms of use" and click Accept. ERA5 uses the "CC-BY licence";
 accepting it once covers all CC-BY datasets. Your accepted licences are listed at
-<https://cds.climate.copernicus.eu/profile?tab=licences>.
+<https://cds.climate.copernicus.eu/profile?tab=licences>. One ECMWF account and token serve
+CDS, ADS and the ECMWF Data Store (ECDS, TIGGE/S2S); licences are per account, so accepting a
+licence on one store covers the others.
+
+**When something blocks access** (a licence, a missing key, no entitlement, a service outage),
+the scripts print a BLOCKED report with exact steps for you and for the agent.
 
 ## Data licences and attribution
 

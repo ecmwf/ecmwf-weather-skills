@@ -5,7 +5,7 @@ compatibility: Skill instructions are provider-neutral. Scripts use uv (PEP 723 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 <!--
@@ -22,6 +22,7 @@ SPDX-License-Identifier: Apache-2.0
 - Key 1.x pitfalls
 - Fallback without earthkit
 - Attribution (required)
+- When blocked (legal or technical barriers)
 - References — `references/recipes.md` (code per job), `references/pitfalls.md` (0.x → 1.x breakages), `references/versions.md` (generated: latest versions, ≥ 1.0 eligibility)
 
 earthkit is ECMWF's Python toolkit. It is split into components; **install only what the task
@@ -105,3 +106,15 @@ Required wherever results are shown. Figures and derived data from ECMWF sources
 `Data: © <year> ECMWF, CC BY 4.0` (the scripts stamp it on every figure). For Copernicus
 (ERA5/CAMS): "Generated using Copernicus Climate Change Service / Atmosphere Monitoring Service
 information <year>". State modifications (regridded, interpolated, unit-converted).
+
+## When blocked
+
+Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the user, and what
+the agent should do) whenever a legal or technical barrier stops access. Relay the user's
+steps in full and follow the agent instruction; never work around a barrier with another
+provider's data, and never ask for passwords or keys in chat.
+
+| Barrier | Report |
+|---|---|
+| earthkit components not installed | `ekinspect.py`/`ekplot.py`: install uv or pip, WSL on Windows |
+| file not decodable | say so; check it is GRIB/NetCDF (`ekinspect.py`) |

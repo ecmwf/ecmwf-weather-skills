@@ -5,7 +5,7 @@ compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.5"
+  version: "0.1.6"
 ---
 
 <!--
@@ -21,6 +21,7 @@ SPDX-License-Identifier: Apache-2.0
 - CAMS air quality without a key
 - Processing the download
 - Attribution and citation (required)
+- When blocked (legal or technical barriers)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -95,3 +96,19 @@ Required in anything published or displayed:
   modified data: "Contains modified …").
 - Cite the dataset DOI (`describe` prints it). Most ERA5/CAMS datasets are CC BY 4.0; read the
   licence per dataset from `describe`.
+
+## When blocked
+
+Scripts print a **BLOCKED** report (what blocks, why, numbered steps for the user, and what
+the agent should do) whenever a legal or technical barrier stops access. Relay the user's
+steps in full and follow the agent instruction; never work around a barrier with another
+provider's data, and never ask for passwords or keys in chat.
+
+| Barrier | Report |
+|---|---|
+| no key | `cds.py` prints `setup` steps; validated requests still work |
+| **dataset licence not accepted** (HTTP 403) | `validate`/`retrieve` print the exact steps: log in, open `…/datasets/<id>?tab=download#manage-licences`, "Terms of use" at the bottom, Accept — then confirm in `profile?tab=licences` |
+| key rejected (401) | re-copy the token from `…/how-to-api` |
+
+Check licences before every download; if one is missing, stop and give the steps — only the
+user can accept terms.

@@ -46,6 +46,28 @@ Agent Skills for ECMWF data. Design: `PLAN.md`. Open work: `TODO.md`. Done work:
   shapes only. Never ask users to paste a secret into chat or onto a command line.
 - `tests/tooling/test_no_secrets.py` blocks credential-shaped values in tracked files.
 
+## When access is blocked — ALWAYS give detailed instructions
+
+Whenever a user is blocked from data by a **legal** barrier (licence or terms not accepted,
+no entitlement, upgraded access not granted) or a **technical** one (no key, key rejected or
+expired, missing dependency, unsupported platform, service unreachable), the code and the skill
+text MUST give detailed instructions — to the user and to the agent. This applies to every
+current and future data source.
+
+- Scripts print a **BLOCKED report** via `blocked()`: what blocks, why, numbered steps the user
+  must take (exact URLs, buttons, files, commands), and what the agent should do next (offer
+  alternatives, don't retry until the user confirms). Access barriers exit 4, missing
+  dependencies 3, service outages 2.
+- **Terms and licences**: detect missing acceptance *before* downloading whenever the service
+  allows it (e.g. `cds.py` checks the account's accepted licences) and give step-by-step
+  acceptance instructions: log in, the exact dataset page, where the "Terms of use" are, what
+  to click, how to confirm. Only the user can accept terms — agents never accept them.
+- Every `SKILL.md` has a `## When blocked` section (enforced by `check_skills.py`) listing its
+  barriers and the reports that cover them.
+- Agents relay the user steps in full, never ask for secrets in chat, and never route around a
+  barrier with another provider's data.
+- A new data source is not done until its barriers have `blocked()` reports and tests.
+
 ## Layout
 
 - Skills live only in `plugins/ecmwf-weather/skills/<name>/` (`SKILL.md`, `references/`, `scripts/`).

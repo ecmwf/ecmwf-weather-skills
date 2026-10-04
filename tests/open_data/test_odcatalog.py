@@ -285,3 +285,8 @@ def test_live_latest_and_estimate():
     assert out.returncode == 0, out.stderr
     data = json.loads(out.stdout)
     assert data["fields"] == 2 and data["bytes"] > 100_000
+
+
+def test_no_run_barrier():
+    b = od.no_run_barrier("ecmwf")
+    assert "--source aws" in "\n".join(b["user_steps"]) + b["agent"]

@@ -11,6 +11,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-04
+
+### Added
+
+- Every data source reports access barriers as a **BLOCKED** report — what blocks, why,
+  numbered steps for the user, what the agent should do: missing or rejected keys (CDS, ADS,
+  ECDS, MARS, Polytope, DestinE, WMS), dataset licences not accepted, no MARS/Polytope rights,
+  no DestinE upgraded access, earthkit not installable, Open Data unreachable.
+- `cds.py`: before any download, checks the account's accepted licences and blocks with
+  detailed acceptance steps (log in, dataset page, "Terms of use", Accept, confirm); also on
+  HTTP 403 licence errors.
+- `cds.py --store ecds`: ECMWF Data Store for check, setup and licence steps (same token as
+  CDS/ADS); full ECDS support is planned (TODO.md).
+- `mars.py lint` sends TIGGE/S2S (`class=ti|s2`) to the ECMWF Data Store.
+- Every `SKILL.md` has a "When blocked" section; `check_skills.py` enforces it. AGENTS.md:
+  "When access is blocked — ALWAYS give detailed instructions".
+
+### Fixed
+
+- `cds.py validate` reports a request as invalid when the server's costing rejects it (it said
+  "valid" for requests the server refused).
+- ECDS data is credited to ECMWF under the dataset licence, not to Copernicus.
+
 ## [0.1.5] - 2026-10-04
 
 ### Added
@@ -169,7 +192,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.5...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.6...HEAD
+[0.1.6]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.2...0.1.3
