@@ -10,9 +10,9 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
-wms = load_script("opencharts-wms", "wms")
+wms = load_script("ecmwf-opencharts-wms", "wms")
 CAPS = (FIXTURES / "wms-capabilities-trimmed.xml").read_text()
-SCRIPT = SKILLS / "opencharts-wms" / "scripts" / "wms.py"
+SCRIPT = SKILLS / "ecmwf-opencharts-wms" / "scripts" / "wms.py"
 
 
 def q(url):

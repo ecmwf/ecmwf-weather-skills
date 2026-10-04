@@ -19,10 +19,10 @@ OFFLINE = {
 @pytest.mark.parametrize(
     "skill, script, args",
     [
-        ("open-data", "odcatalog.py", ["latest"]),
-        ("opencharts-wms", "wms.py", ["layers", "--public"]),
-        ("opencharts-wms", "opencharts.py", ["search", "temperature"]),
-        ("cds-ads", "cds.py", ["search", "era5"]),
+        ("ecmwf-open-data", "odcatalog.py", ["latest"]),
+        ("ecmwf-opencharts-wms", "wms.py", ["layers", "--public"]),
+        ("ecmwf-opencharts-wms", "opencharts.py", ["search", "temperature"]),
+        ("ecmwf-cds-ads", "cds.py", ["search", "era5"]),
     ],
 )
 def test_unreachable_service_is_blocked_with_status(tmp_path, skill, script, args):
@@ -38,7 +38,8 @@ def test_unreachable_service_is_blocked_with_status(tmp_path, skill, script, arg
 
 
 @pytest.mark.parametrize(
-    "skill, script", [("mars", "mars"), ("polytope", "ptpoint"), ("destine", "destine")]
+    "skill, script",
+    [("ecmwf-mars", "mars"), ("ecmwf-polytope", "ptpoint"), ("ecmwf-destine", "destine")],
 )
 def test_connection_errors_map_to_network_barrier(monkeypatch, skill, script):
     import json

@@ -1,13 +1,28 @@
 {
   "id": "cds-era5-request",
-  "prompt": "I want hourly 2 m temperature for Lisbon from 1991 to 2020 from ERA5. Prepare the exact Copernicus CDS request, check that it is valid and how large it is, but don't download anything — I don't have a CDS key yet.",
+  "prompt": "I want hourly 2 m temperature for Lisbon from 1991 to 2020 from ERA5. Prepare the exact Copernicus CDS request, check that it is valid and how large it is, but don't download anything \u2014 I don't have a CDS key yet.",
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "cds-ads"},
-    {"kind": "command", "pattern": "cds\\.py\\s+(validate|era5-point)"},
-    {"kind": "final", "pattern": "reanalysis-era5-single-levels-timeseries"},
-    {"kind": "final", "pattern": "(?i)key|register|account"},
-    {"kind": "command_not", "pattern": "(?i)open-meteo|meteostat"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-cds-ads"
+    },
+    {
+      "kind": "command",
+      "pattern": "cds\\.py\\s+(validate|era5-point)"
+    },
+    {
+      "kind": "final",
+      "pattern": "reanalysis-era5-single-levels-timeseries"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)key|register|account"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|meteostat"
+    }
   ]
 }

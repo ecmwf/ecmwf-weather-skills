@@ -11,7 +11,7 @@
   "expect": [
     {
       "kind": "skill",
-      "name": "earthkit"
+      "name": "ecmwf-earthkit"
     },
     {
       "kind": "command",

@@ -9,7 +9,7 @@ import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
 GRIB = FIXTURES / "ifs-sfc-5deg-20261002-00z.grib2"
-SCRIPTS = SKILLS / "earthkit" / "scripts"
+SCRIPTS = SKILLS / "ecmwf-earthkit" / "scripts"
 
 POINT_JSON = {
     "location": {"lat": 38.72, "lon": -9.14},
@@ -61,12 +61,12 @@ def uv(script, *args, timeout=600):
 
 
 def test_ekinspect_imports_without_earthkit():
-    m = load_script("earthkit", "ekinspect")
+    m = load_script("ecmwf-earthkit", "ekinspect")
     assert hasattr(m, "summarise")
 
 
 def test_ekplot_meteogram_panels_from_json():
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     panels = m.meteogram_panels(POINT_JSON)
     assert [p["key"] for p in panels] == ["t2m_C", "precip_mm", "wind_speed_ms"]
     assert panels[1]["kind"] == "bar"
@@ -76,7 +76,7 @@ def test_ekplot_meteogram_panels_from_json():
 def test_ekplot_meteogram_panels_none_becomes_nan():
     import math
 
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     pj = json.loads(json.dumps(POINT_JSON))
     pj["series"][0]["precip_mm"] = None
     p = next(x for x in m.meteogram_panels(pj) if x["key"] == "precip_mm")
@@ -108,7 +108,7 @@ ENS_JSON = {
 
 
 def test_ekplot_meteogram_panels_ensemble_band():
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     p = {x["key"]: x for x in m.meteogram_panels(ENS_JSON)}
     assert p["t2m_C"]["band"] == ([14.0, 17.0, 20.0, 23.0], [16.5, 19.5, 22.5, 25.5])
     assert "band" in p["precip_mm"]
@@ -116,7 +116,7 @@ def test_ekplot_meteogram_panels_ensemble_band():
 
 
 def test_ekplot_attribution_comes_from_the_data():
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     assert (
         m.attribution_for({"attribution": {"short": "Data: © 2026 ECMWF"}}) == "Data: © 2026 ECMWF"
     )
@@ -201,7 +201,7 @@ MIXED = {
 
 
 def test_precipitation_is_a_rate_over_each_interval():
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     bars = m.precip_bars(MIXED)
     assert bars["widths_h"] == [1, 1, 1, 3, 6]
     assert bars["rates"] == [1.0, 1.0, 1.0, 1.0, 1.0]  # 3 mm in 3 h == 1 mm in 1 h
@@ -211,14 +211,14 @@ def test_precipitation_is_a_rate_over_each_interval():
 
 
 def test_precipitation_rate_band_for_ensembles():
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     bars = m.precip_bars(ENS_JSON)
     assert bars["band"] is not None and len(bars["band"][0]) == len(bars["rates"])
 
 
 @pytest.mark.earthkit
 def test_meteogram_panels_share_one_time_axis(tmp_path):
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     fig = m.plot_meteogram(MIXED, str(tmp_path / "m.png"))
     axes = [a for a in fig.axes if a.get_title(loc="left")]
     assert len({tuple(round(v, 6) for v in a.get_xlim()) for a in axes}) == 1
@@ -233,7 +233,7 @@ def test_meteogram_panels_share_one_time_axis(tmp_path):
 
 @pytest.mark.earthkit
 def test_meteogram_local_time_axis(tmp_path):
-    m = load_script("earthkit", "ekplot")
+    m = load_script("ecmwf-earthkit", "ekplot")
     pj = {**MIXED, "timezone": "Europe/London"}
     fig = m.plot_meteogram(pj, str(tmp_path / "m.png"))
     assert "Europe/London" in fig.axes[-1].get_xlabel()

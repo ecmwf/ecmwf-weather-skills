@@ -60,13 +60,13 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
 
 | Skill | Use it for |
 |---|---|
-| [`open-data`](plugins/ecmwf-weather/skills/open-data/SKILL.md) | Free IFS/AIFS forecasts — latest run, fields, sizes, point forecasts |
-| [`earthkit`](plugins/ecmwf-weather/skills/earthkit/SKILL.md) | Read, process and plot GRIB/NetCDF; maps and meteograms |
-| [`opencharts-wms`](plugins/ecmwf-weather/skills/opencharts-wms/SKILL.md) | WMS layers, official charts, interactive web maps |
-| [`polytope`](plugins/ecmwf-weather/skills/polytope/SKILL.md) | Point, ensemble, profile, area and route extraction |
-| [`cds-ads`](plugins/ecmwf-weather/skills/cds-ads/SKILL.md) | ERA5, ERA5-Land, seasonal and CAMS from the Copernicus Data Stores |
-| [`mars`](plugins/ecmwf-weather/skills/mars/SKILL.md) | The MARS archive via the ECMWF Web API |
-| [`destine`](plugins/ecmwf-weather/skills/destine/SKILL.md) | Destination Earth Digital Twins (Climate DT, Extremes DT) via DestinE Polytope |
+| [`ecmwf-open-data`](plugins/ecmwf-weather/skills/ecmwf-open-data/SKILL.md) | Free IFS/AIFS forecasts — latest run, fields, sizes, point forecasts |
+| [`ecmwf-earthkit`](plugins/ecmwf-weather/skills/ecmwf-earthkit/SKILL.md) | Read, process and plot GRIB/NetCDF; maps and meteograms |
+| [`ecmwf-opencharts-wms`](plugins/ecmwf-weather/skills/ecmwf-opencharts-wms/SKILL.md) | WMS layers, official charts, interactive web maps |
+| [`ecmwf-polytope`](plugins/ecmwf-weather/skills/ecmwf-polytope/SKILL.md) | Point, ensemble, profile, area and route extraction |
+| [`ecmwf-cds-ads`](plugins/ecmwf-weather/skills/ecmwf-cds-ads/SKILL.md) | ERA5, ERA5-Land, seasonal and CAMS from the Copernicus Data Stores |
+| [`ecmwf-mars`](plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md) | The MARS archive via the ECMWF Web API |
+| [`ecmwf-destine`](plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md) | Destination Earth Digital Twins (Climate DT, Extremes DT) via DestinE Polytope |
 
 Scripts and references per skill: [`docs/skills.md`](docs/skills.md).
 
@@ -128,11 +128,11 @@ Ask your agent, for example:
 The scripts also work on their own (paths relative to each skill):
 
 ```bash
-python3 open-data/scripts/odcatalog.py latest                    # latest complete IFS run
-uv run  open-data/scripts/odpoint.py --lat 38.72 --lon -9.14 --steps 0-48
-uv run  earthkit/scripts/ekplot.py meteogram point.json -o meteogram.png
-python3 opencharts-wms/scripts/wms.py layers --public            # keyless map layers
-python3 cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
+python3 ecmwf-open-data/scripts/odcatalog.py latest                    # latest complete IFS run
+uv run  ecmwf-open-data/scripts/odpoint.py --lat 38.72 --lon -9.14 --steps 0-48
+uv run  ecmwf-earthkit/scripts/ekplot.py meteogram point.json -o meteogram.png
+python3 ecmwf-opencharts-wms/scripts/wms.py layers --public            # keyless map layers
+python3 ecmwf-cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
         --start 1991-01-01 --end 2020-12-31 --dry-run            # validate + cost, no key
 ```
 

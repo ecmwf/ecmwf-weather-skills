@@ -11,12 +11,12 @@ def test_catalogue_lists_every_skill_script_and_reference():
     assert "SPDX-License-Identifier: Apache-2.0" in md and "GENERATED" in md
     # REUSE-IgnoreEnd
     for skill in (
-        "open-data",
-        "earthkit",
-        "opencharts-wms",
-        "polytope",
-        "cds-ads",
-        "mars",
+        "ecmwf-open-data",
+        "ecmwf-earthkit",
+        "ecmwf-opencharts-wms",
+        "ecmwf-polytope",
+        "ecmwf-cds-ads",
+        "ecmwf-mars",
     ):
         assert f"## `{skill}`" in md
     assert "`scripts/odpoint.py`" in md and "`references/catalog.md`" in md

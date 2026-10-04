@@ -10,10 +10,10 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
-pt = load_script("polytope", "ptpoint")
+pt = load_script("ecmwf-polytope", "ptpoint")
 OPER = json.loads((FIXTURES / "polytope-oper-lisbon.covjson").read_text())
 ENFO = json.loads((FIXTURES / "polytope-enfo-lisbon.covjson").read_text())
-SCRIPT = SKILLS / "polytope" / "scripts" / "ptpoint.py"
+SCRIPT = SKILLS / "ecmwf-polytope" / "scripts" / "ptpoint.py"
 UTC = timezone.utc
 
 

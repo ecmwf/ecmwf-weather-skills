@@ -7,7 +7,7 @@ import json
 import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
-st = load_script("open-data", "ecmwf_status")
+st = load_script("ecmwf-open-data", "ecmwf_status")
 STATUS = json.loads((FIXTURES / "ecmwf-status.json").read_text())
 SESSIONS = json.loads((FIXTURES / "ecmwf-status-sessions.json").read_text())
 
@@ -144,8 +144,14 @@ def test_network_barrier_has_steps_and_status():
 
 
 def test_copies_are_identical():
-    canonical = (SKILLS / "open-data" / "scripts" / "ecmwf_status.py").read_text()
-    for skill in ("opencharts-wms", "cds-ads", "mars", "polytope", "destine"):
+    canonical = (SKILLS / "ecmwf-open-data" / "scripts" / "ecmwf_status.py").read_text()
+    for skill in (
+        "ecmwf-opencharts-wms",
+        "ecmwf-cds-ads",
+        "ecmwf-mars",
+        "ecmwf-polytope",
+        "ecmwf-destine",
+    ):
         assert (SKILLS / skill / "scripts" / "ecmwf_status.py").read_text() == canonical, skill
 
 

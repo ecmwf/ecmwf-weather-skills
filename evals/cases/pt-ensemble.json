@@ -6,7 +6,7 @@
   "expect": [
     {
       "kind": "skill",
-      "name": "polytope"
+      "name": "ecmwf-polytope"
     },
     {
       "kind": "command",

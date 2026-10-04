@@ -11,6 +11,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Changed
+
+- **All skills are prefixed `ecmwf-`** (`ecmwf-open-data`, `ecmwf-earthkit`, `ecmwf-opencharts-wms`,
+  `ecmwf-polytope`, `ecmwf-cds-ads`, `ecmwf-mars`, `ecmwf-destine`) so they don't collide with other
+  skills where names are flat (`npx skills add`, `~/.agents/skills`, claude.ai uploads) and are
+  unambiguous to the model. **Breaking** for flat installs: remove the old symlinks and re-link.
+  Plugin installs pick it up on update (`/ecmwf-weather:ecmwf-mars` etc.).
+- Codex `websiteURL` is https://www.ecmwf.int (the organisation); the repository stays the
+  plugin's `homepage` and `repository`.
+
 ## [0.2.3] - 2026-10-04
 
 Preparation for the Anthropic and OpenAI plugin directories.

@@ -6,7 +6,7 @@
   "expect": [
     {
       "kind": "skill",
-      "name": "open-data"
+      "name": "ecmwf-open-data"
     },
     {
       "kind": "command",

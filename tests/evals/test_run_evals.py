@@ -10,7 +10,7 @@ from conftest import ROOT
 CLAUDE_STREAM = "\n".join(
     json.dumps(x)
     for x in [
-        {"type": "system", "subtype": "init", "skills": ["ecmwf-weather:open-data"]},
+        {"type": "system", "subtype": "init", "skills": ["ecmwf-weather:ecmwf-open-data"]},
         {
             "type": "assistant",
             "message": {
@@ -18,7 +18,7 @@ CLAUDE_STREAM = "\n".join(
                     {
                         "type": "tool_use",
                         "name": "Skill",
-                        "input": {"skill": "ecmwf-weather:open-data"},
+                        "input": {"skill": "ecmwf-weather:ecmwf-open-data"},
                     }
                 ]
             },
@@ -32,7 +32,8 @@ CLAUDE_STREAM = "\n".join(
                         "name": "Bash",
                         "input": {
                             "command": (
-                                "python3 /x/skills/open-data/scripts/odcatalog.py latest --json"
+                                "python3 /x/skills/ecmwf-open-data/scripts/odcatalog.py "
+                                "latest --json"
                             )
                         },
                     }
@@ -46,7 +47,7 @@ CLAUDE_STREAM = "\n".join(
                     {
                         "type": "tool_use",
                         "name": "Read",
-                        "input": {"file_path": "/x/skills/earthkit/SKILL.md"},
+                        "input": {"file_path": "/x/skills/ecmwf-earthkit/SKILL.md"},
                     }
                 ]
             },
@@ -67,14 +68,16 @@ CODEX_STREAM = "\n".join(
             "type": "item.completed",
             "item": {
                 "type": "command_execution",
-                "command": "bash -lc 'cat .agents/skills/open-data/SKILL.md'",
+                "command": "bash -lc 'cat .agents/skills/ecmwf-open-data/SKILL.md'",
             },
         },
         {
             "type": "item.completed",
             "item": {
                 "type": "command_execution",
-                "command": "uv run .agents/skills/open-data/scripts/odpoint.py --lat 1 --lon 2",
+                "command": (
+                    "uv run .agents/skills/ecmwf-open-data/scripts/odpoint.py --lat 1 --lon 2"
+                ),
             },
         },
         {
@@ -90,7 +93,7 @@ CODEX_STREAM = "\n".join(
 
 def test_parse_claude_stream():
     t = re_.parse_transcript("claude", CLAUDE_STREAM)
-    assert t["skills"] == {"open-data", "earthkit"}
+    assert t["skills"] == {"ecmwf-open-data", "ecmwf-earthkit"}
     assert any("odcatalog.py latest" in c for c in t["commands"])
     assert t["final"].startswith("Latest ECMWF")
     assert t["cost_usd"] == 0.12
@@ -98,7 +101,7 @@ def test_parse_claude_stream():
 
 def test_parse_codex_stream():
     t = re_.parse_transcript("codex", CODEX_STREAM)
-    assert t["skills"] == {"open-data"}
+    assert t["skills"] == {"ecmwf-open-data"}
     assert any("odpoint.py" in c for c in t["commands"])
     assert "20 °C" in t["final"]
 
@@ -138,11 +141,11 @@ def test_grade_all_kinds():
     results = re_.grade(
         t,
         [
-            {"kind": "skill", "name": "open-data"},
+            {"kind": "skill", "name": "ecmwf-open-data"},
             {"kind": "command", "pattern": r"odcatalog\.py"},
             {"kind": "final", "pattern": r"(?i)ecmwf"},
             {"kind": "final_not", "pattern": "scda"},
-            {"kind": "skill", "name": "mars"},
+            {"kind": "skill", "name": "ecmwf-mars"},
             {"kind": "command_not", "pattern": r"pip install earthkit\b"},
         ],
     )
@@ -194,9 +197,9 @@ def test_claude_command_bare_in_ci(tmp_path, monkeypatch):
 def test_command_match_sees_through_shell_variables():
     cmd = (
         "cat > r.mars <<EOF\nretrieve\nEOF\n"
-        "S=/x/skills/mars/scripts/mars.py; python3 $S lint r.mars"
+        "S=/x/skills/ecmwf-mars/scripts/mars.py; python3 $S lint r.mars"
     )
-    cmd2 = 'S="/x/skills/mars/scripts/mars.py"\npython3 "${S}" plan r.mars'
+    cmd2 = 'S="/x/skills/ecmwf-mars/scripts/mars.py"\npython3 "${S}" plan r.mars'
     for c in (cmd, cmd2):
         t = {"skills": set(), "commands": [c], "final": "", "error": None}
         assert re_.grade(t, [{"kind": "command", "pattern": r"mars\.py\s+(lint|plan)"}])[0]["ok"], c
@@ -208,7 +211,7 @@ def test_expand_shell_vars_leaves_unknown_variables():
 
 def test_each_case_uses_a_private_copy_of_the_plugin(tmp_path):
     copy = re_.plugin_copy(tmp_path)
-    assert (copy / "skills" / "open-data" / "SKILL.md").exists()
+    assert (copy / "skills" / "ecmwf-open-data" / "SKILL.md").exists()
     assert re_.PLUGIN not in copy.parents and copy != re_.PLUGIN
     assert not any(p.name == "__pycache__" for p in copy.rglob("*"))
     cmd = re_.agent_command("claude", "hi", tmp_path, {}, plugin=copy)

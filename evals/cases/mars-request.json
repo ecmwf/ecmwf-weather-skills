@@ -4,11 +4,29 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "mars"},
-    {"kind": "command", "pattern": "mars\\.py\\s+(lint|estimate)"},
-    {"kind": "command_not", "pattern": "mars\\.py\\s+retrieve"},
-    {"kind": "final", "pattern": "(?i)class\\s*[=:]\\s*\"?od"},
-    {"kind": "final", "pattern": "0\\.25"},
-    {"kind": "final", "pattern": "(?i)\\d+(\\.\\d+)?\\s?(MB|GB|fields)"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-mars"
+    },
+    {
+      "kind": "command",
+      "pattern": "mars\\.py\\s+(lint|estimate)"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "mars\\.py\\s+retrieve"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)class\\s*[=:]\\s*\"?od"
+    },
+    {
+      "kind": "final",
+      "pattern": "0\\.25"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\\d+(\\.\\d+)?\\s?(MB|GB|fields)"
+    }
   ]
 }

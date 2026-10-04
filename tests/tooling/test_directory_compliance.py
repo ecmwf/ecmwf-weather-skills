@@ -60,7 +60,7 @@ def test_codex_interface_limits_and_urls():
     assert i["privacyPolicyURL"] == "https://www.ecmwf.int/en/privacy"
     assert i["termsOfServiceURL"] == "https://www.ecmwf.int/en/terms-use"
     assert i["supportURL"] == "https://support.ecmwf.int"
-    assert i["websiteURL"] == "https://github.com/ecmwf/ecmwf-weather-skills"
+    assert i["websiteURL"] == "https://www.ecmwf.int"  # the organisation, not the repository
     assert re.fullmatch(r"#[0-9A-Fa-f]{6}", i["brandColor"])
 
 

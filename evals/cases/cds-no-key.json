@@ -6,7 +6,7 @@
   "expect": [
     {
       "kind": "skill",
-      "name": "cds-ads"
+      "name": "ecmwf-cds-ads"
     },
     {
       "kind": "command",

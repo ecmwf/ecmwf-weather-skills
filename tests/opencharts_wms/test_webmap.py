@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from conftest import SKILLS, load_script
 
-wm = load_script("opencharts-wms", "webmap")
-ASSETS = SKILLS / "opencharts-wms" / "assets" / "webmap"
+wm = load_script("ecmwf-opencharts-wms", "webmap")
+ASSETS = SKILLS / "ecmwf-opencharts-wms" / "assets" / "webmap"
 
 
 def test_create_writes_page_assets_and_config(tmp_path):

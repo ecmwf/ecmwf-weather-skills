@@ -38,7 +38,7 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://github.com/ecmwf/ecmwf-weather-skills",
+    "websiteURL": "https://www.ecmwf.int",
     "defaultPrompt": [
       "Get the latest ECMWF IFS forecast for my city.",
       "Build a web map with ECMWF WMS layers and a clicked-point meteogram.",

@@ -4,9 +4,21 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "opencharts-wms"},
-    {"kind": "command", "pattern": "opencharts\\.py"},
-    {"kind": "file", "pattern": "chart.png"},
-    {"kind": "final", "pattern": "CC[ -]BY|©"}
+    {
+      "kind": "skill",
+      "name": "ecmwf-opencharts-wms"
+    },
+    {
+      "kind": "command",
+      "pattern": "opencharts\\.py"
+    },
+    {
+      "kind": "file",
+      "pattern": "chart.png"
+    },
+    {
+      "kind": "final",
+      "pattern": "CC[ -]BY|\u00a9"
+    }
   ]
 }

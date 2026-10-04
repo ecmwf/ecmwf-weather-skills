@@ -11,10 +11,12 @@
   python3 scripts/regenerate_references.py --only versions
 
 Outputs (each starts with a GENERATED marker):
-  open-data/references/fields.md          latest IFS + AIFS step-24 .index + ECMWF parameter
-                                          database
-  opencharts-wms/references/layer-catalog.md   ecCharts WMS GetCapabilities (names, titles, styles)
-  earthkit/references/versions.md         PyPI latest versions of earthkit components and clients
+  ecmwf-open-data/references/fields.md
+      latest IFS + AIFS step-24 .index + ECMWF parameter database
+  ecmwf-opencharts-wms/references/layer-catalog.md
+      ecCharts WMS GetCapabilities (names, titles, styles)
+  ecmwf-earthkit/references/versions.md
+      PyPI latest versions of earthkit components and clients
 Volatile facts (valid times, run dates) are left out so files only change when catalogues do.
 """
 
@@ -223,7 +225,7 @@ def fetch_paramdb() -> dict:
 
 
 def fetch_fields() -> dict:
-    od = _load("open-data", "odcatalog")
+    od = _load("ecmwf-open-data", "odcatalog")
     models = {}
     for model in ("ifs", "aifs-single"):
         # Latest complete run (final step published), so the catalogue describes a fully
@@ -235,7 +237,7 @@ def fetch_fields() -> dict:
 
 
 def fetch_layers() -> list:
-    wms = _load("opencharts-wms", "wms")
+    wms = _load("ecmwf-opencharts-wms", "wms")
     url = wms._url({"service": "WMS", "version": "1.3.0", "request": "GetCapabilities"}, "public")
     return wms.parse_capabilities(wms.fetch(url)[1].decode())
 
@@ -256,15 +258,17 @@ def main() -> int:
     only = set(a.only or ["fields", "layers", "versions"])
     outputs = {}
     if "fields" in only:
-        outputs[SKILLS / "open-data/references/fields.md"] = render_fields(
+        outputs[SKILLS / "ecmwf-open-data/references/fields.md"] = render_fields(
             fetch_fields(), fetch_paramdb()
         )
     if "layers" in only:
-        outputs[SKILLS / "opencharts-wms/references/layer-catalog.md"] = render_layers(
+        outputs[SKILLS / "ecmwf-opencharts-wms/references/layer-catalog.md"] = render_layers(
             fetch_layers()
         )
     if "versions" in only:
-        outputs[SKILLS / "earthkit/references/versions.md"] = render_versions(fetch_versions())
+        outputs[SKILLS / "ecmwf-earthkit/references/versions.md"] = render_versions(
+            fetch_versions()
+        )
     drift = write_or_check(outputs, a.check)
     for d in drift:
         print(f"{'drift' if a.check else 'updated'}: {d.relative_to(ROOT)}")
