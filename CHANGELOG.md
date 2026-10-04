@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-04
+
 ### Added
 
 - Polytope and DestinE skills ask the servers which data collections the account may use
@@ -359,7 +361,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.1...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.2...HEAD
+[0.3.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.2.3...0.3.0
 [0.2.3]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.2.2...0.2.3
