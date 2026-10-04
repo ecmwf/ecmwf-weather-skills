@@ -122,3 +122,14 @@ def test_evals_workflow_never_interpolates_inputs_into_shell():
     assert not any("${{ inputs." in ln for ln in run_lines)
     assert re.search(r"@anthropic-ai/claude-code@\d+\.\d+\.\d+", wf)
     assert "retention-days" in wf and 'grep -rqF -- "$ANTHROPIC_API_KEY"' in wf
+
+
+def test_plugin_icon_present_and_licensed():
+    icon = ROOT / "plugins/ecmwf-weather/assets/ecmwf-logo.svg"
+    assert icon.read_text().lstrip().startswith("<?xml") and "<svg" in icon.read_text()
+    codex = __import__("json").loads(
+        (ROOT / "plugins/ecmwf-weather/.codex-plugin/plugin.json").read_text()
+    )
+    assert codex["interface"]["logo"] == "./assets/ecmwf-logo.svg"
+    assert "LicenseRef-ECMWF-Logo" in (ROOT / "REUSE.toml").read_text()
+    assert (ROOT / "LICENSES/LicenseRef-ECMWF-Logo.txt").exists()

@@ -14,3 +14,10 @@ path = ["tests/fixtures/**", "**/*.json", "uv.lock", "**/*.png"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 European Centre for Medium-Range Weather Forecasts (ECMWF)"
 SPDX-License-Identifier = "Apache-2.0"
+
+# ECMWF logo: trademark, used with ECMWF approval; not Apache-2.0.
+[[annotations]]
+path = ["plugins/ecmwf-weather/assets/ecmwf-logo.svg"]
+precedence = "override"
+SPDX-FileCopyrightText = "European Centre for Medium-Range Weather Forecasts (ECMWF)"
+SPDX-License-Identifier = "LicenseRef-ECMWF-Logo"

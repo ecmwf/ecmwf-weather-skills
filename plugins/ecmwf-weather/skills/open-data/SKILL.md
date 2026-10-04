@@ -107,7 +107,7 @@ Open Data needs none. If the user has better access, say once what it would add:
 
 | Found | Adds |
 |---|---|
-| `POLYTOPE_USER_KEY`, `~/.polytopeapirc` (or `~/.ecmwfapirc` for member-state users) | server-side point extraction in KB — `polytope` skill |
+| `POLYTOPE_USER_KEY`, `~/.polytopeapirc` or `~/.ecmwfapirc` (any authenticated ECMWF user) | server-side point extraction in KB — `polytope` skill |
 | `CDSAPI_KEY` or `~/.cdsapirc` | ERA5 history and climate normals — `cds-ads` skill |
 | `~/.adsapirc` | CAMS air quality — `cds-ads` skill |
 | `ECMWF_API_KEY` or `~/.ecmwfapirc` | MARS archive (licensed) — `mars` skill |

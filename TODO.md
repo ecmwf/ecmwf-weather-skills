@@ -9,13 +9,7 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 
 ## Publication
 
-- [ ] Confirm with ECMWF: attribution wording and logo use per data source (agents relay this
-      wording to users), public WMS token policy and public surface layers (2t, tp), Polytope
-      access for non-member-state users
-- [ ] IPR / sensitive-information review (ecmwf/codex `Legal/Open-Sourcing-Software.md`)
-- [ ] After switching to public: enable private vulnerability reporting (GitHub only offers it
-      on public repositories); remove the repository URL from `check_links.py` IGNORE
-- [ ] Plugin icon in `plugins/ecmwf-weather/assets/` (needs ECMWF communications approval)
+- [ ] Confirm with ECMWF: public WMS token policy and public surface layers (2t, tp)
 - [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow
 
 ## Data sources
