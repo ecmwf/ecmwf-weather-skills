@@ -11,6 +11,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- `make check-endpoints` (`scripts/check_endpoints.py`): verifies that every ECMWF endpoint the
+  skills depend on still exists — the status feeds behind status.ecmwf.int and their shape, each
+  mapped status component, the data-store message APIs and every service host (health is not
+  checked). Retries transient failures. Run by the release and weekly CI.
+- Deterministic release: `make release-prepare VERSION=X.Y.Z` (preflight, all gates including
+  live tests and endpoint checks, version bump, changelog move, release PR) and
+  `make release-publish VERSION=X.Y.Z` (checks, tag, GitHub release); `scripts/release.py`.
+  The procedure is documented in AGENTS.md "Releasing".
+
 ## [0.1.7] - 2026-10-04
 
 ### Added

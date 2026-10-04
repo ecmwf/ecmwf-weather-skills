@@ -23,6 +23,8 @@ jobs:
         env:
           MIR_CACHE_PATH: ${{ runner.temp }}/mir
       - run: make links
+      - name: ECMWF endpoints still exist (status feeds, components, hosts)
+        run: make check-endpoints
   refresh-references:
     name: regenerate references
     runs-on: ubuntu-latest

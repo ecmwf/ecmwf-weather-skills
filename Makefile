@@ -34,6 +34,7 @@ $(eval $(VERSION):;@:)
 endif
 endif
 
+.PHONY: check-endpoints release-prepare release-publish
 .PHONY: help setup all lint fmt check test test-earthkit test-live test-all evals docs clean-cache \
         docs-check references references-check links dist version version-check clean
 
@@ -96,6 +97,9 @@ references: ## Regenerate references from live ECMWF catalogues (network)
 references-check: ## Fail if generated references drifted from live catalogues (network)
 	$(PY) scripts/regenerate_references.py --check
 
+check-endpoints: ## (network) ECMWF status feeds, components and service hosts still exist
+	$(PY) scripts/check_endpoints.py
+
 links: ## Probe every URL in the skills (network)
 	$(PY) scripts/check_links.py
 
@@ -118,6 +122,33 @@ endif
 
 version-check: ## Verify every manifest and SKILL.md agree on the version
 	$(PY) scripts/validate_packaging.py
+
+# ── Releasing (AGENTS.md "Releasing") ────────────────────────────────────────
+
+release-prepare: ## Gate, bump, changelog, release PR: make release-prepare VERSION=X.Y.Z
+	@test -n "$(VERSION)" || { echo "usage: make release-prepare VERSION=X.Y.Z" >&2; exit 2; }
+	$(PY) scripts/release.py preflight $(VERSION) $(if $(ALLOW_MAJOR),--allow-major)
+	$(MAKE) all test-earthkit test-live check-endpoints references-check
+	git switch -c release/$(VERSION)
+	$(PY) scripts/bump_version.py --set $(VERSION)
+	$(PY) scripts/release.py changelog $(VERSION)
+	$(MAKE) docs all
+	git add -A
+	git commit -m "chore: release $(VERSION)"
+	git push -u origin release/$(VERSION)
+	$(PY) scripts/release.py notes $(VERSION) | gh pr create --base main \
+		--head release/$(VERSION) --title "chore: release $(VERSION)" --body-file -
+
+release-publish: ## After the release PR is merged: tag X.Y.Z and publish the GitHub release
+	@test -n "$(VERSION)" || { echo "usage: make release-publish VERSION=X.Y.Z" >&2; exit 2; }
+	git switch main
+	git pull --ff-only
+	$(PY) scripts/release.py publish-check $(VERSION)
+	git tag -a $(VERSION) -m "$(VERSION)"
+	git push origin $(VERSION)
+	$(PY) scripts/release.py notes $(VERSION) | gh release create $(VERSION) --title "$(VERSION)" \
+		--notes-file -
+	git branch -D release/$(VERSION) 2>/dev/null || true
 
 # ── Cleanup ──────────────────────────────────────────────────────────────────
 
