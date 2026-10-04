@@ -54,6 +54,30 @@ STORES = {
         "rc": ".adsapirc",
     },
 }
+
+
+def setup_steps(store: str = "cds") -> list[str]:
+    """Exact steps to obtain and install a CDS/ADS key (verified 2026-10)."""
+    s = STORES[store]
+    host = s["api"].removesuffix("/api")
+    rc = "~/.cdsapirc" if store == "cds" else "~/.adsapirc"
+    return [
+        f"1. Create a free ECMWF account: open {host}, click Login, then 'Register new user' "
+        "(one ECMWF account works for CDS, ADS and the ECMWF Data Store).",
+        f"2. Log in and open {host}/how-to-api — it shows your personal access token.",
+        f"3. Create {rc} with exactly these two lines, then run: chmod 600 {rc}\n"
+        f"   url: {s['api']}\n   key: <your personal access token>"
+        + (
+            "\n   (CDS also reads the CDSAPI_URL and CDSAPI_KEY environment variables.)"
+            if store == "cds"
+            else "\n   (ADS's own page says ~/.cdsapirc; earthkit reads ADS only from ~/.adsapirc.)"
+        ),
+        "4. Accept each dataset's licence once: on the dataset's page, Download tab, tick "
+        "'Terms of use' at the bottom. Requests fail until you do.",
+        "5. Check: python3 cds.py check",
+    ]
+
+
 KEY_HELP = (
     "Register (free) at https://cds.climate.copernicus.eu "
     "(ADS: https://ads.atmosphere.copernicus.eu), "
@@ -79,7 +103,12 @@ def credentials(store: str, env=os.environ, home: Path | None = None) -> str | N
         if rc.exists() and "ads." not in rc.read_text():
             return "~/.cdsapirc"
         return None
-    return "~/.adsapirc" if (home / ".adsapirc").exists() else None
+    if (home / ".adsapirc").exists():
+        return "~/.adsapirc"
+    rc = home / ".cdsapirc"  # ADS's own instructions put its url/key here
+    if rc.exists() and "ads.atmosphere" in rc.read_text():
+        return "~/.cdsapirc (ADS url; earthkit downloads need it copied to ~/.adsapirc)"
+    return None
 
 
 # --- network --------------------------------------------------------------------------------------
@@ -319,6 +348,7 @@ def main(argv=None) -> int:
         return sp
 
     add("check")
+    add("setup", help="step-by-step instructions to obtain and install a key")
     sp = add("search")
     sp.add_argument("text")
     sp = add("describe")
@@ -348,11 +378,20 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
 
     try:
+        if a.cmd == "setup":
+            print("\n".join(setup_steps(a.store)))
+            return 0
+
         if a.cmd == "check":
             res = {
                 "cds": credentials("cds"),
                 "ads": credentials("ads"),
                 "how_to_get_a_key": KEY_HELP,
+                "offer": (
+                    "If a key is missing, say once what it would unlock and offer step-by-step "
+                    "setup instructions (python3 cds.py setup [--store ads]); give them only if "
+                    "the user accepts."
+                ),
                 "keyless_alternatives": (
                     "CAMS forecasts: opencharts-wms skill (composition_* WMS layers, "
                     "`wms.py info` for point values)."

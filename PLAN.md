@@ -45,7 +45,8 @@ to show — for developers, end users and scientists.
 | Script reports | Estimated size, freshness, licence/attribution |
 | MCP | Later (`TODO.md`) |
 | Generated refs | Open Data contents, WMS layers, parameter DB, library versions |
-| Later | CDS/ADS catalog generation, Destination Earth |
+| Later | CDS/ADS catalog generation |
+| Destination Earth | `destine` skill via DestinE Polytope; upgraded access on request; token in `~/.polytopeapirc-destine` |
 
 ## 3. The six skills
 

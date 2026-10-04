@@ -5,7 +5,7 @@ compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scri
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.3"
+  version: "0.1.4"
 ---
 
 <!--
@@ -111,7 +111,9 @@ Open Data needs none. If the user has better access, say once what it would add:
 | `~/.adsapirc` | CAMS air quality — `cds-ads` skill |
 | `ECMWF_API_KEY` or `~/.ecmwfapirc` | MARS archive (licensed) — `mars` skill |
 
-Check presence only; never print key values.
+Check presence only; never print key values. If a route would clearly help and its key is
+missing, mention it once and offer step-by-step instructions — the owning skill prints them
+(`cds.py setup`, `mars.py setup`, `ptpoint.py --setup`, `destine.py setup`).
 
 ## Attribution
 

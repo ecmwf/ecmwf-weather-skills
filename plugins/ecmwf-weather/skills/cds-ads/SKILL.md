@@ -5,7 +5,7 @@ compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.3"
+  version: "0.1.4"
 ---
 
 <!--
@@ -37,11 +37,19 @@ files there, never inside the skill directory. Paths are relative to this skill.
 - [ ] 4. write req.json; python3 scripts/cds.py validate --dataset ID --request req.json
          fix every error it lists (it suggests close matches), repeat until "valid"
 - [ ] 5. key present → uv run scripts/cds.py retrieve --dataset ID --request req.json -o out.nc
-         no key → give the user the validated request and the key instructions from step 1
+         no key → give the validated request and offer setup instructions (below)
 - [ ] 6. answer with the attribution and DOI the script printed
 ```
 
 - Without a key, steps 1–4 still work: deliver a validated, costed request the user can run later.
+  Always state the **dataset id** with the request JSON — the request is unusable without it.
+- **Missing key:** say once what it would unlock (e.g. "a free CDS key would let me download
+  this"), and **end the answer by asking** whether they'd like step-by-step instructions to get
+  one — even when you also saved a validated request or a script. If yes, relay
+  `python3 scripts/cds.py setup` (`--store ads` for CAMS) as printed. Don't dump the steps
+  unasked.
+- ADS keys: earthkit reads only `~/.adsapirc`; ADS's own page says `~/.cdsapirc` — `check`
+  reports which one is present.
 - `validate` checks keys and values locally and asks the server for cost vs limit; a request over
   the limit must be split (by year or month) or reduced (area, variables).
 - Licences: each dataset's licence must be accepted once on its web page (Download tab) — the

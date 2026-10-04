@@ -190,3 +190,41 @@ def test_live_validate_with_costing(tmp_path):
     assert out.returncode == 0, out.stderr
     d = json.loads(out.stdout)
     assert d["valid"] and d["cost"]["cost"] <= d["cost"]["limit"]
+
+
+def test_ads_key_in_cdsapirc_is_found_but_flagged(tmp_path):
+    (tmp_path / ".cdsapirc").write_text("url: https://ads.atmosphere.copernicus.eu/api\nkey: k\n")
+    src = cds.credentials("ads", env={}, home=tmp_path)
+    assert src.startswith("~/.cdsapirc") and "~/.adsapirc" in src
+
+
+def test_setup_steps_cds_and_ads():
+    c = "\n".join(cds.setup_steps("cds"))
+    for must in (
+        "Register new user",
+        "https://cds.climate.copernicus.eu/how-to-api",
+        "url: https://cds.climate.copernicus.eu/api",
+        "chmod 600 ~/.cdsapirc",
+        "Terms of use",
+    ):
+        assert must in c, must
+    a = "\n".join(cds.setup_steps("ads"))
+    assert "url: https://ads.atmosphere.copernicus.eu/api" in a and "~/.adsapirc" in a
+
+
+def test_check_without_key_offers_setup(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "check", "--json"],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+    )
+    d = json.loads(out.stdout)
+    assert "cds.py setup" in d["offer"]
+
+
+def test_cli_setup(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "setup", "--store", "ads"], capture_output=True, text=True
+    )
+    assert out.returncode == 0 and "ads.atmosphere.copernicus.eu/how-to-api" in out.stdout

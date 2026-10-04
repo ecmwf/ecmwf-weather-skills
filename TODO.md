@@ -9,6 +9,13 @@ Accepted, open work only. Finished work is recorded in `CHANGELOG.md`; design in
 
 ## Before the first public release
 
+- [ ] **DestinE (needs upgraded access — reminder for the maintainer):** once a DestinE token is
+      set up in `~/.polytopeapirc-destine`, verify the `destine` request templates live
+      (Climate DT on LUMI and MN5, Extremes DT), confirm token expiry behaviour, then run the
+      `destine-*` evals on Claude Code (Haiku, Sonnet, Opus) and Codex (GPT-6.1-Sol …
+      GPT-5.6-Luna) and add a live test
+- [ ] Live-check the setup instructions end to end with a fresh ECMWF account (CDS, ADS, Web API)
+
 - [ ] Claude Code skill evals on Haiku, Sonnet and Opus (`make evals MODEL=…`)
 - [ ] Live download tests: `cds.py retrieve` / `era5-point` with CDS and ADS keys; confirm ERA5
       time-series CSV column names
@@ -38,6 +45,5 @@ Accepted, open work only. Finished work is recorded in `CHANGELOG.md`; design in
 - [ ] ECMWF MCP server — documented, not bundled (a bundled server cannot be disabled
       conditionally); route end-user "weather in X" questions through it
 - [ ] Generated CDS/ADS dataset catalogue (weekly CI)
-- [ ] Destination Earth skill — Climate DT / Extremes DT, DESP authentication, catalogue
 - [ ] Claude.ai upload and ChatGPT plugin directory submission
 - [ ] Gemini CLI eval runs (needs `GEMINI_API_KEY`)

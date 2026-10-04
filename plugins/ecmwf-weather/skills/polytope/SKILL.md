@@ -5,7 +5,7 @@ compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — eart
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.3"
+  version: "0.1.4"
 ---
 
 <!--
@@ -39,8 +39,10 @@ uv run scripts/ptpoint.py --check --json     # never prints keys
 ```
 
 - exit 0, `"verified": true` → use Polytope.
-- exit 4 → no credentials or no access: use the `open-data` skill (`odpoint.py`) and say once that
-  Polytope access would make it hourly, native resolution and ~10 KB.
+- exit 4 → no credentials or no access: use the `open-data` skill (`odpoint.py`), say once that
+  Polytope access would make it hourly, native resolution and ~10 KB, and ask whether they'd
+  like instructions to obtain it; if yes, relay `uv run scripts/ptpoint.py --setup` as printed.
+- Destination Earth Digital Twin data is a different service and account: the `destine` skill.
 
 ## Point forecast and ensemble workflow
 

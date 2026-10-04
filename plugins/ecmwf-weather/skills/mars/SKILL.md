@@ -1,11 +1,11 @@
 ---
 name: mars
-description: Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
+description: Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.1.3"
+  version: "0.1.4"
 ---
 
 <!--
@@ -37,7 +37,10 @@ Use ECMWF sources only — never substitute a third-party weather API.
 Check access first: `python3 scripts/mars.py check` — finds credentials (names only), verifies
 the key with the Web API in seconds and reports the account id; exit 4 = nothing usable. A
 verified key doesn't guarantee MARS rights for every dataset — that depends on the account.
-Don't read `~/.ecmwfapirc` yourself.
+Don't read `~/.ecmwfapirc` yourself. If nothing usable is found, say once what MARS would add
+and ask whether they'd like step-by-step instructions; if yes, relay `python3 scripts/mars.py
+setup` as printed (key, file, and who grants MARS access). TIGGE and S2S are no longer in MARS
+via the Web API: they are on the ECMWF Data Store (https://ecds.ecmwf.int, cdsapi-style).
 
 ## Request workflow
 

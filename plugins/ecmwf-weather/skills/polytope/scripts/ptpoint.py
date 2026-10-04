@@ -401,6 +401,26 @@ def fetch_latest(lat, lon, end_step, ensemble, date=None, time=None) -> tuple[di
 # --- CLI ------------------------------------------------------------------------------------------
 
 
+def setup_steps() -> list[str]:
+    """Exact steps to obtain ECMWF Polytope credentials (verified 2026-10)."""
+    return [
+        "1. Create an ECMWF account: open https://api.ecmwf.int/v1/key/, click Login, then "
+        "'Register new user'.",
+        "2. Log in and open https://api.ecmwf.int/v1/key/ — copy your key and email.",
+        "3. Save ~/.polytopeapirc and run: chmod 600 ~/.polytopeapirc\n"
+        '   {"user_email": "<email>", "user_key": "<key>"}\n'
+        "   (without this file Polytope falls back to ~/.ecmwfapirc; or set POLYTOPE_USER_EMAIL "
+        "and POLYTOPE_USER_KEY)",
+        "4. Access itself is granted to users at Member and Co-operating State national weather "
+        "services — ask your Computing Representative "
+        "(https://www.ecmwf.int/en/about/contact-us/computing-representatives) or "
+        "https://support.ecmwf.int. Without it, use the open-data skill.",
+        "5. Check: uv run ptpoint.py --check",
+        "Destination Earth Digital Twin data uses a different account and token: "
+        "the destine skill.",
+    ]
+
+
 def check(as_json: bool) -> int:
     src = credentials()
     res = {
@@ -420,6 +440,12 @@ def check(as_json: bool) -> int:
             )
         except Exception as e:
             res.update(polytope=False, verified=False, error=str(e).splitlines()[-1][:300])
+    if not res["polytope"]:
+        res["offer"] = (
+            "Say once what Polytope would add (hourly point data in KB) and offer "
+            "step-by-step setup instructions (ptpoint.py --setup); give them only if "
+            "accepted. Destination Earth data: the destine skill."
+        )
     print(json.dumps(res, indent=2) if as_json else "\n".join(f"{k}: {v}" for k, v in res.items()))
     return 0 if res["polytope"] else 4
 
@@ -429,6 +455,7 @@ def main(argv=None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     ap.add_argument("--check", action="store_true", help="report access (never prints keys)")
+    ap.add_argument("--setup", action="store_true", help="how to obtain Polytope credentials")
     ap.add_argument("--lat", type=float)
     ap.add_argument("--lon", type=float)
     ap.add_argument("--steps", default="0-240", help="0-END hours, e.g. 0-24, 0-120")
@@ -450,6 +477,9 @@ def main(argv=None) -> int:
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
+    if a.setup:
+        print("\n".join(setup_steps()))
+        return 0
     if a.check:
         return check(a.json)
     if a.lat is None or a.lon is None:

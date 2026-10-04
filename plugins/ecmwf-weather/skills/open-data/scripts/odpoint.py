@@ -102,8 +102,8 @@ def access_note(nbytes: int, env=os.environ, home: Path | None = None) -> str:
         )
     return (
         f"Answered from free ECMWF Open Data ({size} of global fields downloaded for one point). "
-        "With ECMWF Polytope access (member-state users or Destination Earth accounts) this "
-        "would be a single point request of a few KB."
+        "With ECMWF Polytope access (member-state users) this would be a single point request "
+        "of a few KB — offer instructions to obtain it (polytope skill: ptpoint.py --setup)."
     )
 
 

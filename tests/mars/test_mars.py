@@ -289,3 +289,27 @@ def test_large_month_is_flagged_but_not_split_below_the_cap():
     assert "GB" in w and "split" not in w and ("grid" in w or "area" in w)
     huge = {**era5, "param": "t/u/v"}
     assert any("split" in x for x in mars.lint(huge)["warnings"])
+
+
+def test_setup_steps_web_api_and_access_routes():
+    s = "\n".join(mars.setup_steps())
+    for must in (
+        "https://api.ecmwf.int/v1/key/",
+        '"url": "https://api.ecmwf.int/v1"',
+        "chmod 600 ~/.ecmwfapirc",
+        "Computing Representative",
+        "https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements",
+        "https://support.ecmwf.int",
+        "expires",
+    ):
+        assert must in s, must
+
+
+def test_cli_check_without_credentials_offers_setup(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "check", "--json"],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+    )
+    assert "mars.py setup" in json.loads(out.stdout)["offer"]

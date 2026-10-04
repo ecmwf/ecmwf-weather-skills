@@ -12,6 +12,7 @@ Agents read `SKILL.md` first; this page is for humans browsing the repository.
 ## Contents
 
 - [`cds-ads`](#cds-ads)
+- [`destine`](#destine)
 - [`earthkit`](#earthkit)
 - [`mars`](#mars)
 - [`open-data`](#open-data)
@@ -34,6 +35,22 @@ Source: [`../plugins/ecmwf-weather/skills/cds-ads/SKILL.md`](../plugins/ecmwf-we
 |---|---|
 | `references/datasets.md` | CDS / ADS datasets and requests |
 
+## `destine`
+
+Handles any Destination Earth question — load it first; it prepares requests by running scripts/destine.py. Accesses Destination Earth (DestinE) Digital Twin data — the Climate Change Adaptation Digital Twin (Climate DT, multi-decadal IFS-FESOM, IFS-NEMO and ICON simulations and SSP3-7.0 projections), the Weather-Induced Extremes Digital Twin (Extremes DT, high-resolution forecasts of the last ~15 days) and On-Demand Extremes — through the DestinE Polytope service. Use when a task mentions Destination Earth, DestinE, Digital Twins, Climate DT, Extremes DT, nextGEMS, the DestinE Platform (DESP), desp-authentication, upgraded access, or polytope.lumi / polytope.mn5 addresses. Explains how to request the required upgraded access when the user has none; checks the token, builds and routes requests, and retrieves data.
+
+**Requirements:** scripts/destine.py check, setup and request run on plain Python 3 offline. retrieve needs uv (PEP 723 inline dependency polytope-client), an approved DestinE upgraded-access account and network access to *.apps.dte.destination-earth.eu.
+
+Source: [`../plugins/ecmwf-weather/skills/destine/SKILL.md`](../plugins/ecmwf-weather/skills/destine/SKILL.md)
+
+| Script | Purpose |
+|---|---|
+| `scripts/destine.py` | Destination Earth (DestinE) Digital Twin data via the DestinE Polytope service |
+
+| Reference | Purpose |
+|---|---|
+| `references/requests.md` | DestinE Polytope requests |
+
 ## `earthkit`
 
 Handles any local GRIB (.grib, .grib2) or NetCDF (.nc) file — load this skill first, before trying xarray, cfgrib, eccodes, grib_ls or pip. Reads, inspects, processes and plots them with ECMWF's earthkit Python components (earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, earthkit-transforms, earthkit-plots), installing only what each task needs. Use for any GRIB or NetCDF file the user has — what's in it, which parameters, levels and steps, a map of a field from it, a meteogram, conversion to xarray or pandas, nearest gridpoint, regridding, wind speed, relative humidity, dewpoint, thermal-comfort indices, unit conversion, daily or country aggregation Also use when GRIB fails to decode, eccodes is missing, or earthkit 0.x code breaks on 1.x.
@@ -55,7 +72,7 @@ Source: [`../plugins/ecmwf-weather/skills/earthkit/SKILL.md`](../plugins/ecmwf-w
 
 ## `mars`
 
-Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
+Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 
 **Requirements:** scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 

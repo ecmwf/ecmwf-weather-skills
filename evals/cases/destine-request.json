@@ -1,0 +1,14 @@
+{
+  "id": "destine-request",
+  "prompt": "Prepare (don't run) the DestinE Polytope request for Climate DT 2 m temperature from the IFS-NEMO historical simulation for January 2014, and tell me which Polytope server to send it to.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "destine"},
+    {"kind": "command", "pattern": "destine\\.py\\s+request"},
+    {"kind": "final", "pattern": "polytope\\.mn5\\.apps\\.dte\\.destination-earth\\.eu"},
+    {"kind": "final", "pattern": "climate-dt"},
+    {"kind": "final", "pattern": "(?i)european commission"},
+    {"kind": "command_not", "pattern": "destine\\.py\\s+retrieve"}
+  ]
+}
