@@ -17,10 +17,10 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Access check (line 37)
-- Point forecast and ensemble workflow (line 51)
-- Other features (line 77)
-- Licence and attribution (line 87)
-- When blocked (line 94)
+- Point forecast and ensemble workflow (line 56)
+- Other features (line 82)
+- Licence and attribution (line 92)
+- When blocked (line 99)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -39,8 +39,13 @@ say so.
 Run it yourself — don't ask the user to run it — and report the result.
 
 ```bash
-uv run scripts/ptpoint.py --check --json     # never prints keys
+python3 scripts/ptpoint.py --check --json    # never prints keys; takes about a second
 ```
+
+The check calls Polytope's authenticated `GET /api/v1/collections` and lists the data
+collections this account may use (e.g. `ecmwf-mars`, `cems`, `ecmwf-time-critical`). Use that
+list — not assumptions — to say what data is available. Point forecasts need `ecmwf-mars`;
+`ptpoint.py` verifies it before every request and blocks with access steps if it is missing.
 
 - exit 0, `"verified": true` → use Polytope.
 - exit 4 → no credentials or no access: use the `ecmwf-open-data` skill (`odpoint.py`), say once that

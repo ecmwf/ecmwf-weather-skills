@@ -31,7 +31,12 @@ Client(address="polytope.lumi.apps.dte.destination-earth.eu", user_key=token, qu
     .retrieve("destination-earth", request, "out.grib")
 ```
 
-Collection: always `destination-earth`. Server: see SKILL.md (or `destine.py request`).
+Collection: `destination-earth`. Server: see SKILL.md (or `destine.py request`).
+
+Which collections a token may use, per data bridge:
+`GET https://<bridge>/api/v1/collections` with `Authorization: Bearer <token>` →
+`{"message": ["destination-earth", "ecmwf-destination-earth", "test"]}`; 401 without a valid
+token. `destine.py check` queries all bridges.
 
 ## Climate DT keys
 

@@ -17,11 +17,11 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Access check (line 33)
-- No access yet (line 41)
-- Request workflow (line 57)
-- Which server holds the data (line 79)
-- Licence and attribution (line 90)
-- When blocked (line 99)
+- No access yet (line 46)
+- Request workflow (line 62)
+- Which server holds the data (line 84)
+- Licence and attribution (line 95)
+- When blocked (line 104)
 - References — `references/requests.md` (keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -37,6 +37,11 @@ python3 scripts/destine.py check --json     # never prints the token
 ```
 
 Exit 0: a token exists in `~/.polytopeapirc-destine` (or `DESTINE_POLYTOPE_KEY`). Exit 4: none.
+With a token it also calls the authenticated `GET /api/v1/collections` on each data bridge
+(LUMI, MareNostrum 5, Leonardo) and reports `digital_twin_access` — whether
+`destination-earth` is listed. Use that list to say what data is available; an `HTTP 401` per
+bridge means the token is invalid or expired. `retrieve` checks the target bridge first and
+blocks with instructions instead of sending a request that would fail.
 
 ## No access yet
 

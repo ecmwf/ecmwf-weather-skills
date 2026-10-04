@@ -42,6 +42,12 @@ PROBES = {
     "ecds": "https://ecds.ecmwf.int/api/catalogue/v1/collections?limit=1",
     "destine": "https://polytope.lumi.apps.dte.destination-earth.eu/api/v1/test",
     "destine-mn5": "https://polytope.mn5.apps.dte.destination-earth.eu/api/v1/test",
+    "polytope-collections": "https://polytope.ecmwf.int/api/v1/collections",  # 401 = present
+    "destine-lumi-collections": "https://polytope.lumi.apps.dte.destination-earth.eu/api/v1/collections",
+    "destine-mn5-collections": "https://polytope.mn5.apps.dte.destination-earth.eu/api/v1/collections",
+    "destine-leonardo-collections": (
+        "https://polytope.leonardo.apps.dte.destination-earth.eu/api/v1/collections"
+    ),
     "destine-news": st.DESTINE_NEWS,
 }
 PRESENT = {401, 403, 405}

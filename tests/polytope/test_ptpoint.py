@@ -308,3 +308,82 @@ def test_cli_point_without_credentials_is_blocked(tmp_path):
         env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
     )
     assert out.returncode == 4 and "BLOCKED:" in out.stderr and "odpoint.py" in out.stderr
+
+
+# --- collections endpoint (authenticated) ----------------------------------------------------
+
+
+def test_auth_header_sources_never_leave_the_header(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text('{"url": "u", "key": "k1", "email": "a@b.int"}')
+    assert pt.auth_header(env={}, home=tmp_path) == "EmailKey a@b.int:k1"
+    (tmp_path / ".polytopeapirc").write_text('{"user_email": "c@d.int", "user_key": "k2"}')
+    assert pt.auth_header(env={}, home=tmp_path) == "EmailKey c@d.int:k2"
+    env = {"POLYTOPE_USER_KEY": "k3", "POLYTOPE_USER_EMAIL": "e@f.int"}
+    assert pt.auth_header(env=env, home=tmp_path) == "EmailKey e@f.int:k3"
+    assert pt.auth_header(env={"POLYTOPE_USER_KEY": "k4"}, home=tmp_path / "x") == "Bearer k4"
+    assert pt.auth_header(env={}, home=tmp_path / "none") is None
+
+
+def test_list_collections():
+    seen = {}
+
+    def fetch(url, headers):
+        seen.update(url=url, headers=headers)
+        return 200, {"message": ["cems", "ecmwf-mars"]}
+
+    assert pt.list_collections("polytope.ecmwf.int", "Bearer k", fetch=fetch) == [
+        "cems",
+        "ecmwf-mars",
+    ]
+    assert seen["url"] == "https://polytope.ecmwf.int/api/v1/collections"
+    assert seen["headers"]["Authorization"] == "Bearer k"
+
+
+def test_list_collections_rejected_is_a_barrier():
+    with pytest.raises(pt.AccessDenied, match="401"):
+        pt.list_collections("h", "Bearer bad", fetch=lambda u, h: (401, {"message": "no"}))
+
+
+def test_collection_missing_barrier():
+    b = pt.collection_barrier("ecmwf-mars", ["cems"])
+    assert "ecmwf-mars" in b["blocked"] and "cems" in b["why"]
+    assert "https://www.ecmwf.int/en/forecasts/datasets" in "\n".join(b["user_steps"])
+
+
+def test_check_reports_collections(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(pt, "credentials", lambda: "~/.ecmwfapirc")
+    monkeypatch.setattr(pt, "auth_header", lambda: "Bearer zz-fake-secret-zz")
+    monkeypatch.setattr(pt, "list_collections", lambda addr, auth: ["cems", "ecmwf-mars"])
+    assert pt.check(True) == 0
+    raw = capsys.readouterr().out
+    out = json.loads(raw)
+    assert out["collections"] == ["cems", "ecmwf-mars"] and out["verified"] is True
+    assert out["point_forecasts"] is True and "zz-fake-secret-zz" not in raw
+
+
+def test_check_without_ecmwf_mars(monkeypatch, capsys):
+    monkeypatch.setattr(pt, "credentials", lambda: "~/.ecmwfapirc")
+    monkeypatch.setattr(pt, "auth_header", lambda: "Bearer k")
+    monkeypatch.setattr(pt, "list_collections", lambda addr, auth: ["cems"])
+    assert pt.check(True) == 4
+    out = json.loads(capsys.readouterr().out)
+    assert out["point_forecasts"] is False and "ecmwf-mars" in out["offer"]
+
+
+@pytest.mark.live
+def test_live_collections():
+    cols = pt.list_collections(pt.ADDRESS, pt.auth_header())
+    assert "ecmwf-mars" in cols
+
+
+def test_point_request_blocked_when_collection_not_available(monkeypatch, capsys):
+    monkeypatch.setattr(pt, "credentials", lambda: "~/.ecmwfapirc")
+    monkeypatch.setattr(pt, "auth_header", lambda: "Bearer zz")
+    monkeypatch.setattr(pt, "list_collections", lambda addr, auth: ["cems"])
+
+    def never(*a, **k):
+        raise AssertionError("must not request data")
+
+    monkeypatch.setattr(pt, "fetch_latest", never)
+    assert pt.main(["--lat", "1", "--lon", "2"]) == 4
+    assert "BLOCKED" in capsys.readouterr().err

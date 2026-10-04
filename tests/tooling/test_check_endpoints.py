@@ -72,7 +72,7 @@ def test_transient_failures_are_retried():
     base = fetcher()
 
     def flaky(url):
-        if "polytope.ecmwf.int" in url:
+        if url == "https://polytope.ecmwf.int/api/v1/test":
             calls["n"] += 1
             if calls["n"] == 1:
                 raise TimeoutError("timed out")

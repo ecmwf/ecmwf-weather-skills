@@ -51,6 +51,8 @@ ecmwf_status = importlib.import_module(
 UTC = timezone.utc
 ADDRESS = os.environ.get("POLYTOPE_ADDRESS", "polytope.ecmwf.int")
 COLLECTION = "ecmwf-mars"
+# The collections list is a small JSON document; 30 s tolerates a slow server.
+COLLECTIONS_TIMEOUT_S = 30
 # paramIds: 2t, tp, 10u, 10v, msl, tcc (ensemble: 2t, tp — enough for uncertainty, keeps it small)
 PARAMS = "167/228/165/166/151/164"
 ENS_PARAMS = "167/228"
@@ -461,7 +463,65 @@ def setup_steps() -> list[str]:
     ]
 
 
+class AccessDenied(Exception):
+    """The Polytope server rejected the credentials (401/403)."""
+
+
+def auth_header(env=None, home: Path | None = None) -> str | None:
+    """Authorization header from the same sources as polytope-client — never printed.
+
+    POLYTOPE_USER_KEY(+EMAIL) > ~/.polytopeapirc > ~/.ecmwfapirc."""
+    env = os.environ if env is None else env
+    home = home or Path.home()
+    key, email = env.get("POLYTOPE_USER_KEY"), env.get("POLYTOPE_USER_EMAIL")
+    if not key:
+        for f, kk, ek in (
+            (".polytopeapirc", "user_key", "user_email"),
+            (".ecmwfapirc", "key", "email"),
+        ):
+            if (home / f).exists():
+                d = json.loads((home / f).read_text())
+                key, email = d.get(kk), d.get(ek)
+                break
+    if not key:
+        return None
+    return f"EmailKey {email}:{key}" if email else f"Bearer {key}"
+
+
+def _get_json(url: str, headers: dict) -> tuple[int, dict]:
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": "ecmwf-weather-skills", **headers})
+    try:
+        with urllib.request.urlopen(req, timeout=COLLECTIONS_TIMEOUT_S) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, {}
+
+
+def list_collections(address: str, auth: str, fetch=_get_json) -> list[str]:
+    """GET /api/v1/collections: the data collections this account may use (authenticated)."""
+    status, body = fetch(f"https://{address}/api/v1/collections", {"Authorization": auth})
+    if status in (401, 403):
+        raise AccessDenied(f"HTTP {status}: Polytope rejected these credentials")
+    if status != 200:
+        raise RuntimeError(f"collections endpoint answered HTTP {status}")
+    return list(body.get("message", []))
+
+
+def collection_barrier(collection: str, available: list[str]) -> dict:
+    return {
+        "blocked": f"this account has no access to the Polytope collection '{collection}'",
+        "why": f"the account can use: {', '.join(available) or 'no collections'}.",
+        "user_steps": [setup_steps()[3], "Then re-run: uv run ptpoint.py --check"],
+        "agent": "Answer from the ecmwf-open-data skill now and give these steps; don't retry "
+        "Polytope until the collection is listed.",
+    }
+
+
 def check(as_json: bool) -> int:
+    """Credentials + the account's collections (seconds; no data request)."""
     src = credentials()
     res = {
         "polytope": bool(src),
@@ -472,16 +532,23 @@ def check(as_json: bool) -> int:
     }
     if src:
         try:
-            _, n = fetch_latest(51.5, 0.0, 0, False)
-            res.update(verified=True, test_bytes=n)
-        except ImportError:
-            res.update(
-                verified=None,
-                hint="run with `uv run ptpoint.py --check` to test access",
-            )
+            cols = list_collections(ADDRESS, auth_header())
+            res.update(verified=True, collections=cols, point_forecasts=COLLECTION in cols)
+            if COLLECTION not in cols:
+                res["polytope"] = False
+                res["offer"] = (
+                    f"Polytope works but '{COLLECTION}' (operational forecasts) is not "
+                    "among this account's collections; use ecmwf-open-data and offer "
+                    "the access steps (ptpoint.py --setup)."
+                )
+        except AccessDenied as e:
+            res.update(polytope=False, verified=False, error=str(e))
         except Exception as e:
-            res.update(polytope=False, verified=False, error=str(e).splitlines()[-1][:300])
-    if not res["polytope"]:
+            b = barrier_for_error(str(e))
+            res.update(polytope=False, verified=None, error=str(e).splitlines()[-1][:300])
+            if b:
+                res["status"] = b.get("why")
+    if not res["polytope"] and "offer" not in res:
         res["offer"] = (
             "Say once what Polytope would add (hourly point data in KB) and offer "
             "step-by-step setup instructions (ptpoint.py --setup); give them only if "
@@ -537,6 +604,18 @@ def main(argv=None) -> int:
             },
             a.json,
         )
+    # Confirm the account can use the collection before requesting data (fast, authenticated).
+    try:
+        cols = list_collections(ADDRESS, auth_header())
+    except AccessDenied as e:
+        return blocked(barrier_for_error(str(e)), a.json)
+    except Exception as e:
+        b = barrier_for_error(str(e))
+        if b:
+            return blocked(b, a.json)
+        cols = None  # endpoint unavailable: let the data request report the problem
+    if cols is not None and COLLECTION not in cols:
+        return blocked(collection_barrier(COLLECTION, cols), a.json)
     try:
         end = int(a.steps.split("-")[-1])
         if a.next_hours:

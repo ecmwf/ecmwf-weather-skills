@@ -124,6 +124,67 @@ def barrier_for_error(message: str) -> dict | None:
     return None
 
 
+# --- collections (authenticated) ---------------------------------------------------------------
+
+# The collections list is a small JSON document; 30 s tolerates a slow data bridge.
+COLLECTIONS_TIMEOUT_S = 30
+
+
+def _get_json(url: str, headers: dict) -> tuple[int, dict]:
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": "ecmwf-weather-skills", **headers})
+    try:
+        with urllib.request.urlopen(req, timeout=COLLECTIONS_TIMEOUT_S) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, {}
+
+
+def collections_on(address: str, token: str, fetch=_get_json) -> list[str]:
+    """GET /api/v1/collections on one data bridge; raises on 401/403 or other failures."""
+    status, body = fetch(
+        f"https://{address}/api/v1/collections", {"Authorization": f"Bearer {token}"}
+    )
+    if status != 200:
+        raise RuntimeError(f"HTTP {status}")
+    return list(body.get("message", []))
+
+
+def collections_by_bridge(token: str, fetch=_get_json) -> dict:
+    """Collections the token may use on each bridge, or the error text for that bridge."""
+    out: dict = {}
+    for address in (LUMI, MN5, LEONARDO):
+        try:
+            out[address] = collections_on(address, token, fetch)
+        except Exception as e:
+            out[address] = f"error: {e}"
+    return out
+
+
+def preflight(req: dict, token: str, fetch=_get_json) -> dict | None:
+    """Before retrieving: the target bridge must list the collection for this token."""
+    address = address_for(req)
+    try:
+        cols = collections_on(address, token, fetch)
+    except Exception as e:
+        return barrier_for_error(f"{e} from {address}") or ecmwf_status.network_barrier(
+            "destine", str(e)
+        )
+    if COLLECTION not in cols:
+        return {
+            "blocked": f"the '{COLLECTION}' collection is not available to this account on "
+            f"{address}",
+            "why": f"the token can use: {', '.join(cols) or 'no collections'} — Digital Twin data "
+            "needs upgraded access granted by the European Commission.",
+            "user_steps": [*setup_steps()[:3], setup_steps()[5]],
+            "agent": "Give these steps; offer ecmwf-open-data or ecmwf-cds-ads alternatives "
+            "meanwhile.",
+        }
+    return None
+
+
 # --- requests -------------------------------------------------------------------------------------
 
 
@@ -268,7 +329,9 @@ def main(argv=None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("check").add_argument("--json", action="store_true")
+    c = sub.add_parser("check", help="token present, and collections per data bridge")
+    c.add_argument("--json", action="store_true")
+    c.add_argument("--offline", action="store_true", help="don't query the collections endpoint")
     sub.add_parser("setup")
     r = sub.add_parser("request", help="build, lint and route a request")
     r.add_argument("dataset", choices=["climate-dt", "extremes-dt"])
@@ -292,6 +355,13 @@ def main(argv=None) -> int:
     if a.cmd == "check":
         src = token_source()
         res = {"token": src, "addresses": {"lumi": LUMI, "mn5": MN5, "leonardo": LEONARDO}}
+        if src and not a.offline:
+            res["collections"] = collections_by_bridge(read_token())
+            res["digital_twin_access"] = any(
+                isinstance(c, list) and COLLECTION in c for c in res["collections"].values()
+            )
+        elif src:
+            res["collections"] = "not queried (--offline)"
         if not src:
             res["offer"] = (
                 "No DestinE token found. Digital Twin data needs upgraded access on the "
@@ -340,6 +410,9 @@ def main(argv=None) -> int:
                 "prepared (destine.py request).",
             }
         )
+    b = preflight(req, read_token())
+    if b:
+        return blocked(b)
     try:
         retrieve(req, a.output)
     except ImportError as e:

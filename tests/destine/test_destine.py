@@ -150,3 +150,53 @@ def test_cli_retrieve_without_token_is_blocked(tmp_path):
     out = cli("retrieve", str(req), "-o", str(tmp_path / "o"), home=tmp_path)
     assert out.returncode == 4 and "BLOCKED:" in out.stderr
     assert "access-policy-upgrade" in out.stderr
+
+
+# --- collections endpoint per data bridge -----------------------------------------------------
+
+
+def test_collections_per_bridge():
+    calls = []
+
+    def fetch(url, headers):
+        calls.append((url, headers["Authorization"]))
+        if "mn5" in url:
+            return 200, {"message": ["destination-earth", "test"]}
+        if "leonardo" in url:
+            raise OSError("unreachable")
+        return 200, {"message": ["destination-earth", "ecmwf-destination-earth"]}
+
+    r = dt.collections_by_bridge("tok", fetch=fetch)
+    assert r[dt.LUMI] == ["destination-earth", "ecmwf-destination-earth"]
+    assert r[dt.MN5] == ["destination-earth", "test"]
+    assert "unreachable" in r[dt.LEONARDO]
+    assert all(h == "Bearer tok" for _, h in calls)
+    assert calls[0][0] == f"https://{dt.LUMI}/api/v1/collections"
+
+
+def test_collections_rejected_token_is_reported():
+    r = dt.collections_by_bridge("bad", fetch=lambda u, h: (401, {"message": "no"}))
+    assert all("401" in str(v) for v in r.values())
+
+
+def test_preflight_blocks_missing_collection():
+    req = dt.template("climate-dt")
+    b = dt.preflight(req, "tok", fetch=lambda u, h: (200, {"message": ["test"]}))
+    assert (
+        b
+        and "destination-earth" in b["blocked"]
+        and "access-policy-upgrade" in "\n".join(b["user_steps"])
+    )
+    assert (
+        dt.preflight(req, "tok", fetch=lambda u, h: (200, {"message": ["destination-earth"]}))
+        is None
+    )
+    b401 = dt.preflight(req, "tok", fetch=lambda u, h: (401, {}))
+    assert "desp-authentication.py" in "\n".join(b401["user_steps"])
+
+
+def test_check_lists_collections_with_token(tmp_path):
+    (tmp_path / ".polytopeapirc-destine").write_text('{"user_key": "s3cr3t"}')
+    out = cli("check", "--json", "--offline", home=tmp_path)
+    d = json.loads(out.stdout)
+    assert d["token"] and "collections" in d and "s3cr3t" not in out.stdout
