@@ -390,6 +390,28 @@ def verify_webapi(env=os.environ, home: Path | None = None, fetch=_http_json) ->
     return {"verified": False, "error": f"Web API rejected the key (HTTP {status})"}
 
 
+def setup_steps() -> list[str]:
+    """Exact steps to obtain the ECMWF Web API key and MARS access (verified 2026-10)."""
+    return [
+        "1. Create an ECMWF account: open https://api.ecmwf.int/v1/key/, click Login, then "
+        "'Register new user'.",
+        "2. Log in and open https://api.ecmwf.int/v1/key/ — it shows your url, key and email. "
+        "The key expires after one year (ECMWF emails you before it does).",
+        "3. Save it as ~/.ecmwfapirc and run: chmod 600 ~/.ecmwfapirc\n"
+        '   {"url": "https://api.ecmwf.int/v1", "key": "<key>", "email": "<email>"}\n'
+        "   (or set ECMWF_API_URL, ECMWF_API_KEY and ECMWF_API_EMAIL together)",
+        "4. The key alone gives no MARS data: users at Member and Co-operating State national "
+        "weather services get access through their Computing Representative "
+        "(https://www.ecmwf.int/en/about/contact-us/computing-representatives); everyone else "
+        "needs a service agreement "
+        "(https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements). "
+        "Questions: https://support.ecmwf.int",
+        "5. Check: python3 mars.py check",
+        "Free alternatives: ERA5 via the cds-ads skill; TIGGE and S2S via the ECMWF Data Store "
+        "(https://ecds.ecmwf.int); recent forecasts via the open-data skill.",
+    ]
+
+
 def licence_note(req: dict) -> str:
     if req.get("class") in ERA5_CLASSES:
         return (
@@ -444,6 +466,7 @@ def main(argv=None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("setup", help="how to obtain the Web API key and MARS access")
     sp = sub.add_parser("check")
     sp.add_argument("--json", action="store_true")
     for name in ("lint", "estimate", "plan", "cost", "retrieve"):
@@ -453,6 +476,10 @@ def main(argv=None) -> int:
         if name == "retrieve":
             sp.add_argument("-o", "--output", required=True)
     a = ap.parse_args(argv)
+
+    if a.cmd == "setup":
+        print("\n".join(setup_steps()))
+        return 0
 
     if a.cmd == "check":
         c = credentials()
@@ -464,6 +491,11 @@ def main(argv=None) -> int:
             "(Member/Co-operating State or licensed users) — `uv run mars.py cost` on a tiny "
             "request proves them, but queues for minutes."
         )
+        if not (c["webapi"] or c["mars_client"]) or c.get("verified") is False:
+            c["offer"] = (
+                "Say once what MARS access would add and offer step-by-step setup "
+                "instructions (python3 mars.py setup); give them only if accepted."
+            )
         print(json.dumps(c, indent=2) if a.json else "\n".join(f"{k}: {v}" for k, v in c.items()))
         if c.get("verified") is False:
             return 4

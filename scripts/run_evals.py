@@ -142,6 +142,26 @@ def _png_size(path: Path) -> tuple[int, int] | None:
     return struct.unpack(">II", head[16:24])
 
 
+def case_env(case: dict, base: dict | None = None) -> dict:
+    """Environment for one case: the caller's, plus the case's `setup.env` overrides (e.g.
+    point CDSAPI_RC at a missing file to simulate a user without a CDS key)."""
+    return {**(os.environ if base is None else base), **case.get("setup", {}).get("env", {})}
+
+
+def new_run_dir(base: Path, stamp: str | None = None) -> Path:
+    """A fresh directory per run; parallel runs started in the same second get a suffix."""
+    stamp = stamp or time.strftime("%Y%m%d-%H%M%S")
+    base.mkdir(parents=True, exist_ok=True)
+    for n in range(1000):
+        d = base / (stamp if n == 0 else f"{stamp}-{n}")
+        try:
+            d.mkdir()
+            return d
+        except FileExistsError:
+            continue
+    raise RuntimeError(f"cannot create a run directory under {base}")
+
+
 def summary_line(results: list[dict]) -> str:
     passed = sum(r["passed"] for r in results)
     errors = sum(1 for r in results if r.get("error"))
@@ -238,7 +258,7 @@ def run_case(agent: str, case: dict, outdir: Path, model: str | None, attempt: i
             capture_output=True,
             text=True,
             timeout=case.get("timeout", 900),
-            env={**os.environ},
+            env=case_env(case),
         )
         raw, err, rc = p.stdout, p.stderr, p.returncode
     except subprocess.TimeoutExpired as e:
@@ -282,8 +302,7 @@ def main(argv=None) -> int:
     cases = load_cases(ROOT / "evals" / "cases")
     if a.case:
         cases = [c for c in cases if c["id"] in a.case]
-    outdir = ROOT / "evals" / "runs" / time.strftime("%Y%m%d-%H%M%S")
-    outdir.mkdir(parents=True)
+    outdir = new_run_dir(ROOT / "evals" / "runs")
     summary = []
     for c in cases:
         for i in range(a.repeat):

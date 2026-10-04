@@ -15,8 +15,9 @@ SPDX-License-Identifier: Apache-2.0
 > [!IMPORTANT]
 > This software is **Emerging** and subject to ECMWF's guidelines on [Software Maturity](https://github.com/ecmwf/codex/raw/refs/heads/main/Project%20Maturity).
 
-Six [Agent Skills](https://agentskills.io) covering ECMWF's real-time IFS and AIFS forecasts,
-ERA5 reanalysis, CAMS air quality, the MARS archive, Polytope feature extraction and the
+Seven [Agent Skills](https://agentskills.io) covering ECMWF's real-time IFS and AIFS forecasts,
+ERA5 reanalysis, CAMS air quality, the MARS archive, Polytope feature extraction, Destination
+Earth Digital Twins and the
 ecCharts/OpenCharts map services. Install them and your agent knows which service to use, how
 to build the request, how to decode GRIB with [earthkit](https://github.com/ecmwf/earthkit),
 and which attribution to show — without you reading the docs or hand-writing requests.
@@ -65,6 +66,7 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
 | [`polytope`](plugins/ecmwf-weather/skills/polytope/SKILL.md) | Point, ensemble, profile, area and route extraction |
 | [`cds-ads`](plugins/ecmwf-weather/skills/cds-ads/SKILL.md) | ERA5, ERA5-Land, seasonal and CAMS from the Copernicus Data Stores |
 | [`mars`](plugins/ecmwf-weather/skills/mars/SKILL.md) | The MARS archive via the ECMWF Web API |
+| [`destine`](plugins/ecmwf-weather/skills/destine/SKILL.md) | Destination Earth Digital Twins (Climate DT, Extremes DT) via DestinE Polytope |
 
 Scripts and references per skill: [`docs/skills.md`](docs/skills.md).
 
@@ -132,12 +134,14 @@ python3 cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
 |---|---|---|
 | Open Data, public WMS, OpenCharts | — | — |
 | CDS (ERA5) | `CDSAPI_URL`, `CDSAPI_KEY` | `~/.cdsapirc` |
-| ADS (CAMS) | — | `~/.adsapirc` |
+| ADS (CAMS) | — | `~/.adsapirc` (earthkit; ADS's own docs use `~/.cdsapirc`) |
 | MARS (ECMWF Web API) | `ECMWF_API_URL`, `ECMWF_API_KEY`, `ECMWF_API_EMAIL` | `~/.ecmwfapirc` |
 | Polytope | `POLYTOPE_USER_KEY`, `POLYTOPE_USER_EMAIL` | `~/.polytopeapirc` (falls back to `~/.ecmwfapirc`) |
+| Destination Earth (upgraded access, on request) | `DESTINE_POLYTOPE_KEY` | `~/.polytopeapirc-destine` |
 
 Polytope and MARS access depend on your account (ECMWF Member and Co-operating States, licensed
-users). Scripts check credentials by name and never print them.
+users). Scripts check credentials by name and never print them. When a key is missing, the agent
+offers step-by-step instructions to obtain it.
 
 ## Data licences and attribution
 
@@ -187,7 +191,7 @@ Agreement.
 
 ## Repository layout
 
-- **`plugins/ecmwf-weather/skills/`** — the six skills (the portable payload): `SKILL.md`,
+- **`plugins/ecmwf-weather/skills/`** — the seven skills (the portable payload): `SKILL.md`,
   `references/`, `scripts/`, `assets/`.
 - **`plugins/ecmwf-weather/.claude-plugin/`, `.codex-plugin/`** — plugin manifests;
   **`.claude-plugin/marketplace.json`** — marketplace catalogue.

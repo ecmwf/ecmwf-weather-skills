@@ -1,0 +1,36 @@
+{
+  "id": "destine-access",
+  "prompt": "I want hourly 2 m temperature from the Destination Earth Climate Digital Twin for Lisbon. Can I get it from this machine? Don't print any keys.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "destine"
+    },
+    {
+      "kind": "command",
+      "pattern": "destine\\.py\\s+(check|setup)"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)upgrade"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "[0-9a-f]{32}"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "desp-authentication\\.py[^\\n]*-p\\s"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\\?|if you (want|like|wish|prefer)|\\b(I can|I could|happy to)\\b.{0,60}(give|walk|provide|send|print|share|guide)"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)instructions|steps|set ?up|walk you"
+    }
+  ]
+}

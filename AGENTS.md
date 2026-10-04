@@ -94,6 +94,8 @@ Makefile wraps the scripts below, so there is one source of truth for each comma
   `make references` → PR with a MICRO bump); `evals.yml` (manual, Claude Code `--bare` with
   `ANTHROPIC_API_KEY`, choose the model). Third-party actions are pinned to full commit SHAs
   with the release in a comment; update both together.
+- **`reuse lint` and new directories**: before a new directory is tracked by git, `reuse` reports
+  its ignored `__pycache__` files as unlicensed. Stage new files (`git add`) before `make all`.
 - **Editing Python with scripts**: a formatter may reflow files after each write, so scripted
   string replacements can silently match nothing. Re-read before editing, or assert the
   replacement happened.
@@ -246,6 +248,10 @@ expectations are meaningful for it.
 **Current status** (2026-10-03): Claude Code Opus 19/19, Sonnet 19/19, Haiku meets the 2-of-3
 rule on every case; Codex GPT-6.1-Sol, GPT-6-Astra/Sol/Luna, GPT-5.6-Terra/Sol/Luna 19/19
 (GPT-6-Sol 18/19 on one run, grader fixed). `gpt-5.6-astra` does not exist in Codex.
+0.1.4 (21 cases): Sonnet 21/21; Codex GPT-5.6-Luna 21/21 after one fix; new cases pass on all
+ten models except Haiku, which stays below 2-of-3 on `destine-request` and `mars-access` (it
+answers from the skill text without running the script). `destine` evals with a real token
+are pending upgraded access (TODO.md).
 Gemini needs `GEMINI_API_KEY`.
 
 **Read transcripts, not just verdicts.** A PASS can hide a struggling agent: the first

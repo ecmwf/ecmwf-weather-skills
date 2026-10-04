@@ -4,9 +4,35 @@
   "timeout": 600,
   "max_budget_usd": 2,
   "expect": [
-    {"kind": "skill", "name": "cds-ads"},
-    {"kind": "command", "pattern": "cds\\.py\\s+check"},
-    {"kind": "final", "pattern": "(?i)\\.cdsapirc|CDSAPI_KEY|API key"},
-    {"kind": "command_not", "pattern": "(?i)open-meteo|meteostat"}
-  ]
+    {
+      "kind": "skill",
+      "name": "cds-ads"
+    },
+    {
+      "kind": "command",
+      "pattern": "cds\\.py\\s+check"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|meteostat"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\\.cdsapirc|CDSAPI_KEY|(CDS|API|Copernicus) (API )?key"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\\?|if you (want|like|wish|prefer)|\\b(I can|I could|happy to)\\b.{0,60}(give|walk|provide|send|print|share|guide)"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)instructions|steps|set ?up|walk you"
+    }
+  ],
+  "setup": {
+    "env": {
+      "CDSAPI_RC": "/nonexistent/ecmwf-eval/.cdsapirc"
+    }
+  },
+  "note": "Simulates a user without a CDS key via CDSAPI_RC; the agent must say what a key unlocks and offer setup instructions."
 }

@@ -11,6 +11,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-04
+
+### Added
+
+- `destine` skill — Destination Earth Digital Twin data (Climate DT, Extremes DT, On-Demand
+  Extremes) via DestinE Polytope: `destine.py check` (token present, never printed), `setup`
+  (register, request upgraded access from the European Commission, authenticate), `request`
+  (build, lint and route to the right data bridge — LUMI, MareNostrum 5 or Leonardo, optional
+  point time series), `retrieve`. The token lives in `~/.polytopeapirc-destine` so it never
+  overwrites an ECMWF Polytope key. Request templates follow the official examples; live
+  verification is pending upgraded access.
+- Missing credentials: every skill says once what a key would unlock and offers step-by-step
+  instructions, given only on request — `cds.py setup [--store ads]`, `mars.py setup`,
+  `ptpoint.py --setup`, `destine.py setup` (verified against the official pages, 2026-10).
+- Eval cases `destine-access`, `destine-request`; eval cases can set environment variables
+  (`setup.env`), used to simulate a user without a CDS key.
+
+### Fixed
+
+- `cds.py check` finds an ADS key in `~/.cdsapirc` (where ADS's own instructions put it) and
+  says earthkit needs it in `~/.adsapirc`.
+- `mars` notes that TIGGE and S2S moved to the ECMWF Data Store (ecds.ecmwf.int).
+- `cds-ads` answers name the dataset id with every request.
+- Eval harness: parallel runs started in the same second no longer collide.
+
 ## [0.1.3] - 2026-10-03
 
 Fixes from the Codex evaluation across seven models (GPT-6.1-Sol, GPT-6-Astra, GPT-6-Sol,
@@ -131,7 +156,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.3...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.4...HEAD
+[0.1.4]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.1.0...0.1.1

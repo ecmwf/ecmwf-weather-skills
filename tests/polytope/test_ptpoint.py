@@ -263,3 +263,26 @@ def test_shape_output_next_hours():
     rows = [{"step": s, "valid_time": t} for s, t in zip(p["steps"], p["times"], strict=True)]
     out = pt.shape_output(rows, p, next_hours=6, now=datetime(2026, 10, 3, 12, 0, tzinfo=UTC))
     assert [r["valid_time"][11:13] for r in out["series"]] == ["12", "13", "14", "15", "16", "17"]
+
+
+def test_setup_steps_polytope():
+    s = "\n".join(pt.setup_steps())
+    for must in (
+        "https://api.ecmwf.int/v1/key/",
+        '"user_email"',
+        '"user_key"',
+        "~/.polytopeapirc",
+        "Computing Representative",
+        "https://support.ecmwf.int",
+    ):
+        assert must in s, must
+
+
+def test_cli_check_offers_setup(tmp_path):
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), "--check", "--json"],
+        capture_output=True,
+        text=True,
+        env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
+    )
+    assert "ptpoint.py --setup" in json.loads(out.stdout)["offer"]

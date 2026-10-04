@@ -242,3 +242,16 @@ def test_image_size_expectation(tmp_path):
         tmp_path,
     )
     assert [x["ok"] for x in r] == [True, False, False]
+
+
+def test_case_env_overrides_are_applied():
+    case = {"setup": {"env": {"CDSAPI_RC": "/nonexistent/.cdsapirc"}}}
+    env = re_.case_env(case, base={"HOME": "/h", "CDSAPI_RC": "/real"})
+    assert env["CDSAPI_RC"] == "/nonexistent/.cdsapirc" and env["HOME"] == "/h"
+    assert re_.case_env({}, base={"A": "1"}) == {"A": "1"}
+
+
+def test_run_dirs_are_unique_within_the_same_second(tmp_path):
+    a = re_.new_run_dir(tmp_path, stamp="20261004-020916")
+    b = re_.new_run_dir(tmp_path, stamp="20261004-020916")
+    assert a != b and a.is_dir() and b.is_dir()

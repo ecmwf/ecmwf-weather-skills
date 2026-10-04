@@ -187,3 +187,7 @@ def test_next_hours_window_open_data(odp):
         odp.build_parser().parse_args(["--lat", "1", "--lon", "2", "--next-hours", "24"]).next_hours
         == 24
     )
+
+
+def test_access_note_offers_instructions(odp, tmp_path):
+    assert "instructions" in odp.access_note(1_000_000, env={}, home=tmp_path)
