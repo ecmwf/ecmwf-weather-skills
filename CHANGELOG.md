@@ -11,6 +11,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Fixed
+
+- `cds.py validate` always states the licence result: `accepted` (confirmed on the account),
+  `NOT accepted` (with acceptance steps), or `not checked` with the reason (no readable key, API
+  error). Previously a confirmed licence printed nothing, so agents could not tell it from an
+  unchecked one and hedged ("didn't explicitly confirm the licence is accepted"). JSON output
+  adds `licences.state` and `licences.reason`; the cds-ads skill explains the three states.
+
 ## [0.2.1] - 2026-10-04
 
 ### Added
