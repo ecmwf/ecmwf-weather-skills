@@ -2,7 +2,7 @@ version = 1
 
 # Human-facing LICENSE and NOTICE live outside LICENSES/.
 [[annotations]]
-path = ["LICENSE", "NOTICE", "CONTRIBUTORS"]
+path = ["LICENSE", "NOTICE", "CONTRIBUTORS", "plugins/ecmwf-weather/LICENSE"]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 European Centre for Medium-Range Weather Forecasts (ECMWF)"
 SPDX-License-Identifier = "Apache-2.0"
@@ -17,7 +17,7 @@ SPDX-License-Identifier = "Apache-2.0"
 
 # ECMWF logo: trademark, used with ECMWF approval; not Apache-2.0.
 [[annotations]]
-path = ["plugins/ecmwf-weather/assets/ecmwf-logo.svg"]
+path = ["plugins/ecmwf-weather/assets/ecmwf-logo.svg", "plugins/ecmwf-weather/assets/ecmwf-icon.png"]
 precedence = "override"
 SPDX-FileCopyrightText = "European Centre for Medium-Range Weather Forecasts (ECMWF)"
 SPDX-License-Identifier = "LicenseRef-ECMWF-Logo"

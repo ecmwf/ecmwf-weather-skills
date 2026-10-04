@@ -11,6 +11,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+Preparation for the Anthropic and OpenAI plugin directories.
+
+### Added
+
+- `plugins/ecmwf-weather/README.md` (the submitted folder's own README) disclosing everything
+  the scripts run, every host they contact and what they send; a test keeps the host list
+  complete. `plugins/ecmwf-weather/LICENSE`.
+- Square ECMWF icon (`assets/ecmwf-icon.png`, 200×200) as the Codex `logo`/`composerIcon`;
+  brand colour `#0069A6`; website, support, privacy and terms URLs (repository, ECMWF Support
+  Portal, ECMWF privacy notice, ECMWF terms of use).
+- README: install with `npx skills add ecmwf/ecmwf-weather-skills`.
+- Tests for the directory requirements (no top-level `bin/`, README length, icon, manifest field
+  limits, provider-neutral skill text).
+
+### Changed
+
+- Codex `shortDescription` shortened to the 30-character limit.
+
+### Removed
+
+- The empty `plugins/ecmwf-weather/bin/` (claude.ai and Cowork refuse plugins with a top-level
+  `bin/`).
+
 ## [0.2.2] - 2026-10-04
 
 ### Fixed

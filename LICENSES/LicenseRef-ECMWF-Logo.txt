@@ -1,6 +1,8 @@
-The ECMWF logo (plugins/ecmwf-weather/assets/ecmwf-logo.svg) is a trademark of the European
+The ECMWF logo (plugins/ecmwf-weather/assets/ecmwf-logo.svg and the square icon
+plugins/ecmwf-weather/assets/ecmwf-icon.png) is a trademark of the European
 Centre for Medium-Range Weather Forecasts (ECMWF). It is not covered by the Apache License 2.0
 that applies to the rest of this repository.
 
 It is included with ECMWF's approval to identify this plugin as an ECMWF project. Any other use
-requires ECMWF's permission. Source file: https://commons.wikimedia.org/wiki/File:ECMWF_logo.svg
+requires ECMWF's permission. Sources: https://commons.wikimedia.org/wiki/File:ECMWF_logo.svg and the ECMWF GitHub
+organisation avatar.
