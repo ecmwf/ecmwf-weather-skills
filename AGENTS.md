@@ -257,6 +257,12 @@ How it isolates the agent:
   `ANTHROPIC_API_KEY`; use it in CI.)
 - **Codex**: skills symlinked into `<tmp>/.agents/skills/`, then `codex exec --skip-git-repo-check
   -C <tmp> --json "<prompt>"`.
+- **opencode**: skills copied into `<tmp>/.agents/skills/`, then `opencode run --format json
+  --auto --dir <tmp> -m provider/model "<prompt>"` (`make evals AGENT=opencode MODEL=…`).
+  opencode also loads the user's `~/.claude/skills` and `~/.agents/skills` (realistic
+  competition). Bash commands are recorded with their `workdir`.
+- **pi**: `pi --mode json --no-session --skill <plugin>/skills --model … "<prompt>"`; needs a pi
+  login or provider API key (`pi auth`); without one the run is reported as ERROR.
 - **Gemini CLI**: skills symlinked into `<tmp>/.gemini/skills/` (verify path at agentskills.io/clients),
   `gemini -p "<prompt>" -o json --approval-mode yolo`.
 

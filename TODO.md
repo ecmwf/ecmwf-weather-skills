@@ -23,6 +23,9 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 - [ ] Confirm with ECMWF: public WMS token policy and public surface layers (2t, tp)
 - [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow
 
+- [ ] Run the 21 eval cases on pi (`make evals AGENT=pi MODEL=…`) once pi has a login or API key
+      on the eval machine; full opencode runs across models
+
 ## Data sources
 
 - [ ] **ECMWF Data Store (ECDS) access** — https://ecds.ecmwf.int (TIGGE, S2S forecasts and

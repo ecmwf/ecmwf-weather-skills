@@ -24,13 +24,19 @@ Request templates follow the official polytope-examples; live verification is pe
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import os
 import re
 import sys
 from pathlib import Path
 
-import ecmwf_status  # sibling script: what ECMWF says about service status
+# Never write __pycache__ into the installed skill (it may be read-only, and skills must
+# not be modified); sibling scripts are imported below.
+sys.dont_write_bytecode = True
+ecmwf_status = importlib.import_module(
+    "ecmwf_status"
+)  # sibling script: what ECMWF says about service status
 
 TOKEN_FILE = ".polytopeapirc-destine"
 TOKEN_ENV = "DESTINE_POLYTOPE_KEY"

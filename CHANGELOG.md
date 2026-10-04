@@ -11,6 +11,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- **opencode and pi support**, verified: opencode discovers all seven skills and runs them end to
+  end (Claude Opus 4.8 and GPT-6-Luna); pi discovers all seven via its own loader.
+- Root `package.json` making the repository a pi package:
+  `pi install git:github.com/ecmwf/ecmwf-weather-skills` (previously installed 0 skills).
+- README install sections for opencode and pi; harness rows in "Tested models".
+- Eval harness: `--agent opencode` (`opencode run --format json`) and `--agent pi`
+  (`pi --mode json`); an agent that exits without doing anything (no login or API key) is
+  reported as ERROR, not as a skill failure.
+
+### Fixed
+
+- Scripts no longer write `__pycache__` into the installed skill when importing a sibling script
+  (seen under opencode; breaks read-only installs and the never-modify-the-skill rule).
+
 ## [0.3.0] - 2026-10-04
 
 ### Changed

@@ -42,6 +42,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
+# Never write __pycache__ into the installed skill (it may be read-only, and skills must
+# not be modified); sibling scripts are imported below.
+sys.dont_write_bytecode = True
+
+
 BASE = "https://eccharts.ecmwf.int/wms/"
 NS = {"w": "http://www.opengis.net/wms", "xlink": "http://www.w3.org/1999/xlink"}
 # Layers without a time dimension; sending TIME with them makes the server return an exception.

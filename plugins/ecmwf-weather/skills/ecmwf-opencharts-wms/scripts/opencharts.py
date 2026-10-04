@@ -25,6 +25,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
+# Never write __pycache__ into the installed skill (it may be read-only, and skills must
+# not be modified); sibling scripts are imported below.
+sys.dont_write_bytecode = True
+
+
 API = "https://charts.ecmwf.int/opencharts-api/v1"
 USER_AGENT = "ecmwf-weather-skills/0.1 (+https://github.com/ecmwf/ecmwf-weather-skills)"
 # Chart rendering on first request can take ~10-20 s; images are 1-2 MB.
