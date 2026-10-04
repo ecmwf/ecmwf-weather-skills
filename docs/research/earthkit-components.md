@@ -11,7 +11,7 @@ for sizes (Linux x86_64, Py3.12), unpacked-wheel source reading, and a live end-
 (open-data fetch → select → xarray → wind speed → regrid → nearest point → daily max → units →
 country reduction → map + timeseries plot). ✅ = executed, ⚠️ = source-read only.
 
-Re-run this research before each minor release (see PLAN.md §0).
+Re-run this research before each minor release (see AGENTS.md "Research step").
 
 ## Eligible (≥ 1.0) — use these
 

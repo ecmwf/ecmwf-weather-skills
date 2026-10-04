@@ -275,6 +275,8 @@ def get_form(collection: dict) -> list:
     href = next(
         (link["href"] for link in collection.get("links", []) if link.get("rel") == "form"), None
     )
+    if href and not href.startswith("https://"):  # link comes from the server: https only
+        raise ValueError(f"catalogue returned a non-https form link: {href}")
     return _http(href) if href else []
 
 
@@ -431,7 +433,34 @@ def era5_point_request(
 # --- retrieve (earthkit) --------------------------------------------------------------------------
 
 
-def retrieve(store: str, dataset: str, request: dict, output: str) -> None:
+def unpack_download(src: Path, output: Path) -> list[Path]:
+    """Data stores often deliver a ZIP (e.g. ERA5 time series CSV, netcdf_zip). A single member
+    becomes `output`; several are extracted into a directory named after `output`."""
+    import zipfile
+
+    src, output = Path(src), Path(output)
+    if not zipfile.is_zipfile(src):
+        shutil.copy(src, output)
+        return [output]
+    with zipfile.ZipFile(src) as z:
+        members = [m for m in z.infolist() if not m.is_dir()]
+        for m in members:
+            if Path(m.filename).is_absolute() or ".." in Path(m.filename).parts:
+                raise ValueError(f"unsafe path in downloaded archive: {m.filename}")
+        if len(members) == 1:
+            output.write_bytes(z.read(members[0]))
+            return [output]
+        out_dir = output.with_suffix("")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        files = []
+        for m in members:
+            target = out_dir / Path(m.filename).name
+            target.write_bytes(z.read(m))
+            files.append(target)
+        return sorted(files)
+
+
+def retrieve(store: str, dataset: str, request: dict, output: str) -> list[Path]:
     import contextlib
 
     import earthkit.data as ekd
@@ -442,7 +471,7 @@ def retrieve(store: str, dataset: str, request: dict, output: str) -> None:
             if store == "cds"
             else ekd.from_source(store, dataset, request)
         )
-    shutil.copy(src.path, output)
+    return unpack_download(Path(src.path), Path(output))
 
 
 # --- CLI ------------------------------------------------------------------------------------------
@@ -640,8 +669,9 @@ def main(argv=None) -> int:
             return blocked(lb, a.json)
 
         out = a.output or f"{dataset}.{'csv' if req.get('data_format') == 'csv' else 'nc'}"
-        retrieve(a.store, dataset, req, out)
-        res["output"] = out
+        files = retrieve(a.store, dataset, req, out)
+        res["output"] = [str(f) for f in files]
+        out = ", ".join(res["output"])
         _print(
             res,
             a.json,

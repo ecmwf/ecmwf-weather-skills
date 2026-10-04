@@ -112,3 +112,13 @@ def test_codeowners_assigns_the_maintainer():
     text = (ROOT / ".github" / "CODEOWNERS").read_text()
     rules = [ln.split() for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
     assert ["*", "@tlmquintino"] in rules
+
+
+def test_evals_workflow_never_interpolates_inputs_into_shell():
+    wf = (ROOT / ".github" / "workflows" / "evals.yml").read_text()
+    run_lines = [
+        ln for ln in wf.splitlines() if "make evals" in ln or ln.strip().startswith("run:")
+    ]
+    assert not any("${{ inputs." in ln for ln in run_lines)
+    assert re.search(r"@anthropic-ai/claude-code@\d+\.\d+\.\d+", wf)
+    assert "retention-days" in wf and 'grep -rqF -- "$ANTHROPIC_API_KEY"' in wf

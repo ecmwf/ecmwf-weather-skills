@@ -214,12 +214,31 @@ def _coords(qs: dict) -> tuple[float, float]:
     return lat, lon
 
 
-def make_server(outdir: Path, port: int = 8000, service=None, host: str = "127.0.0.1"):
+def allowed_hosts(bind: str, port: int, extra=()) -> set[str]:
+    """Host headers the server answers: loopback names, the bound address, and --allow-host."""
+    names = {"127.0.0.1", "localhost", "[::1]", *extra}
+    if bind not in ("0.0.0.0", "::", ""):
+        names.add(bind)
+    return {f"{n}:{port}" for n in names}
+
+
+def make_server(outdir: Path, port: int = 8000, service=None, host: str = "127.0.0.1", allow=()):
     outdir = Path(outdir).resolve()
     service = service or MeteogramService(outdir / ".cache")
 
     class Handler(SimpleHTTPRequestHandler):
+        def _trusted(self) -> bool:
+            """Only this machine's own page may use the server: reject other Host names
+            (DNS rebinding) and cross-site Origins."""
+            ok_hosts = allowed_hosts(host, self.server.server_address[1], allow)
+            if self.headers.get("Host", "") not in ok_hosts:
+                return False
+            origin = self.headers.get("Origin")
+            return origin is None or origin in {f"http://{h}" for h in ok_hosts}
+
         def do_GET(self):
+            if not self._trusted():
+                return self._send(403, "text/plain", b"forbidden: local use only")
             u = urlparse(self.path)
             if not u.path.startswith("/api/"):
                 return super().do_GET()
@@ -270,6 +289,12 @@ def main(argv=None) -> int:
     s.add_argument("outdir")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--host", default="127.0.0.1")
+    s.add_argument(
+        "--allow-host",
+        action="append",
+        default=[],
+        help="extra host name clients use (needed with --host 0.0.0.0)",
+    )
     a = ap.parse_args(argv)
     try:
         if a.cmd == "create":
@@ -292,7 +317,7 @@ def main(argv=None) -> int:
                 f"warning: {missing} not found — meteograms need the open-data and earthkit skills",
                 file=sys.stderr,
             )
-        srv = make_server(Path(a.outdir), a.port, host=a.host)
+        srv = make_server(Path(a.outdir), a.port, host=a.host, allow=a.allow_host)
         print(f"serving {a.outdir} on http://{a.host}:{srv.server_address[1]}  (Ctrl-C to stop)")
         srv.serve_forever()
     except (ValueError, OSError) as e:

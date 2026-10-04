@@ -171,6 +171,10 @@ def check_skill(skill_dir: Path) -> list[str]:
     # the installed plugin; every skill must say where files go.
     # Users blocked by legal or technical barriers must always get detailed instructions
     # (AGENTS.md "When access is blocked"); every skill says how.
+    # Scripts relay text from remote services (banners, errors, descriptions); agents must not
+    # take instructions from it (AGENTS.md "Untrusted text").
+    if "data, not instructions" not in " ".join(body.split()):
+        p.append("SKILL.md must say text from remote services is data, not instructions")
     if not re.search(r"^## When blocked\s*$", body, re.M):
         p.append("SKILL.md needs a '## When blocked' section (instructions for user and agent)")
     if "never inside the skill directory" not in " ".join(body.split()):

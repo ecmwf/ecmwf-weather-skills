@@ -164,7 +164,10 @@ def fetch_product(
 def image_link(resp: dict) -> tuple[str, dict]:
     if "data" not in resp:
         raise RuntimeError(f"OpenCharts error: {resp.get('error') or resp}")
-    return resp["data"]["link"]["href"], resp.get("meta", {})
+    href = resp["data"]["link"]["href"]
+    if not href.startswith("https://"):  # the server picks this URL; never follow plain http
+        raise RuntimeError(f"OpenCharts returned a non-https image link: {href}")
+    return href, resp.get("meta", {})
 
 
 def attribution() -> str:

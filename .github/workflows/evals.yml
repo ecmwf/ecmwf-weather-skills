@@ -24,12 +24,27 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: "22" }
-      - run: npm install -g @anthropic-ai/claude-code
+      # Pinned: an unpinned install would run whatever npm serves next to ANTHROPIC_API_KEY.
+      - run: npm install -g --ignore-scripts @anthropic-ai/claude-code@2.1.289
       - name: Fresh agent, plugin only
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EVAL_BARE: "1"
-        run: make evals AGENT=claude MODEL="${{ inputs.model }}" CASES="${{ inputs.cases }}"
+          # Inputs reach the shell only as environment variables, and are validated.
+          IN_MODEL: ${{ inputs.model }}
+          IN_CASES: ${{ inputs.cases }}
+        run: |
+          [[ "$IN_MODEL" =~ ^(haiku|sonnet|opus)$ ]] || { echo "invalid model" >&2; exit 2; }
+          [[ "$IN_CASES" =~ ^[a-z0-9\ -]*$ ]] || { echo "invalid case list" >&2; exit 2; }
+          make evals AGENT=claude MODEL="$IN_MODEL" CASES="$IN_CASES"
+      - name: Refuse to publish transcripts containing the API key
+        if: always()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ] && grep -rqF -- "$ANTHROPIC_API_KEY" evals/runs/; then
+            echo "API key found in transcripts; not uploading" >&2; rm -rf evals/runs; exit 1
+          fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
-        with: { name: eval-runs, path: evals/runs/ }
+        with: { name: eval-runs, path: evals/runs/, retention-days: 7, if-no-files-found: ignore }

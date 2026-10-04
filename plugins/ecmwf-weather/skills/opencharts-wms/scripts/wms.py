@@ -323,9 +323,21 @@ def parse_featureinfo(text: str) -> list[dict]:
     ]
 
 
+class HttpsOnlyRedirects(urllib.request.HTTPRedirectHandler):
+    """Follow the server's 302 to /streaming/…, but never to a non-https location."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not newurl.startswith("https://"):
+            raise urllib.error.URLError(f"refusing redirect to non-https URL {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(HttpsOnlyRedirects)
+
+
 def fetch(url: str) -> tuple[str, bytes]:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:  # follows the 302 to /streaming/
+    with _OPENER.open(req, timeout=TIMEOUT_S) as r:  # follows the 302 to /streaming/
         return r.headers.get("Content-Type", ""), r.read()
 
 

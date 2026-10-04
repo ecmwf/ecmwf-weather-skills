@@ -133,3 +133,63 @@ console.log(JSON.stringify(out));
         "2026-10-03T18:00:00Z",
     ]
     assert out["closest"] == "2026-10-03T12:00:00Z"
+
+
+def test_server_rejects_foreign_hosts_and_origins(tmp_path):
+    import http.client
+
+    out = tmp_path / "webmap"
+    wm.create(out)
+
+    class Svc:
+        def meteogram(self, lat, lon):
+            p = tmp_path / "m.png"
+            p.write_bytes(b"\x89PNG")
+            return p
+
+        def point(self, lat, lon):
+            return {}
+
+    srv = wm.make_server(out, port=0, service=Svc())
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    port = srv.server_address[1]
+
+    def get(path, headers):
+        c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+        c.request("GET", path, headers=headers)
+        return c.getresponse().status
+
+    try:
+        api = "/api/meteogram.png?lat=1&lon=2"
+        assert get(api, {"Host": f"127.0.0.1:{port}"}) == 200
+        assert get(api, {"Host": f"localhost:{port}", "Origin": f"http://localhost:{port}"}) == 200
+        assert get(api, {"Host": "evil.example"}) == 403  # DNS rebinding
+        assert get(api, {"Host": f"127.0.0.1:{port}", "Origin": "https://evil.example"}) == 403
+        assert get("/", {"Host": "evil.example"}) == 403
+    finally:
+        srv.shutdown()
+
+
+def test_allowed_hosts():
+    assert wm.allowed_hosts("127.0.0.1", 8000) >= {"127.0.0.1:8000", "localhost:8000"}
+    assert "wx.example.int:8000" in wm.allowed_hosts("0.0.0.0", 8000, extra=["wx.example.int"])
+    assert "10.0.0.5:8000" in wm.allowed_hosts("10.0.0.5", 8000)
+
+
+def test_serve_cli_passes_allowed_hosts(monkeypatch, tmp_path):
+    seen = {}
+
+    class Srv:
+        server_address = ("127.0.0.1", 1)
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+    def fake(outdir, port, service=None, host="127.0.0.1", allow=()):
+        seen.update(outdir=outdir, allow=list(allow))
+        return Srv()
+
+    monkeypatch.setattr(wm, "make_server", fake)
+    wm.main(["serve", str(tmp_path), "--allow-host", "wx.example.int"])
+    assert seen["outdir"] == tmp_path and seen["allow"] == ["wx.example.int"]
