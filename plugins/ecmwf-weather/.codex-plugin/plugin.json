@@ -1,6 +1,6 @@
 {
   "name": "ecmwf-weather",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "Find, request, decode and visualise ECMWF forecasts, reanalysis and atmospheric composition data — Open Data, CDS/ADS, MARS, Polytope, Destination Earth, OpenCharts/WMS and earthkit.",
   "author": {
     "name": "ECMWF",
