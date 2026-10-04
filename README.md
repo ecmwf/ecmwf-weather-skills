@@ -89,6 +89,14 @@ codex plugin add ecmwf-weather@ecmwf
 
 ### Other skills-compatible agents
 
+With the [skills CLI](https://skills.sh):
+
+```bash
+npx skills add ecmwf/ecmwf-weather-skills
+```
+
+Or by hand:
+
 ```bash
 git clone https://github.com/ecmwf/ecmwf-weather-skills.git
 mkdir -p ~/.agents/skills

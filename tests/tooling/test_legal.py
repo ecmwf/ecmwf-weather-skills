@@ -130,6 +130,6 @@ def test_plugin_icon_present_and_licensed():
     codex = __import__("json").loads(
         (ROOT / "plugins/ecmwf-weather/.codex-plugin/plugin.json").read_text()
     )
-    assert codex["interface"]["logo"] == "./assets/ecmwf-logo.svg"
+    assert codex["interface"]["logo"] == "./assets/ecmwf-icon.png"  # square, for directories
     assert "LicenseRef-ECMWF-Logo" in (ROOT / "REUSE.toml").read_text()
     assert (ROOT / "LICENSES/LicenseRef-ECMWF-Logo.txt").exists()

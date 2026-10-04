@@ -9,6 +9,17 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 
 ## Publication
 
+- [ ] **URGENT — before submitting to the Claude or OpenAI directories:** upload one skill to
+      claude.ai (Customize → Skills; one skill folder zipped at the root, e.g. `open-data`) and
+      try a prompt in Chat/Cowork. Their cloud sandboxes may not reach `data.ecmwf.int` and the
+      other ECMWF hosts or install earthkit with `uv`; if not, most skills only produce "cannot
+      reach" reports there. Record what works, and state the limitation in the listing (or
+      submit only once it works).
+- [ ] Directory submissions (after the test above): Anthropic — claude.ai/directory/manage
+      (Plugin bundle, folder `plugins/ecmwf-weather`, ECMWF's paid organisation account);
+      OpenAI — platform.openai.com/plugins (Skills only; ECMWF business verification; decide
+      first whether an MCP server will ever join this plugin — it cannot be added later)
+
 - [ ] Confirm with ECMWF: public WMS token policy and public surface layers (2t, tp)
 - [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow
 

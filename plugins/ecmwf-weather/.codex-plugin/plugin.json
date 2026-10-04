@@ -30,7 +30,7 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "ECMWF Weather Data",
-    "shortDescription": "ECMWF forecast, reanalysis and map tools",
+    "shortDescription": "ECMWF weather data and maps",
     "longDescription": "Reusable ECMWF skills for fetching IFS and AIFS forecasts from Open Data, ERA5 and CAMS from the Copernicus data stores, MARS archive requests, Polytope point and area extraction, Destination Earth Digital Twin data, OpenCharts and WMS map layers, and decoding and plotting GRIB with earthkit.",
     "developerName": "ECMWF",
     "category": "Developer Tools",
@@ -38,13 +38,18 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://www.ecmwf.int",
+    "websiteURL": "https://github.com/ecmwf/ecmwf-weather-skills",
     "defaultPrompt": [
       "Get the latest ECMWF IFS forecast for my city.",
       "Build a web map with ECMWF WMS layers and a clicked-point meteogram.",
       "Download ERA5 temperature for a region and plot it."
     ],
-    "composerIcon": "./assets/ecmwf-logo.svg",
-    "logo": "./assets/ecmwf-logo.svg"
+    "composerIcon": "./assets/ecmwf-icon.png",
+    "logo": "./assets/ecmwf-icon.png",
+    "brandColor": "#0069A6",
+    "brandColorDark": "#0069A6",
+    "supportURL": "https://support.ecmwf.int",
+    "privacyPolicyURL": "https://www.ecmwf.int/en/privacy",
+    "termsOfServiceURL": "https://www.ecmwf.int/en/terms-use"
   }
 }
