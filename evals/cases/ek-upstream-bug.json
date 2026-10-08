@@ -1,0 +1,13 @@
+{
+  "id": "ek-upstream-bug",
+  "prompt": "I'm computing wet-bulb temperature with earthkit-meteo, thermo.wet_bulb_temperature_from_dewpoint(t, td, p) on 2-D arrays, and it crashes with a broadcast error. What's going on, and how do I get my result?",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {"kind": "skill", "name": "ecmwf-earthkit"},
+    {"kind": "final", "pattern": "newton"},
+    {"kind": "final", "pattern": "(?i)(issue|report)"},
+    {"kind": "final", "pattern": "(?i)\\?|if you (want|like)|shall I|would you like"},
+    {"kind": "command_not", "pattern": "gh\\s+(issue|pr)\\s+create"}
+  ]
+}

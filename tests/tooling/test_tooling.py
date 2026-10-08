@@ -143,7 +143,7 @@ def test_render_versions_md():
     info = {"earthkit-data": "1.2.3", "earthkit-time": "0.1.8", "thermofeel": "2.3.0"}
     md = regen.render_versions(info)
     assert "| `earthkit-data` | 1.2.3 | yes |" in md
-    assert "| `earthkit-time` | 0.1.8 | no |" in md
+    assert "| `earthkit-time` | 0.1.8 | exception | Emerging" in md  # allowed, pinned
 
 
 def test_check_mode_reports_drift(tmp_path):

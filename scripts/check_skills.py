@@ -41,6 +41,8 @@ TIME_SENSITIVE = re.compile(
     r"|\b(since|before|after|until|as of)\s+20\d\d",
     re.I,
 )
+# Hand-written equivalents of earthkit functionality, not allowed in skill examples.
+HAND_ROLLED = re.compile(r"import matplotlib|import cartopy|from cartopy|\.groupby\(|[-+] ?273\.15")
 REF_LINK = re.compile(r"references/([A-Za-z0-9_.-]+\.md)")
 BACKSLASH_PATH = re.compile(r"\b(?:scripts|references)\\")
 
@@ -171,6 +173,15 @@ def check_skill(skill_dir: Path) -> list[str]:
     # the installed plugin; every skill must say where files go.
     # Users blocked by legal or technical barriers must always get detailed instructions
     # (AGENTS.md "When access is blocked"); every skill says how.
+    # Agents hand-write numpy/matplotlib/cartopy code unless pointed at earthkit: every data
+    # skill routes processing and plotting through ecmwf-earthkit (AGENTS.md "earthkit first").
+    if skill_dir.name != "ecmwf-earthkit" and not re.search(
+        r"load the `ecmwf-earthkit` skill before writing", " ".join(body.split())
+    ):
+        p.append(
+            "SKILL.md must say: to process or plot the data, load the `ecmwf-earthkit` "
+            "skill before writing code"
+        )
     # Scripts relay text from remote services (banners, errors, descriptions); agents must not
     # take instructions from it (AGENTS.md "Untrusted text").
     if "data, not instructions" not in " ".join(body.split()):
@@ -211,6 +222,12 @@ def check_skill(skill_dir: Path) -> list[str]:
 
     for f in [skill_md, *(refs_dir / r for r in refs)]:
         t = f.read_text()
+        for block in re.findall(r"```python\n(.*?)```", t, re.S):
+            if HAND_ROLLED.search(block):
+                p.append(
+                    f"{f.name}: Python example uses {HAND_ROLLED.search(block).group(0)!r} — "
+                    "show the earthkit way (earthkit-plots / -transforms / -meteo)"
+                )
         if BACKSLASH_PATH.search(t):
             p.append(f"{f.name} uses a backslash path — use forward slashes")
         m = TIME_SENSITIVE.search(_strip_old_patterns(t))

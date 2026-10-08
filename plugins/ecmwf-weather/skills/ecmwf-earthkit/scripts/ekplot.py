@@ -6,16 +6,24 @@
 
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["earthkit-plots>=1.0", "earthkit-data>=1.2"]
+# dependencies = [
+#   "earthkit-plots>=1.0",
+#   "earthkit-data>=1.2",
+#   "earthkit-transforms[all]>=1.0",
+# ]
 # ///
 """Plot ECMWF data with earthkit-plots.
 
-  map        one field from a GRIB/NetCDF file on a map
+  map        one field from a GRIB/NetCDF file on a map (ECMWF style chosen automatically)
+  ens-stats  ensemble mean / standard deviation / percentile maps from ensemble members
+             (statistics with earthkit-transforms, maps with earthkit-plots)
   meteogram  multi-panel time series from point-forecast JSON
              (odpoint.py / ptpoint.py --json)
 
   uv run ekplot.py map forecast.grib2 --param 2t --step 24 --units celsius \\
       --domain Europe -o t2m.png
+  uv run ekplot.py ens-stats ens.grib2 --param 2t --units celsius --domain Europe -o ens.png
+      # -> ens_mean.png, ens_std.png (add --stats mean,std,p10,p90 and --panel for one figure)
   uv run ekplot.py meteogram lisbon.json -o lisbon.png
 
 Every figure carries the ECMWF CC-BY-4.0 attribution line.
@@ -69,24 +77,33 @@ def precip_bars(point: dict) -> dict:
     """Precipitation per interval as a rate (mm/h) with the interval's start and length.
 
     Steps get longer with lead time (1 h → 3 h → 6 h), so interval totals are not comparable;
-    a rate drawn as a bar spanning its interval is. The first row has no preceding interval.
+    a rate drawn as a bar spanning its interval is. Rates come from earthkit-transforms
+    (`accumulation_to_rate`, per-interval amounts). The first row has no preceding interval.
     """
+    import numpy as np
+    import xarray as xr
+    from earthkit.transforms import temporal
+
     rows = point["series"]
-    starts, widths, rates, lo, hi = [], [], [], [], []
+    t = np.array([r["valid_time"].rstrip("Z") for r in rows], dtype="datetime64[ns]")
+
+    def rate(key):
+        da = xr.DataArray(
+            [_nan(r[key]) for r in rows],
+            dims=["valid_time"],
+            coords={"valid_time": t},
+            attrs={"units": "mm"},
+        )
+        r = temporal.accumulation_to_rate(da, accumulation_type="start_of_step", rate_units="hours")
+        return [round(float(v), 3) for v in r.values[1:]]
+
     has_band = all("precip_mm_p10" in r and "precip_mm_p90" in r for r in rows)
-    for prev, cur in itertools.pairwise(rows):
-        hours = cur["step"] - prev["step"]
-        starts.append(prev["valid_time"].rstrip("Z"))
-        widths.append(hours)
-        rates.append(round(_nan(cur["precip_mm"]) / hours, 3))
-        if has_band:
-            lo.append(_nan(cur["precip_mm_p10"]) / hours)
-            hi.append(_nan(cur["precip_mm_p90"]) / hours)
+    widths = [int(b["step"] - a["step"]) for a, b in itertools.pairwise(rows)]
     return {
-        "starts": starts,
+        "starts": [r["valid_time"].rstrip("Z") for r in rows[:-1]],
         "widths_h": widths,
-        "rates": rates,
-        "band": (lo, hi) if has_band else None,
+        "rates": rate("precip_mm"),
+        "band": (rate("precip_mm_p10"), rate("precip_mm_p90")) if has_band else None,
     }
 
 
@@ -145,9 +162,15 @@ def plot_meteogram(point: dict, output: str):
             bars = precip_bars(point)
             starts = np.array(bars["starts"], dtype="datetime64[m]")
             widths = np.array(bars["widths_h"]) / 24.0  # matplotlib date units are days
-            ax.bar(
-                starts,
+            bar = xr.DataArray(
                 bars["rates"],
+                dims=["valid_time"],
+                coords={"valid_time": starts},
+                name="precip_rate",
+                attrs={"units": "mm/h", "long_name": p["title"]},
+            )
+            ts.bar(
+                bar,
                 width=widths,
                 align="edge",
                 color=p["colour"],
@@ -198,9 +221,25 @@ def plot_meteogram(point: dict, output: str):
         f"ECMWF {point.get('model', '').upper()} run {point.get('run', '')} — "
         f"{gp.get('lat')}, {gp.get('lon')}"
     )
+    fig.attribution(attribution_for(point))
     fig.save(output)
-    _stamp(output, attribution_for(point))
     return fig.fig
+
+
+def _select(path: str, param: str, step: int | None = None, level: int | None = None):
+    import earthkit.data as ekd
+
+    fl = ekd.from_source("file", path).to_fieldlist()
+    query = {"parameter.variable": param}
+    if step is not None:
+        query["time.step"] = step
+    if level is not None:
+        query["vertical.level"] = level
+    sel = fl.sel(query)
+    if len(sel) == 0:
+        have = ", ".join(sorted(set(fl.metadata("shortName"))))
+        raise ValueError(f"no field matches {query}; parameters in file: {have}")
+    return sel
 
 
 def plot_map(
@@ -212,41 +251,123 @@ def plot_map(
     domain=None,
     level=None,
 ) -> None:
-    import earthkit.data as ekd
     import earthkit.plots as ekp
 
-    fl = ekd.from_source("file", path).to_fieldlist()
-    sel = fl.sel({"metadata.shortName": param})
-    if len(sel) == 0:
-        have = sorted({f.get("metadata.shortName") for f in fl})
-        raise ValueError(f"param {param!r} not in file; available: {', '.join(have)}")
-    if step is not None:
-        sel = [f for f in sel if int(f.time.step().total_seconds() // 3600) == step]
-    if level is not None:
-        sel = [f for f in sel if f.get("metadata.level", default=None) == level]
-    if not sel:
-        raise ValueError("no field matches --step/--level")
+    sel = _select(path, param, step, level)
     kw = {k: v for k, v in {"units": units, "domain": domain}.items() if v}
-    fig = ekp.quickplot(sel[0], **kw)
+    fig = ekp.quickplot(sel[0], **kw)  # style="auto": ECMWF style from the GRIB metadata
+    fig.attribution(attribution_text())
     fig.save(output)
-    _stamp(output)
 
 
-def _stamp(output: str, text: str | None = None) -> None:
-    """Add the attribution line to the saved figure (bottom-right)."""
-    import matplotlib.pyplot as plt
+# --- ensemble statistics -------------------------------------------------------------------------
 
-    fig = plt.gcf()
-    fig.text(
-        0.99,
-        -0.01,  # below the axes; bbox_inches="tight" expands the canvas to include it
-        text or attribution_text(),
-        ha="right",
-        va="top",
-        fontsize=7,
-        color="#444",
-    )
-    fig.savefig(output, dpi=fig.dpi, bbox_inches="tight")
+STAT_NAMES = {"mean": "ensemble mean", "std": "ensemble standard deviation"}
+# Spread maps: levels in the field's (converted) units, a sequential palette.
+SPREAD_COLORS = "Purples"
+
+
+def parse_stats(spec: str) -> list[tuple[str, int | None]]:
+    out = []
+    for item in spec.split(","):
+        item = item.strip()
+        if item in STAT_NAMES:
+            out.append((item, None))
+        elif item.startswith("p") and item[1:].isdigit() and 0 < int(item[1:]) < 100:
+            out.append((item, int(item[1:])))
+        else:
+            raise ValueError(f"unknown statistic {item!r}; use mean, std or pNN (e.g. p10, p90)")
+    return out
+
+
+def stat_label(stat: str, long_name: str) -> str:
+    if stat in STAT_NAMES:
+        return f"{long_name} — {STAT_NAMES[stat]}"
+    return f"{long_name} — ensemble {int(stat[1:])}th percentile"
+
+
+def stat_outputs(output: str, stats: list[str]) -> dict[str, str]:
+    from pathlib import Path
+
+    p = Path(output)
+    return {s: str(p.with_name(f"{p.stem}_{s}{p.suffix}")) for s in stats}
+
+
+def ensemble_stats(path: str, param: str, stats, step: int | None = None):
+    """{stat: DataArray} computed with earthkit-transforms over the member dimension."""
+    import earthkit.transforms as ekt
+    from earthkit.transforms import ensemble
+
+    ds = _select(path, param, step).to_xarray()
+    var = next(iter(ds.data_vars))
+    da = ds[var]
+    if "member" not in da.dims:
+        raise ValueError("no ensemble members in the file (expected several 'number' values)")
+    out = {}
+    for name, q in stats:
+        if name == "mean":
+            r = ensemble.mean(da)
+        elif name == "std":
+            r = ensemble.std(da)
+        else:
+            r = ekt.reduce(da, how="percentile", dim="member", q=q)
+        out[name] = r.squeeze(drop=True)
+    return out, int(da.sizes["member"]), da.attrs.get("long_name", var)
+
+
+def plot_ens_stats(
+    path: str,
+    param: str,
+    output: str,
+    stats_spec: str = "mean,std",
+    units=None,
+    domain=None,
+    step=None,
+    panel=False,
+) -> list[str]:
+    import earthkit.plots as ekp
+
+    stats = parse_stats(stats_spec)
+    fields, n, long_name = ensemble_stats(path, param, stats, step)
+    # A spread is a difference: K and °C are the same size, so label it in the input units.
+    spread_units = str(fields.get("std", next(iter(fields.values()))).attrs.get("units", ""))
+    spread_units = {"kelvin": "K", "degree_Celsius": "°C"}.get(spread_units, spread_units)
+
+    def draw(m, name, da):
+        if name == "std":
+            # Spread keeps the variable's metadata: give it its own levels and label so the
+            # temperature style (or a °C offset) is never applied to a difference.
+            m.contourf(da, colors=SPREAD_COLORS, extend="max")
+            m.legend(label=f"{stat_label(name, long_name)} ({spread_units})")
+            m.coastlines()
+            m.borders()
+            m.gridlines()
+            return
+        else:
+            m.contourf(da, units=units, style="auto") if units else m.contourf(da, style="auto")
+        m.coastlines()
+        m.borders()
+        m.gridlines()
+        m.legend(label=stat_label(name, long_name))
+
+    title = f"{long_name}, {n} members" + ("" if step is None else f", T+{step}h")
+    if panel:
+        fig = ekp.Figure(rows=1, columns=len(stats), size=(6 * len(stats), 4.5))
+        for i, (name, _) in enumerate(stats):
+            draw(fig.add_map(0, i, domain=domain), name, fields[name])
+        fig.title(title)
+        fig.attribution(attribution_text())
+        fig.save(output)
+        return [output]
+    files = []
+    for name, target in stat_outputs(output, [n for n, _ in stats]).items():
+        fig = ekp.Figure(rows=1, columns=1, size=(8, 6))
+        draw(fig.add_map(0, 0, domain=domain), name, fields[name])
+        fig.title(f"{title} — {STAT_NAMES.get(name, name)}")
+        fig.attribution(attribution_text())
+        fig.save(target)
+        files.append(target)
+    return files
 
 
 def main(argv=None) -> int:
@@ -262,6 +383,15 @@ def main(argv=None) -> int:
     m.add_argument("--units", help="e.g. celsius, hPa, mm")
     m.add_argument("--domain", help="e.g. Europe, 'United Kingdom', [W, E, S, N]")
     m.add_argument("-o", "--output", required=True)
+    e = sub.add_parser("ens-stats", help="ensemble mean/std/percentile maps (earthkit-transforms)")
+    e.add_argument("path")
+    e.add_argument("--param", required=True, help="GRIB shortName, e.g. 2t")
+    e.add_argument("--stats", default="mean,std", help="comma list: mean, std, pNN")
+    e.add_argument("--step", type=int)
+    e.add_argument("--units", help="e.g. celsius (not applied to the spread)")
+    e.add_argument("--domain", help="e.g. Europe")
+    e.add_argument("--panel", action="store_true", help="one figure with all statistics")
+    e.add_argument("-o", "--output", required=True, help="x.png -> x_mean.png, x_std.png, …")
     g = sub.add_parser("meteogram")
     g.add_argument("json_path", help="output of open-data odpoint.py --json")
     g.add_argument("-o", "--output", required=True)
@@ -270,6 +400,10 @@ def main(argv=None) -> int:
         with contextlib.redirect_stdout(sys.stderr):
             if a.cmd == "map":
                 plot_map(a.path, a.param, a.step, a.output, a.units, a.domain, a.level)
+            elif a.cmd == "ens-stats":
+                files = plot_ens_stats(
+                    a.path, a.param, a.output, a.stats, a.units, a.domain, a.step, a.panel
+                )
             else:
                 with open(a.json_path) as fh:
                     plot_meteogram(json.load(fh), a.output)
@@ -282,7 +416,8 @@ def main(argv=None) -> int:
                     "1. Install uv: https://docs.astral.sh/uv/getting-started/installation/ "
                     "(curl -LsSf https://astral.sh/uv/install.sh | sh), then re-run with "
                     "`uv run ekplot.py …` — it installs exactly what is needed.",
-                    "2. Without uv: pip install 'earthkit-plots>=1.0' 'earthkit-data>=1.2'",
+                    "2. Without uv: pip install 'earthkit-plots>=1.0' 'earthkit-data>=1.2' "
+                    "'earthkit-transforms[all]>=1.0'",
                     "3. On Windows use WSL (earthkit has no Windows wheels).",
                 ],
                 "agent": "Run the script with `uv run`; if uv cannot be installed, give these "
@@ -294,6 +429,18 @@ def main(argv=None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     label = attribution_text()
+    if a.cmd == "ens-stats":
+        import earthkit.data as ekd
+
+        with contextlib.redirect_stdout(sys.stderr):
+            n = len(
+                ekd.from_source("file", a.path).to_fieldlist().sel({"parameter.variable": a.param})
+            )
+        print(
+            f"saved {', '.join(files)} (members: {n}; statistics with earthkit-transforms, "
+            f"maps with earthkit-plots; {label})"
+        )
+        return 0
     if a.cmd == "meteogram":
         with open(a.json_path) as fh:
             label = attribution_for(json.load(fh))

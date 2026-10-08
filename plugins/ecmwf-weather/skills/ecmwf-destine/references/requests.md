@@ -24,6 +24,7 @@ with a live request by this project.
 # /// script
 # dependencies = ["polytope-client>=0.7"]
 # ///
+# needs credentials (not run by the tests)
 import json, pathlib
 from polytope.api import Client
 token = json.loads(pathlib.Path("~/.polytopeapirc-destine").expanduser().read_text())["user_key"]

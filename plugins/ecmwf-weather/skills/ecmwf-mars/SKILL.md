@@ -16,12 +16,13 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF MARS archive
 
 ## Contents
-- Is MARS the right route? (line 29)
-- Request workflow (line 46)
-- Templates (lint-clean — start from these) (line 71)
-- Efficiency rules (line 90)
-- Licence and attribution (line 102)
-- When blocked (line 111)
+- Is MARS the right route? (line 30)
+- Request workflow (line 47)
+- Templates (lint-clean — start from these) (line 72)
+- Efficiency rules (line 91)
+- Processing and plots (line 103)
+- Licence and attribution (line 111)
+- When blocked (line 120)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -98,6 +99,14 @@ reads each tape file once:
 4. Keep each retrieval well below the 75 GB per-request cap (`lint` warns above 20 GB).
 
 `mars.py plan` produces exactly these monthly chunks.
+
+## Processing and plots
+
+MARS returns GRIB. Ensemble mean and spread maps (`ekplot.py ens-stats`), other maps,
+statistics, derived quantities and regridding — use ECMWF's earthkit components, not hand-written
+numpy, matplotlib or cartopy code: to process or plot the data, load the `ecmwf-earthkit` skill
+before writing code. Its scripts and recipes cover ECMWF-styled maps (earthkit-plots), ensemble
+and time statistics (earthkit-transforms) and meteorological quantities (earthkit-meteo).
 
 ## Licence and attribution
 

@@ -11,6 +11,50 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+**earthkit first.** Agents were writing code that earthkit already provides — e.g. ensemble
+mean and spread maps drawn with cartopy and `.std("member")` instead of earthkit-transforms and
+earthkit-plots (ECMWF styles), or `- 273.15` instead of `units="celsius"`.
+
+### Added
+
+- `ecmwf-earthkit` rewritten around a "Before you write code" table (hand-written habit →
+  earthkit call) covering earthkit-data, -plots, -transforms, -meteo, -geo, -hydro, -utils and
+  -time; component table with install specs.
+- `references/recipes.md`: verified code for every job (ensemble statistics and maps, styled
+  maps, multi-panel figures, plumes, daily statistics, de-accumulation and rates,
+  climatologies and anomalies, area and country means, meteorological quantities, EFI/SOT and
+  CRPS, regridding, units, GRIB output, river networks, hindcast dates). **Every runnable
+  Python block in every skill's references is executed by the test suite.**
+- `ekplot.py ens-stats`: ensemble mean / standard deviation / percentile maps
+  (earthkit-transforms + earthkit-plots), with correct labels and palette for the spread.
+- Upstream contributions: when earthkit fails or lacks a feature, agents solve the task, then
+  ask whether to report the bug or propose a pull request, and act only on explicit approval
+  (`references/upstream.md`: issue and draft-PR procedure, reproducer and CLA rules).
+- `docs/upstream/`: nine verified draft issues for earthkit-meteo, -plots, -transforms and
+  -utils, each with a pinned self-contained reproducer — not filed, awaiting approval.
+- Lint: every data skill routes processing and plotting to `ecmwf-earthkit`; skill examples may
+  not use matplotlib, cartopy, `groupby` or `- 273.15`.
+- Eval cases `ek-ensemble-maps`, `ek-humidity`, `ek-upstream-bug`, `mars-ens-plots`.
+- earthkit-time (0.1.x, Emerging) allowed as the one pinned exception below 1.0.
+
+### Changed
+
+- Scripts use earthkit for their own computations: de-accumulation, ensemble percentiles and
+  daily statistics (`odpoint.py`, `ptpoint.py`) with earthkit-transforms; meteogram
+  precipitation rates via `accumulation_to_rate` and bars, maps and attribution via
+  earthkit-plots (no direct matplotlib). `odpoint.py`/`ptpoint.py` now also install
+  earthkit-transforms.
+- Eval harness grades code written to files (Claude Write/Edit, opencode write, Codex patches
+  from its session log), not only shell commands, and removes each case's skill copies after
+  grading so agents can't find stale skills.
+
+### Fixed
+
+- `ecmwf-cds-ads` climate-normals recipe used pandas `groupby` and `- 273.15`; now
+  earthkit-transforms and earthkit-utils.
+- Recipes corrected after executing them: `GeoKDTree` import path, `RelativeYear` import,
+  `earthkit-meteo[scores]` extra, `datetime` inputs for solar functions.
+
 ## [0.3.2] - 2026-10-04
 
 ### Added

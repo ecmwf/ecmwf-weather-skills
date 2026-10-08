@@ -49,8 +49,11 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
 - **History and climate** — ERA5 / ERA5-Land and CAMS requests validated and costed against the
   Copernicus Data Stores *before* you have a key; downloads once you do.
 - **MARS archive** — request lint, size estimate, tape-friendly monthly splitting, server cost.
-- **earthkit first** — decoding, regridding, derived quantities, unit conversion and plots with
-  ECMWF's earthkit components (≥ 1.0), installing only the components a task needs.
+- **earthkit first** — agents are steered to ECMWF's earthkit components (data, plots,
+  transforms, meteo, geo, hydro, utils, time) instead of hand-written numpy, matplotlib or
+  cartopy: ECMWF-styled maps, ensemble and climate statistics, meteorological quantities, with
+  code recipes that the test suite executes. Bugs or gaps in earthkit are offered upstream as
+  issues or pull requests — only with your approval.
 - **Attribution built in** — every script prints the licence line for its data (CC BY 4.0 for
   open data, Copernicus credit for C3S/CAMS, ECMWF licence for operational data) and stamps it
   on figures.

@@ -10,6 +10,7 @@
 #   "earthkit-data[polytope,covjsonkit]>=1.2",
 #   "earthkit-meteo>=1.2",
 #   "earthkit-utils>=1.0",
+#   "earthkit-transforms[all]>=1.0",
 # ]
 # ///
 """Point forecast via ECMWF Polytope — server-side extraction, a few KB instead of global fields.
@@ -18,6 +19,7 @@ earthkit components, each for its job:
   earthkit-data[polytope]  submit the feature-extraction request (polytope-client)
   earthkit-meteo           wind speed / direction
   earthkit-utils           unit conversion
+  earthkit-transforms      de-accumulation, ensemble percentiles, daily statistics
 
   uv run ptpoint.py --check                                  # credentials + test request
   uv run ptpoint.py --lat 38.72 --lon -9.14                  # IFS HRES, hourly, 0-240 h
@@ -40,6 +42,11 @@ import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # heavy; imported inside the functions that need it
+    import xarray as xr
+
 
 # Never write __pycache__ into the installed skill (it may be read-only, and skills must
 # not be modified); sibling scripts are imported below.
@@ -167,28 +174,52 @@ def parse_covjson(d: dict) -> dict:
     }
 
 
-def _percentile(vals: list[float], q: float) -> float:
-    s = sorted(vals)
-    k = (len(s) - 1) * q / 100.0
-    lo = int(k)
-    hi = min(lo + 1, len(s) - 1)
-    return round(s[lo] + (s[hi] - s[lo]) * (k - lo), 4)
+def _hourly(values, hours) -> xr.DataArray:
+    """1-D series on a datetime axis, as earthkit-transforms expects (only spacing matters)."""
+    import numpy as np
+    import xarray as xr
+
+    t = np.datetime64("2000-01-01T00", "ns") + np.asarray(hours, "timedelta64[h]")
+    return xr.DataArray(np.asarray(values, float), dims=["valid_time"], coords={"valid_time": t})
+
+
+def deaccumulate_mm(values_m: list[float], steps: list[int] | None = None) -> list[float | None]:
+    """Accumulated precipitation (m since step 0) -> mm per interval since the previous step,
+    with earthkit-transforms. The first value is 0 at step 0; unknown (None) when the series
+    starts later (its value covers the whole run so far)."""
+    from earthkit.transforms import temporal
+
+    steps = list(range(len(values_m))) if steps is None else steps
+    first = 0.0 if steps[0] == 0 else None
+    if len(values_m) < 2:
+        return [first]
+    d = temporal.deaccumulate(_hourly(values_m, steps)).values * 1000.0
+    return [first, *(round(max(0.0, float(v)), 2) for v in d)]
+
+
+def percentile(values, q: float) -> float:
+    """q-th percentile across ensemble members, with earthkit-transforms."""
+    import earthkit.transforms as ekt
+    import numpy as np
+    import xarray as xr
+
+    da = xr.DataArray(np.asarray(values, float), dims=["member"])
+    return round(float(ekt.reduce(da, how="percentile", dim="member", q=q)), 4)
 
 
 def quantiles(member_series: list[list[float]], qs=QUANTILES) -> list[list[float]]:
-    """members x times -> times x quantiles."""
-    return [
-        [_percentile([m[i] for m in member_series], q) for q in qs]
-        for i in range(len(member_series[0]))
-    ]
+    """members x times -> times x quantiles (earthkit-transforms, over the member dimension)."""
+    import earthkit.transforms as ekt
+    import numpy as np
+    import xarray as xr
+
+    da = xr.DataArray(np.asarray(member_series, float), dims=["member", "valid_time"])
+    per_q = [ekt.reduce(da, how="percentile", dim="member", q=q).values for q in qs]
+    return [[round(float(v[i]), 4) for v in per_q] for i in range(da.sizes["valid_time"])]
 
 
-def _deaccumulate_mm(vals: list[float]) -> list[float]:
-    out, prev = [], 0.0
-    for v in vals:
-        out.append(round(max(0.0, (v - prev) * 1000.0), 2))
-        prev = v
-    return out
+def _deaccumulate_mm(vals: list[float], steps: list[int] | None = None) -> list[float]:
+    return [0.0 if v is None else v for v in deaccumulate_mm(vals, steps)]
 
 
 def size_note(nbytes: int) -> str:
@@ -240,47 +271,64 @@ def drop_past(rows: list[dict], now: datetime | None = None) -> list[dict]:
 def daily_summary(p: dict, tz: str = "UTC") -> list[dict]:
     """Per local calendar day: high/low 2 m temperature (°C) and precipitation total (mm).
 
-    Ensembles give p10/p50/p90 of each member's daily high, low and total — the spread of
-    the days, not of individual hours. A precipitation interval counts for the day it ends
-    in. Days whose samples span less than 18 h are marked partial.
+    Daily statistics with earthkit-transforms on a local-time axis (exact across DST changes).
+    Ensembles give p10/p50/p90 of each member's daily high, low and total — the spread of the
+    days, not of individual hours. A precipitation interval counts for the day it ends in.
+    Days whose samples span less than 18 h are marked partial.
     """
     from zoneinfo import ZoneInfo
 
+    import numpy as np
+    import xarray as xr
+    from earthkit.transforms import temporal
+
     zone = ZoneInfo(tz)
-    days = [_utc(t).astimezone(zone).date() for t in p["times"]]
-    hours = [_utc(t).astimezone(zone) for t in p["times"]]
-    per_member: dict[int, dict] = {}
-    for n, m in p["members"].items():
-        temps = [v - 273.15 for v in m["2t"]] if "2t" in m else None
-        rain = _deaccumulate_mm(m["tp"]) if "tp" in m else None
-        out: dict = {}
-        for i, d in enumerate(days):
-            e = out.setdefault(d, {"t": [], "tp": 0.0, "h": []})
-            e["h"].append(hours[i])
-            if temps:
-                e["t"].append(temps[i])
-            if rain and i > 0:
-                e["tp"] += rain[i]
-        per_member[n] = out
-    ensemble = list(p["members"]) != [0]
+    local = [_utc(t).astimezone(zone) for t in p["times"]]
+    axis = np.array([t.replace(tzinfo=None) for t in local], dtype="datetime64[ns]")
+    names = list(p["members"])
+
+    def stack(key, fn):
+        rows = [fn(p["members"][n][key]) for n in names]
+        return xr.DataArray(
+            np.asarray(rows, float), dims=["member", "valid_time"], coords={"valid_time": axis}
+        )
+
+    has_t, has_tp = ("2t" in p["members"][names[0]]), ("tp" in p["members"][names[0]])
+    stats = {}
+    if has_t:
+        t = stack("2t", lambda v: np.asarray(v) - 273.15)
+        stats["high_C"] = temporal.daily_max(t, time_dim="valid_time")
+        stats["low_C"] = temporal.daily_min(t, time_dim="valid_time")
+    if has_tp:
+        rain = stack("tp", lambda v: _deaccumulate_mm(v, p["steps"]))
+        stats["precip_mm"] = temporal.daily_sum(
+            rain.isel(valid_time=slice(1, None)), time_dim="valid_time"
+        )
+    days = sorted({t.date() for t in local})
+    ensemble = names != [0]
     result = []
-    for d in sorted(set(days)):
-        first = per_member[next(iter(per_member))][d]
-        span_h = (max(first["h"]) - min(first["h"])).total_seconds() / 3600
-        row: dict = {"date": d.isoformat(), "partial": span_h < 18}
-        highs = [max(m[d]["t"]) for m in per_member.values() if m[d]["t"]]
-        lows = [min(m[d]["t"]) for m in per_member.values() if m[d]["t"]]
-        rain = [round(m[d]["tp"], 2) for m in per_member.values()]
+    for d in days:
+        on_day = [t for t in local if t.date() == d]
+        row: dict = {
+            "date": d.isoformat(),
+            "partial": (on_day[-1] - on_day[0]).total_seconds() / 3600 < 18,
+        }
+        key = np.datetime64(d.isoformat(), "ns")
+        for name, da in stats.items():
+            if key not in da["valid_time"].values:
+                if name == "precip_mm":
+                    vals = [0.0] * len(names)  # no interval ends on this day
+                else:
+                    continue
+            else:
+                vals = da.sel(valid_time=key).values.tolist()
+            if ensemble:
+                for q in QUANTILES:
+                    row[f"{name}_p{q}"] = round(percentile(vals, q), 1)
+            else:
+                row[name] = round(float(vals[0]), 1)
         if ensemble:
-            for name, vals in (("high_C", highs), ("low_C", lows), ("precip_mm", rain)):
-                if vals:
-                    for q in QUANTILES:
-                        row[f"{name}_p{q}"] = round(_percentile(vals, q), 1)
-            row["members"] = len(per_member)
-        else:
-            if highs:
-                row["high_C"], row["low_C"] = round(highs[0], 1), round(lows[0], 1)
-            row["precip_mm"] = round(rain[0], 1)
+            row["members"] = len(names)
         result.append(row)
     return result
 
@@ -347,7 +395,7 @@ def series(p: dict) -> list[dict]:
             ):
                 r["t2m_C"] = round(float(v), 1)
         if "tp" in m:
-            for r, v in zip(rows, _deaccumulate_mm(m["tp"]), strict=True):
+            for r, v in zip(rows, _deaccumulate_mm(m["tp"], p["steps"]), strict=True):
                 r["precip_mm"] = v
         if "10u" in m and "10v" in m:
             u, v = np.array(m["10u"]), np.array(m["10v"])
@@ -369,7 +417,11 @@ def series(p: dict) -> list[dict]:
 
     names = sorted(mem)
     t2 = [list(convert_units(np.array(mem[n]["2t"]), "degC", source_units="K")) for n in names]
-    tp = [_deaccumulate_mm(mem[n]["tp"]) for n in names] if "tp" in mem[names[0]] else None
+    tp = (
+        [_deaccumulate_mm(mem[n]["tp"], p["steps"]) for n in names]
+        if "tp" in mem[names[0]]
+        else None
+    )
     for r, q in zip(rows, quantiles(t2), strict=True):
         r.update({f"t2m_C_p{k}": round(v, 1) for k, v in zip(QUANTILES, q, strict=True)})
         r["t2m_C"] = r["t2m_C_p50"]

@@ -24,14 +24,17 @@ def test_module_imports_without_earthkit(odp):
     assert hasattr(odp, "point_series")
 
 
+@pytest.mark.earthkit
 def test_deaccumulate_m_to_mm_intervals(odp):
     assert odp.deaccumulate([0.0, 0.001, 0.0035, 0.0035]) == [0.0, 1.0, 2.5, 0.0]
 
 
+@pytest.mark.earthkit
 def test_deaccumulate_clips_negative_noise(odp):
     assert odp.deaccumulate([0.0, 0.002, 0.0019999]) == [0.0, 2.0, 0.0]
 
 
+@pytest.mark.earthkit
 def test_deaccumulate_first_value_unknown_when_series_does_not_start_at_step_0(odp):
     # steps 12, 24: the value at 12 is accumulated over 0-12, not "since previous step"
     assert odp.deaccumulate([0.004, 0.005], steps=[12, 24]) == [None, 1.0]
@@ -140,6 +143,7 @@ def test_live_point_forecast_small():
     assert len(data["series"]) == 5 and data["run"]
 
 
+@pytest.mark.earthkit
 def test_shape_output_local_time_from_now_daily(odp):
     from datetime import datetime, timezone
 

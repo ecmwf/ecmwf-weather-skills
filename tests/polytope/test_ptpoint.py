@@ -81,6 +81,7 @@ def test_parse_covjson_ensemble_members():
     assert sorted(p["members"]) == [1, 2, 3, 4, 5]
 
 
+@pytest.mark.earthkit
 def test_quantiles_pure():
     assert pt.quantiles([[1, 10], [2, 20], [3, 30], [4, 40], [5, 50]], (10, 50, 90)) == [
         [1.4, 3.0, 4.6],
@@ -198,6 +199,7 @@ def test_add_local_time_and_drop_past():
     assert [r["valid_time"] for r in kept] == ["2026-10-03T12:00Z", "2026-10-03T13:00Z"]
 
 
+@pytest.mark.earthkit
 def test_daily_summary_deterministic_local_days():
     n = 49
     temps = [273.15 + 10 + (h % 24) for h in range(n)]  # 10..33 C each UTC day
@@ -209,6 +211,7 @@ def test_daily_summary_deterministic_local_days():
     assert days[-1]["partial"] is True  # only 00 h of the last day
 
 
+@pytest.mark.earthkit
 def test_daily_summary_ensemble_percentiles_of_member_highs_and_lows():
     members = {
         n: {"2t": [273.15 + n + (h % 24) for h in range(49)], "tp": [0.0] * 49}
@@ -221,6 +224,7 @@ def test_daily_summary_ensemble_percentiles_of_member_highs_and_lows():
     assert d0["members"] == 10
 
 
+@pytest.mark.earthkit
 def test_daily_summary_uses_the_local_calendar_day():
     temps = [273.15 + (30 if h == 23 else 0) for h in range(49)]  # spike at 23 UTC on day 1
     days = pt.daily_summary(_p({0: {"2t": temps, "tp": [0.0] * 49}}), tz="Europe/London")
@@ -228,6 +232,7 @@ def test_daily_summary_uses_the_local_calendar_day():
     assert {d["date"]: d["high_C"] for d in days}["2026-10-04"] == 30.0
 
 
+@pytest.mark.earthkit
 def test_shape_output_applies_tz_from_now_and_daily():
     p = _p({0: {"2t": [283.15] * 49, "tp": [0.0] * 49}})
     rows = [{"step": s, "valid_time": t} for s, t in zip(p["steps"], p["times"], strict=True)]

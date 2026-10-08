@@ -16,11 +16,12 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Polytope
 
 ## Contents
-- Access check (line 37)
-- Point forecast and ensemble workflow (line 56)
-- Other features (line 82)
-- Licence and attribution (line 92)
-- When blocked (line 99)
+- Access check (line 38)
+- Point forecast and ensemble workflow (line 57)
+- Other features (line 83)
+- Processing and plots (line 93)
+- Licence and attribution (line 101)
+- When blocked (line 108)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -88,6 +89,14 @@ Two rules the server enforces that most published examples get wrong:
 
 - **Omit `"format": "covjson"`** — the server rejects it; CoverageJSON comes back anyway.
 - **Points are `[lat, lon]`** with `"axes": ["latitude", "longitude"]`.
+
+## Processing and plots
+
+Point series and meteograms come from `ptpoint.py` and `ekplot.py meteogram`. For anything
+else — e.g. the CoverageJSON of profiles, polygons or routes, statistics or maps — use ECMWF's earthkit components, not hand-written
+numpy, matplotlib or cartopy code: to process or plot the data, load the `ecmwf-earthkit` skill
+before writing code. Its scripts and recipes cover ECMWF-styled maps (earthkit-plots), ensemble
+and time statistics (earthkit-transforms) and meteorological quantities (earthkit-meteo).
 
 ## Licence and attribution
 

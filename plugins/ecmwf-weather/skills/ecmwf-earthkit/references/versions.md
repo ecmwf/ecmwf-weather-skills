@@ -10,7 +10,7 @@ Only earthkit components with version ≥ 1.0 may be used (see SKILL.md). Regene
 
 | Package | Latest | ≥ 1.0 | Note |
 |---|---|---|---|
-| `earthkit-data` | 1.2.3 | yes |  |
+| `earthkit-data` | 1.2.4 | yes |  |
 | `earthkit-geo` | 1.1.2 | yes |  |
 | `earthkit-meteo` | 1.2.0 | yes |  |
 | `earthkit-utils` | 1.0.2 | yes |  |
@@ -18,9 +18,9 @@ Only earthkit components with version ≥ 1.0 may be used (see SKILL.md). Regene
 | `earthkit-plots` | 1.0.4 | yes |  |
 | `earthkit-hydro` | 1.4.0 | yes |  |
 | `earthkit-regrid` | 0.5.1 | no | use earthkit-geo |
-| `earthkit-time` | 0.1.8 | no |  |
+| `earthkit-time` | 0.1.8 | exception | Emerging — allowed exception, pin exactly |
 | `earthkit-climate` | 0.3.2 | no |  |
-| `earthkit-workflows` | 0.18.0 | no |  |
+| `earthkit-workflows` | 0.19.0 | no |  |
 | `thermofeel` | 2.3.0 | n/a | client library — the ≥ 1.0 rule applies to earthkit components only |
 | `ecmwf-opendata` | 0.3.34 | n/a | client library — the ≥ 1.0 rule applies to earthkit components only |
 | `polytope-client` | 0.7.10 | n/a | client library — the ≥ 1.0 rule applies to earthkit components only |

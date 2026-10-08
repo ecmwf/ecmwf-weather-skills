@@ -1,0 +1,106 @@
+# SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
+# SPDX-License-Identifier: Apache-2.0
+#
+# Draft upstream issues found while writing the earthkit recipes. NOT FILED — the maintainer
+# reviews each and approves filing (AGENTS.md "Upstream contributions").
+# Each entry's reproducer is <script>; tests/tooling/test_upstream_drafts.py checks the files.
+# status: draft | filed (add url) | fixed (add version)
+
+[[issue]]
+script = "meteo-wet-bulb-bisect-2d.py"
+repo = "ecmwf/earthkit-meteo"
+kind = "bug"
+status = "draft"
+title = "thermo.wet_bulb_temperature_from_dewpoint: default t_method='bisect' fails on 2-D input"
+expected = "Same result as t_method='newton' for 2-D/3-D numpy and xarray inputs."
+actual = "ValueError: operands could not be broadcast together with shapes (3,4) (12,)."
+suggestion = "The bisect path flattens one operand but not the others; reshape consistently (or apply np.broadcast_arrays first)."
+workaround = "Pass t_method='newton'."
+
+[[issue]]
+script = "meteo-scores-extra-name.py"
+repo = "ecmwf/earthkit-meteo"
+kind = "bug"
+status = "draft"
+title = "score: error message names a non-existent 'earthkit-meteo[score]' extra (it is [scores])"
+expected = "The message points to `pip install earthkit-meteo[scores]`."
+actual = "'The earthkit-meteo[score] extra is required ... pip install earthkit-meteo[score]'; pip then installs nothing extra."
+suggestion = "Fix the extra name in the RuntimeError message."
+workaround = "pip install 'earthkit-meteo[scores]'."
+
+[[issue]]
+script = "meteo-xarray-output-keeps-input-name.py"
+repo = "ecmwf/earthkit-meteo"
+kind = "bug"
+status = "draft"
+title = "xarray results keep the first input's name and long_name (relative humidity named '2t')"
+expected = "Output named and described for the computed quantity (e.g. name 'r', long_name 'relative humidity'), as the FieldList path already does."
+actual = "name '2t', long_name '2 metre temperature', units '%', standard_name 'relative_humidity'."
+suggestion = "Set name/long_name in the xarray dispatcher from the same metadata used for FieldList outputs."
+workaround = "Rename and reset attributes on the result."
+
+[[issue]]
+script = "plots-spaghetti-xarray.py"
+repo = "ecmwf/earthkit-plots"
+kind = "bug"
+status = "draft"
+title = "geo.spaghetti rejects an ensemble DataArray despite documenting xarray input; error message unformatted"
+expected = "One contour per member of a (member, latitude, longitude) DataArray, as for a FieldList."
+actual = "ValueError 'Invalid shape for selection ... got sizes {self.selection.shape}' (the f-string prefix is missing)."
+suggestion = "Iterate over the non-spatial dimension for xarray input; add the f prefix to the message."
+workaround = "Pass a FieldList (earthkit-data) instead of xarray."
+
+[[issue]]
+script = "plots-quickplot-doc-ekp-plot.py"
+repo = "ecmwf/earthkit-plots"
+kind = "bug"
+status = "draft"
+title = "quickplot docstring recommends ekp.plot(), which does not exist"
+expected = "The docstring points to an existing function (ekp.geo.plot)."
+actual = "AttributeError for ekp.plot — users and coding agents follow the docstring."
+suggestion = "Reference earthkit.plots.geo.plot, or add ekp.plot as an alias."
+workaround = "Use ekp.geo.plot."
+
+[[issue]]
+script = "plots-timeseries-quantiles-xarray.py"
+repo = "ecmwf/earthkit-plots"
+kind = "bug"
+status = "draft"
+title = "TimeSeries.quantiles fails on a (member, time) DataArray"
+expected = "Quantile bands over the member dimension."
+actual = "ValueError: 'x' is not 1-dimensional."
+suggestion = "Reduce over the non-time dimension before drawing (or accept dim=)."
+workaround = "Compute quantiles (earthkit-transforms) and use fill_between / envelope."
+
+[[issue]]
+script = "transforms-spatial-reduce-0-360.py"
+repo = "ecmwf/earthkit-transforms"
+kind = "bug"
+status = "draft"
+title = "spatial.reduce returns NaN for western-hemisphere polygons when longitudes run 0-360"
+expected = "The same mean as with -180..180 longitudes (1.0 in the reproducer)."
+actual = "NaN — ECMWF GRIB on 0..360 grids gives NaN for any polygon west of Greenwich."
+suggestion = "Normalise polygon or grid longitudes to the same convention before masking."
+workaround = "da.assign_coords(longitude=((da.longitude + 180) % 360) - 180).sortby('longitude')."
+
+[[issue]]
+script = "transforms-spatial-reduce-return-as-pandas.py"
+repo = "ecmwf/earthkit-transforms"
+kind = "bug"
+status = "draft"
+title = "spatial.reduce(..., return_as='pandas') crashes (return_as passed on to nanmean)"
+expected = "A pandas DataFrame, as documented."
+actual = "TypeError: nanmean() got an unexpected keyword argument 'return_as'."
+suggestion = "Pop return_as before forwarding kwargs to the reduction."
+workaround = "Reduce to xarray, then .to_dataframe()."
+
+[[issue]]
+script = "utils-convert-units-fieldlist-noop.py"
+repo = "ecmwf/earthkit-utils"
+kind = "bug"
+status = "draft"
+title = "units.convert_units on a FieldList silently returns the data unconverted"
+expected = "Converted values (or a clear error that FieldLists are unsupported)."
+actual = "Values unchanged; only a log warning."
+suggestion = "Support FieldList (convert values, update units metadata) or raise TypeError."
+workaround = "Convert xarray, or convert at plot time with earthkit-plots units=."

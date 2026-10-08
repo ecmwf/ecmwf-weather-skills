@@ -61,19 +61,26 @@ CAMS Europe forecast (ADS):
 
 ## Climate normals recipe
 
+ERA5 point series (`cds.py era5-point`, CSV with columns `valid_time, t2m, latitude,
+longitude`) straight into earthkit-transforms and earthkit-utils:
+
 ```python
 # /// script
-# dependencies = ["pandas>=2"]
+# dependencies = ["earthkit-transforms[all]>=1.0", "earthkit-utils>=1.0", "pandas>=2"]
 # ///
 import pandas as pd
-df = pd.read_csv("lisbon.csv", parse_dates=["valid_time"])     # from cds.py era5-point
-df["t2m_C"] = df["t2m"] - 273.15
-normals = df.groupby(df.valid_time.dt.month)["t2m_C"].agg(["mean", "min", "max"])
+from earthkit.transforms import climatology, temporal
+from earthkit.utils.units import convert_units
+
+da = pd.read_csv("lisbon.csv", parse_dates=["valid_time"]).set_index("valid_time")["t2m"]
+da = convert_units(da.to_xarray().assign_attrs(units="K"), "degC")
+daily_max = temporal.daily_max(da, time_dim="valid_time")
+normals = climatology.mean(da, frequency="month", time_dim="valid_time")   # 1991-2020 → normals
+print(daily_max.values, normals.values)
 ```
 
-For gridded NetCDF use `earthkit-transforms[all]` (`temporal.monthly_mean`,
-`climatology.mean`) — see the `ecmwf-earthkit` skill. Inspect CSV column names first; they follow the
-GRIB short names (`t2m`, `tp`).
+Anomalies: `climatology.anomaly(da, normals, frequency="month")`. Gridded NetCDF: read with
+earthkit-data and use the same functions — see the `ecmwf-earthkit` skill.
 
 ## Limits and queue
 
