@@ -11,6 +11,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Changed
+
+- The nine earthkit issues found while writing the recipes are filed upstream
+  (earthkit-meteo #212–#214, earthkit-plots #260–#262, earthkit-transforms #133–#134,
+  earthkit-utils #88); `docs/upstream/` records their URLs and the filing guide.
+
 ## [0.4.0] - 2026-10-08
 
 **earthkit first.** Agents were writing code that earthkit already provides — e.g. ensemble

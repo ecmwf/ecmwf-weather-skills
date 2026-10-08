@@ -51,14 +51,18 @@ def body(i: dict) -> str:
     )
 
 
+def _status(i: dict) -> str:
+    return f"[{i['status']}]({i['url']})" if i.get("url") else i["status"]
+
+
 def render(issues: list[dict]) -> str:
     rows = [
-        f"| {i['status']} | `{i['repo']}` | {i['title']} | [`{i['script']}`]({i['script']}) |"
+        f"| {_status(i)} | `{i['repo']}` | {i['title']} | [`{i['script']}`]({i['script']}) |"
         for i in issues
     ]
     parts = [
         HEADER,
-        "# Upstream earthkit issues — drafts",
+        "# Upstream earthkit issues",
         "",
         "Not filed. Each needs the maintainer's approval; then: "
         "`python3 scripts/upstream_drafts.py --body <script> | gh issue create -R <repo> "
@@ -73,7 +77,7 @@ def render(issues: list[dict]) -> str:
         parts += [
             f"## {i['title']}",
             "",
-            f"Repository: `{i['repo']}` · {i['kind']} · {i['status']}",
+            f"Repository: `{i['repo']}` · {i['kind']} · {_status(i)}",
             "",
             body(i),
             "",
