@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-08
+
 **earthkit first.** Agents were writing code that earthkit already provides — e.g. ensemble
 mean and spread maps drawn with cartopy and `.std("member")` instead of earthkit-transforms and
 earthkit-plots (ECMWF styles), or `- 273.15` instead of `units="celsius"`.
@@ -405,7 +407,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.2...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.2...0.4.0
 [0.3.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.2.3...0.3.0
