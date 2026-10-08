@@ -21,6 +21,7 @@ Verified against polytope.ecmwf.int; published docs and notebooks contain errors
 # /// script
 # dependencies = ["earthkit-data[polytope,covjsonkit]>=1.2"]
 # ///
+# needs credentials (not run by the tests)
 import earthkit.data as ekd
 ds = ekd.from_source("polytope", "ecmwf-mars", request, stream=False, address="polytope.ecmwf.int")
 ds.to_xarray()          # or json.load(open(ds.path)) for the raw CoverageJSON

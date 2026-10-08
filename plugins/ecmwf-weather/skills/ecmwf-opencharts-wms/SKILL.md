@@ -16,14 +16,15 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF maps — WMS, OpenCharts, web maps
 
 ## Contents
-- Choose the route (line 29)
-- Web map workflow (line 48)
-- WMS (line 65)
-- OpenCharts (line 83)
-- Rules the server enforces (line 89)
-- Access and tokens (line 100)
-- Attribution (line 106)
-- When blocked (line 115)
+- Choose the route (line 30)
+- Web map workflow (line 49)
+- WMS (line 66)
+- OpenCharts (line 84)
+- Rules the server enforces (line 90)
+- Access and tokens (line 101)
+- Processing and plots (line 107)
+- Attribution (line 115)
+- When blocked (line 124)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -102,6 +103,14 @@ The scripts handle these; when writing your own client code:
 `token=public` needs no account. Non-public layers need an ECMWF API key
 (`--token key` reads `ECMWF_API_KEY` or `~/.ecmwfapirc`; printed URLs are redacted). Never embed a
 personal key in a web page — `webmap.py` refuses; proxy through a server instead.
+
+## Processing and plots
+
+This skill shows ECMWF's pre-rendered maps. To draw your own maps from GRIB data, compute a
+field or plot a time series — use ECMWF's earthkit components, not hand-written
+numpy, matplotlib or cartopy code: to process or plot the data, load the `ecmwf-earthkit` skill
+before writing code. Its scripts and recipes cover ECMWF-styled maps (earthkit-plots), ensemble
+and time statistics (earthkit-transforms) and meteorological quantities (earthkit-meteo).
 
 ## Attribution
 

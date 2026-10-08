@@ -21,3 +21,10 @@ path = ["plugins/ecmwf-weather/assets/ecmwf-logo.svg", "plugins/ecmwf-weather/as
 precedence = "override"
 SPDX-FileCopyrightText = "European Centre for Medium-Range Weather Forecasts (ECMWF)"
 SPDX-License-Identifier = "LicenseRef-ECMWF-Logo"
+
+# Upstream issue reproducers are pasted verbatim into GitHub issues; kept header-free.
+[[annotations]]
+path = ["docs/upstream/*.py"]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 European Centre for Medium-Range Weather Forecasts (ECMWF)"
+SPDX-License-Identifier = "Apache-2.0"

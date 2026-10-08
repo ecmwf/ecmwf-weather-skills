@@ -19,9 +19,9 @@ SPDX-License-Identifier: Apache-2.0
 - Workflow (line 29)
 - ERA5 at a point (line 67)
 - CAMS air quality without a key (line 80)
-- Processing the download (line 87)
-- Attribution and citation (line 92)
-- When blocked (line 103)
+- Processing and plots (line 87)
+- Attribution and citation (line 97)
+- When blocked (line 108)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -84,10 +84,15 @@ CAMS forecasts are also served keyless as WMS layers: the `ecmwf-opencharts-wms`
 the value at a point (µg/m³); `wms.py layers --search pm10|ozone|dust|uv|pollen` lists others.
 Use ADS (`--store ads`) for downloads, history or variables not in the WMS.
 
-## Processing the download
+## Processing and plots
 
-NetCDF/GRIB: the `ecmwf-earthkit` skill (`earthkit-data` to read, `earthkit-transforms[all]` for
-daily/monthly statistics and climatologies). CSV time series: pandas is fine.
+ERA5, ERA5-Land and CAMS downloads are NetCDF, GRIB or CSV. Climate normals, anomalies, daily
+or monthly statistics, area means and maps — use ECMWF's earthkit components, not hand-written
+numpy, matplotlib or cartopy code: to process or plot the data, load the `ecmwf-earthkit` skill
+before writing code. Its scripts and recipes cover ECMWF-styled maps (earthkit-plots), ensemble
+and time statistics (earthkit-transforms) and meteorological quantities (earthkit-meteo).
+CSV point series: read with pandas, then the same earthkit-transforms functions (climate
+normals recipe in `references/datasets.md`).
 
 ## Attribution and citation
 

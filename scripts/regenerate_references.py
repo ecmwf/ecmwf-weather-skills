@@ -54,6 +54,8 @@ CLIENTS = [
     "cdsapi",
     "ecmwf-api-client",
 ]
+# Below 1.0 but allowed, pinned exactly: date logic nothing else covers.
+ALLOWED_EXCEPTIONS = {"earthkit-time": "Emerging — allowed exception, pin exactly"}
 DEPRECATED = {
     "earthkit-regrid": "use earthkit-geo",
     "earthkit-maps": "use earthkit-plots",
@@ -193,6 +195,8 @@ def render_versions(info: dict) -> str:
     for pkg, ver in info.items():
         if pkg.startswith("earthkit"):
             ok, note = ("yes" if _major(ver) >= 1 else "no"), DEPRECATED.get(pkg, "")
+            if pkg in ALLOWED_EXCEPTIONS:
+                ok, note = "exception", ALLOWED_EXCEPTIONS[pkg]
         else:
             ok = "n/a"
             note = "client library — the ≥ 1.0 rule applies to earthkit components only"

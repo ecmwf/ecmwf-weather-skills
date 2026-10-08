@@ -11,6 +11,7 @@
 #   "earthkit-geo>=1.1",
 #   "earthkit-meteo>=1.2",
 #   "earthkit-utils>=1.0",
+#   "earthkit-transforms[all]>=1.0",
 # ]
 # ///
 """Point forecast from ECMWF Open Data — nearest gridpoint time series.
@@ -43,6 +44,11 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # heavy; imported inside the functions that need it
+    import xarray as xr
+
 
 # Never write __pycache__ into the installed skill (it may be read-only, and skills must
 # not be modified); sibling scripts are imported below.
@@ -66,20 +72,69 @@ UNITS = {
 # --- pure helpers -------------------------------------------------------------------------------
 
 
-def deaccumulate(values_m: list[float], steps: list[int] | None = None) -> list[float | None]:
-    """Accumulated precipitation (m, since step 0) -> mm per interval since the previous step.
+def _hourly(values, hours) -> xr.DataArray:
+    """1-D series on a datetime axis, as earthkit-transforms expects (only spacing matters)."""
+    import numpy as np
+    import xarray as xr
 
-    If the series does not start at step 0 the first interval is unknown (its value covers the
-    whole run so far), so it is returned as None rather than a misleading total.
-    """
-    out: list[float | None] = []
-    prev = 0.0
-    for k, v in enumerate(values_m):
-        if k == 0 and steps is not None and steps[0] != 0:
-            out.append(None)
-        else:
-            out.append(round(max(0.0, (v - prev) * 1000.0), 2))
-        prev = v
+    t = np.datetime64("2000-01-01T00", "ns") + np.asarray(hours, "timedelta64[h]")
+    return xr.DataArray(np.asarray(values, float), dims=["valid_time"], coords={"valid_time": t})
+
+
+def deaccumulate_mm(values_m: list[float], steps: list[int] | None = None) -> list[float | None]:
+    """Accumulated precipitation (m since step 0) -> mm per interval since the previous step,
+    with earthkit-transforms. The first value is 0 at step 0; unknown (None) when the series
+    starts later (its value covers the whole run so far)."""
+    from earthkit.transforms import temporal
+
+    steps = list(range(len(values_m))) if steps is None else steps
+    first = 0.0 if steps[0] == 0 else None
+    if len(values_m) < 2:
+        return [first]
+    d = temporal.deaccumulate(_hourly(values_m, steps)).values * 1000.0
+    return [first, *(round(max(0.0, float(v)), 2) for v in d)]
+
+
+def deaccumulate(values_m: list[float], steps: list[int] | None = None) -> list[float | None]:
+    return deaccumulate_mm(values_m, steps)
+
+
+def daily_from_rows(rows: list[dict], zone) -> list[dict]:
+    """Per local day high/low (°C) and precipitation (mm) with earthkit-transforms."""
+    import numpy as np
+    import xarray as xr
+    from earthkit.transforms import temporal
+
+    local = [_utc(r["valid_time"]).astimezone(zone) for r in rows]
+    axis = np.array([t.replace(tzinfo=None) for t in local], dtype="datetime64[ns]")
+
+    def series(key):
+        vals = [np.nan if r.get(key) is None else r[key] for r in rows]
+        return xr.DataArray(
+            np.asarray(vals, float), dims=["valid_time"], coords={"valid_time": axis}
+        )
+
+    stats = {}
+    if any(r.get("t2m_C") is not None for r in rows):
+        t = series("t2m_C")
+        stats["high_C"] = temporal.daily_max(t, time_dim="valid_time")
+        stats["low_C"] = temporal.daily_min(t, time_dim="valid_time")
+    if any(r.get("precip_mm") is not None for r in rows):
+        stats["precip_mm"] = temporal.daily_sum(
+            series("precip_mm").fillna(0.0), time_dim="valid_time"
+        )
+    out = []
+    for d in sorted({t.date() for t in local}):
+        on_day = [t for t in local if t.date() == d]
+        day = {
+            "date": d.isoformat(),
+            "partial": (on_day[-1] - on_day[0]).total_seconds() / 3600 < 18,
+        }
+        key = np.datetime64(d.isoformat(), "ns")
+        for name, da in stats.items():
+            if key in da["valid_time"].values:
+                day[name] = round(float(da.sel(valid_time=key)), 1)
+        out.append(day)
     return out
 
 
@@ -162,21 +217,7 @@ def shape_output(
             r["local_time"] = _utc(r["valid_time"]).astimezone(zone).isoformat(timespec="minutes")
         out["timezone"] = tz
     if daily:
-        by_day: dict = {}
-        for r in rows:
-            t = _utc(r["valid_time"]).astimezone(zone)
-            by_day.setdefault(t.date(), []).append((t, r))
-        out["daily"] = []
-        for d, items in sorted(by_day.items()):
-            temps = [r["t2m_C"] for _, r in items if r.get("t2m_C") is not None]
-            rain = [r["precip_mm"] for _, r in items if r.get("precip_mm") is not None]
-            span = (items[-1][0] - items[0][0]).total_seconds() / 3600
-            day = {"date": d.isoformat(), "partial": span < 18}
-            if temps:
-                day["high_C"], day["low_C"] = max(temps), min(temps)
-            if rain:
-                day["precip_mm"] = round(sum(rain), 1)
-            out["daily"].append(day)
+        out["daily"] = daily_from_rows(rows, zone)
     now = now or datetime.now(UTC)
     end = now + timedelta(hours=next_hours) if next_hours else None
     if from_now or next_hours:

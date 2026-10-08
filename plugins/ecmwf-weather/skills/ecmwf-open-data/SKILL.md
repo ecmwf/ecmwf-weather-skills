@@ -16,14 +16,15 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Open Data
 
 ## Contents
-- Scripts (line 33)
-- Point forecast workflow (line 53)
-- Facts to get right (line 74)
-- Dependencies — earthkit first (line 90)
-- Credentials and better routes (line 104)
-- Attribution (line 119)
-- When blocked (line 128)
-- Old patterns (line 148)
+- Scripts (line 34)
+- Point forecast workflow (line 54)
+- Facts to get right (line 75)
+- Dependencies — earthkit first (line 91)
+- Credentials and better routes (line 105)
+- Processing and plots (line 120)
+- Attribution (line 128)
+- When blocked (line 137)
+- Old patterns (line 157)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -115,6 +116,14 @@ Open Data needs none. If the user has better access, say once what it would add:
 Check presence only; never print key values. If a route would clearly help and its key is
 missing, mention it once and offer step-by-step instructions — the owning skill prints them
 (`cds.py setup`, `mars.py setup`, `ptpoint.py --setup`, `destine.py setup`).
+
+## Processing and plots
+
+Point forecasts and meteograms come from this skill's scripts. For anything else you compute
+or plot from the downloaded GRIB — maps, statistics, derived quantities, regridding — use ECMWF's earthkit components, not hand-written
+numpy, matplotlib or cartopy code: to process or plot the data, load the `ecmwf-earthkit` skill
+before writing code. Its scripts and recipes cover ECMWF-styled maps (earthkit-plots), ensemble
+and time statistics (earthkit-transforms) and meteorological quantities (earthkit-meteo).
 
 ## Attribution
 

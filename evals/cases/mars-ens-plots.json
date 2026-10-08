@@ -1,0 +1,34 @@
+{
+  "id": "mars-ens-plots",
+  "prompt": "ens.grib2 is IFS ENS 2 m temperature that I retrieved from MARS for yesterday's 00 UTC run (all members, over Europe). Make the ensemble mean and standard deviation plots and save them as mean.png and std.png.",
+  "setup": {
+    "copy": {
+      "tests/fixtures/ifs-ens-2t-5members-5deg.grib2": "ens.grib2"
+    }
+  },
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "note": "Maintainer report: after a MARS retrieval, agents plotted with cartopy directly; processing and plots must go through the ecmwf-earthkit skill.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-earthkit"
+    },
+    {
+      "kind": "command",
+      "pattern": "ekplot\\.py\\s+ens-stats|earthkit\\.transforms"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "\\.(mean|std)\\(\\s*(dim\\s*=\\s*)?['\"]?(member|number|mem)\\b|np\\.(nan)?(mean|std)\\(|273\\.15|plt\\.contourf|(?<![\\w])ax\\.contourf|add_feature\\("
+    },
+    {
+      "kind": "file",
+      "pattern": "mean.png"
+    },
+    {
+      "kind": "file",
+      "pattern": "std.png"
+    }
+  ]
+}

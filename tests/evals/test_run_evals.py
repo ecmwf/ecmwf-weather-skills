@@ -384,3 +384,112 @@ def test_agent_that_exits_without_doing_anything_is_an_error():
     worked = {"skills": set(), "commands": ["ls"], "final": "", "error": None}
     re_.note_startup_failure(worked, 1, "boom")
     assert worked["error"] is None
+
+
+def test_code_written_to_files_is_graded():
+    claude = "\n".join(
+        json.dumps(x)
+        for x in [
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Write",
+                            "input": {
+                                "file_path": "/w/rh.py",
+                                "content": "from earthkit.meteo import thermo\n",
+                            },
+                        }
+                    ]
+                },
+            },
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Edit",
+                            "input": {
+                                "file_path": "/w/rh.py",
+                                "old_string": "x",
+                                "new_string": "t - 273.15",
+                            },
+                        }
+                    ]
+                },
+            },
+        ]
+    )
+    t = re_.parse_transcript("claude", claude)
+    assert "earthkit.meteo" in t["code"] and "273.15" in t["code"]
+    r = re_.grade(
+        t,
+        [
+            {"kind": "command", "pattern": r"earthkit\.meteo"},
+            {"kind": "command_not", "pattern": r"273\.15"},
+        ],
+    )
+    assert [x["ok"] for x in r] == [True, False]
+
+
+def test_codex_patches_are_read_from_its_session_log(tmp_path):
+    wd = tmp_path / "work"
+    log = tmp_path / "sessions" / "2026" / "10" / "08" / "rollout-1.jsonl"
+    log.parent.mkdir(parents=True)
+    log.write_text(
+        "\n".join(
+            json.dumps(x)
+            for x in [
+                {"type": "session_meta", "payload": {"cwd": str(wd)}},
+                {
+                    "type": "response_item",
+                    "payload": {
+                        "type": "custom_tool_call",
+                        "name": "exec",
+                        "input": (
+                            'const patch = "*** Begin Patch\\n*** Add File: m.py\\n'
+                            '+from earthkit.transforms import ensemble\\n";'
+                        ),
+                    },
+                },
+                {
+                    "type": "response_item",
+                    "payload": {
+                        "type": "custom_tool_call",
+                        "name": "exec",
+                        "input": 'const r = await tools.exec_command({cmd:"ls"});',
+                    },
+                },
+            ]
+        )
+    )
+    code = re_.codex_written_code(wd, sessions=tmp_path / "sessions")
+    assert "earthkit.transforms" in code and "exec_command" not in code
+    assert re_.codex_written_code(tmp_path / "other", sessions=tmp_path / "sessions") == ""
+
+
+def test_opencode_write_tool_content_is_code():
+    raw = json.dumps(
+        {
+            "type": "tool_use",
+            "part": {
+                "type": "tool",
+                "tool": "write",
+                "state": {
+                    "input": {"filePath": "/w/a.py", "content": "import earthkit.plots as ekp\n"}
+                },
+            },
+        }
+    )
+    assert "earthkit.plots" in re_.parse_transcript("opencode", raw)["code"]
+
+
+def test_case_cleanup_removes_skill_copies_but_keeps_outputs(tmp_path):
+    plugin = re_.plugin_copy(tmp_path / "plugin")
+    wd = re_.prepare_workdir("opencode", {"id": "c"}, plugin)
+    (wd / "out.png").write_bytes(b"x")
+    re_.cleanup_case(plugin, wd)
+    assert not plugin.exists() and not (wd / ".agents").exists() and (wd / "out.png").exists()

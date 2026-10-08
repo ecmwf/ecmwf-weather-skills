@@ -1,0 +1,42 @@
+{
+  "id": "ek-ensemble-maps",
+  "prompt": "ens.grib2 in this folder holds ECMWF IFS ENS 2 m temperature members. Make an ensemble mean map and an ensemble standard deviation map over Europe and save them as ens_mean.png and ens_std.png.",
+  "setup": {
+    "copy": {
+      "tests/fixtures/ifs-ens-2t-5members-5deg.grib2": "ens.grib2"
+    }
+  },
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "note": "Reproduces maintainer feedback: agents drew ensemble maps with cartopy/matplotlib by hand instead of earthkit-transforms (statistics) and earthkit-plots (ECMWF styles).",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-earthkit"
+    },
+    {
+      "kind": "command",
+      "pattern": "ekplot\\.py\\s+ens-stats|earthkit\\.transforms"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "\\.(mean|std)\\(\\s*(dim\\s*=\\s*)?['\"]?(member|number|mem)\\b|np\\.(nan)?(mean|std)\\("
+    },
+    {
+      "kind": "command_not",
+      "pattern": "273\\.15|plt\\.contourf|(?<![\\w])ax\\.contourf|(?<![\\w])ax\\.pcolormesh|add_feature\\("
+    },
+    {
+      "kind": "command_not",
+      "pattern": "pip3? install"
+    },
+    {
+      "kind": "file",
+      "pattern": "ens_mean.png"
+    },
+    {
+      "kind": "file",
+      "pattern": "ens_std.png"
+    }
+  ]
+}

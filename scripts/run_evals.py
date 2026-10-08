@@ -43,7 +43,9 @@ def _skills_from_text(text: str) -> set[str]:
 
 
 def parse_transcript(agent: str, raw: str) -> dict:
-    t = {"skills": set(), "commands": [], "final": "", "cost_usd": None, "error": None}
+    # "code": text the agent wrote into files — graded with commands, since agents often put
+    # their code in a file and only run `uv run x.py` in the shell.
+    t = {"skills": set(), "commands": [], "code": "", "final": "", "cost_usd": None, "error": None}
     for line in raw.splitlines():
         try:
             ev = json.loads(line)
@@ -60,6 +62,13 @@ def parse_transcript(agent: str, raw: str) -> dict:
                     elif c.get("name") == "Bash":
                         t["commands"].append(inp.get("command", ""))
                         t["skills"] |= _skills_from_text(inp.get("command", ""))
+                    elif c.get("name") in ("Write", "Edit", "MultiEdit"):
+                        t["code"] += "\n" + str(
+                            inp.get("content")
+                            or inp.get("new_string")
+                            or json.dumps(inp.get("edits", ""))
+                        )
+                        t["skills"] |= _skills_from_text(json.dumps(inp))
                     else:
                         t["skills"] |= _skills_from_text(json.dumps(inp))
             elif ev.get("type") == "result":
@@ -82,6 +91,10 @@ def parse_transcript(agent: str, raw: str) -> dict:
                 inp = part.get("state", {}).get("input", {})
                 if part.get("tool") == "skill":
                     t["skills"].add(str(inp.get("name", "")))
+                elif part.get("tool") in ("write", "edit", "apply_patch"):
+                    t["code"] += "\n" + str(
+                        inp.get("content") or inp.get("newString") or inp.get("patchText") or ""
+                    )
                 elif part.get("tool") == "bash":
                     # opencode passes the directory separately; keep it with the command
                     wd = inp.get("workdir")
@@ -131,7 +144,8 @@ def grade(t: dict, expect: list[dict], workdir: Path | None = None) -> list[dict
     out = []
     # Agents quote paths ("$DIR/cds.py" check) and keep script paths in shell variables
     # (S=.../mars.py; python3 $S lint) — match on the expanded command without quotes.
-    cmds = expand_shell_vars("\n".join(t["commands"])).replace('"', "").replace("'", "")
+    text = "\n".join([*t["commands"], t.get("code", "")])
+    cmds = expand_shell_vars(text).replace('"', "").replace("'", "")
     for e in expect:
         k = e["kind"]
         if k == "skill":
@@ -204,6 +218,40 @@ def note_startup_failure(t: dict, rc: int, stderr: str) -> dict:
         lines = [ln for ln in (stderr or "").strip().splitlines() if ln.strip()]
         t["error"] = (lines[0] if lines else f"agent exited with code {rc}")[:300]
     return t
+
+
+CODEX_SESSIONS = Path.home() / ".codex" / "sessions"
+
+
+def codex_written_code(workdir: Path, sessions: Path = CODEX_SESSIONS) -> str:
+    """File edits Codex made in `workdir`. Its --json stream reports only that a file changed;
+    the patch text is in Codex's own session log, matched by working directory."""
+    out = []
+    for log in sorted(Path(sessions).rglob("rollout-*.jsonl"), reverse=True)[:400]:
+        lines = log.read_text(errors="ignore").splitlines()
+        if not lines or str(workdir) not in lines[0]:
+            continue
+        for line in lines:
+            try:
+                p = json.loads(line).get("payload", {})
+            except json.JSONDecodeError:
+                continue
+            body = p.get("input") or p.get("arguments") or ""
+            if isinstance(body, str) and "*** Begin Patch" in body:
+                out.append(body.encode().decode("unicode_escape", errors="ignore"))
+        break
+    return "\n".join(out)
+
+
+def cleanup_case(plugin: Path, workdir: Path) -> None:
+    """After grading: remove the case's skill copies so later agents searching the filesystem
+    can never find stale skills; keep the workdir's outputs for inspection."""
+    shutil.rmtree(
+        plugin.parent if plugin.parent.name.startswith("ecmwf-eval-plugin-") else plugin,
+        ignore_errors=True,
+    )
+    for d in (".agents", ".gemini"):
+        shutil.rmtree(workdir / d, ignore_errors=True)
 
 
 def summary_line(results: list[dict]) -> str:
@@ -326,7 +374,10 @@ def run_case(agent: str, case: dict, outdir: Path, model: str | None, attempt: i
     if err:
         (outdir / f"{name}.stderr").write_text(err)
     t = note_startup_failure(parse_transcript(agent, raw), rc, err)
+    if agent == "codex":
+        t["code"] += codex_written_code(wd)
     results = grade(t, case["expect"], wd)
+    cleanup_case(plugin, wd)
     return {
         "id": case["id"],
         "agent": agent,

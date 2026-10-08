@@ -16,12 +16,13 @@ SPDX-License-Identifier: Apache-2.0
 # Destination Earth Digital Twins
 
 ## Contents
-- Access check (line 33)
-- No access yet (line 46)
-- Request workflow (line 62)
-- Which server holds the data (line 84)
-- Licence and attribution (line 95)
-- When blocked (line 104)
+- Access check (line 34)
+- No access yet (line 47)
+- Request workflow (line 63)
+- Which server holds the data (line 85)
+- Processing and plots (line 96)
+- Licence and attribution (line 104)
+- When blocked (line 113)
 - References — `references/requests.md` (keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -91,6 +92,14 @@ when `check` finds no token, and give its output.
 | Some Climate DT Generation 1 data | `polytope.leonardo.apps.dte.destination-earth.eu` |
 
 `destine.py request` picks the server automatically; always state it with the request.
+
+## Processing and plots
+
+DestinE returns GRIB (or CoverageJSON for features). Statistics, climate indicators, maps and
+time series — use ECMWF's earthkit components, not hand-written
+numpy, matplotlib or cartopy code: to process or plot the data, load the `ecmwf-earthkit` skill
+before writing code. Its scripts and recipes cover ECMWF-styled maps (earthkit-plots), ensemble
+and time statistics (earthkit-transforms) and meteorological quantities (earthkit-meteo).
 
 ## Licence and attribution
 

@@ -200,6 +200,7 @@ MIXED = {
 }
 
 
+@pytest.mark.earthkit
 def test_precipitation_is_a_rate_over_each_interval():
     m = load_script("ecmwf-earthkit", "ekplot")
     bars = m.precip_bars(MIXED)
@@ -210,6 +211,7 @@ def test_precipitation_is_a_rate_over_each_interval():
     assert "mm/h" in p["precip_mm"]["title"] + p["precip_mm"]["units"]
 
 
+@pytest.mark.earthkit
 def test_precipitation_rate_band_for_ensembles():
     m = load_script("ecmwf-earthkit", "ekplot")
     bars = m.precip_bars(ENS_JSON)
@@ -237,3 +239,73 @@ def test_meteogram_local_time_axis(tmp_path):
     pj = {**MIXED, "timezone": "Europe/London"}
     fig = m.plot_meteogram(pj, str(tmp_path / "m.png"))
     assert "Europe/London" in fig.axes[-1].get_xlabel()
+
+
+ENS = FIXTURES / "ifs-ens-2t-5members-5deg.grib2"
+
+
+@pytest.mark.earthkit
+def test_ens_stats_mean_and_spread_maps(tmp_path):
+    out = uv(
+        "ekplot.py",
+        "ens-stats",
+        ENS,
+        "--param",
+        "2t",
+        "--domain",
+        "Europe",
+        "--units",
+        "celsius",
+        "-o",
+        tmp_path / "ens.png",
+    )
+    assert out.returncode == 0, out.stderr
+    for f in ("ens_mean.png", "ens_std.png"):
+        assert (tmp_path / f).read_bytes()[:4] == b"\x89PNG", f
+    assert "members: 5" in out.stdout and "earthkit-transforms" in out.stdout
+
+
+@pytest.mark.earthkit
+def test_ens_stats_percentile_and_panel(tmp_path):
+    out = uv(
+        "ekplot.py",
+        "ens-stats",
+        ENS,
+        "--param",
+        "2t",
+        "--stats",
+        "mean,std,p90",
+        "--panel",
+        "-o",
+        tmp_path / "all.png",
+    )
+    assert out.returncode == 0, out.stderr
+    assert (tmp_path / "all.png").read_bytes()[:4] == b"\x89PNG"
+
+
+def test_ens_stats_output_names():
+    m = load_script("ecmwf-earthkit", "ekplot")
+    assert m.stat_outputs("ens.png", ["mean", "std"]) == {
+        "mean": "ens_mean.png",
+        "std": "ens_std.png",
+    }
+    assert m.parse_stats("mean,std,p10,p90") == [
+        ("mean", None),
+        ("std", None),
+        ("p10", 10),
+        ("p90", 90),
+    ]
+    with pytest.raises(ValueError):
+        m.parse_stats("median")
+
+
+def test_spread_is_labelled_as_spread():
+    m = load_script("ecmwf-earthkit", "ekplot")
+    assert (
+        m.stat_label("std", "2 metre temperature")
+        == "2 metre temperature — ensemble standard deviation"
+    )
+    assert (
+        m.stat_label("p90", "2 metre temperature")
+        == "2 metre temperature — ensemble 90th percentile"
+    )

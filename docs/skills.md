@@ -55,7 +55,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md`](../plugins/ec
 
 ## `ecmwf-earthkit`
 
-Handles any local GRIB (.grib, .grib2) or NetCDF (.nc) file — load this skill first, before trying xarray, cfgrib, eccodes, grib_ls or pip. Reads, inspects, processes and plots them with ECMWF's earthkit Python components (earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, earthkit-transforms, earthkit-plots), installing only what each task needs. Use for any GRIB or NetCDF file the user has — what's in it, which parameters, levels and steps, a map of a field from it, a meteogram, conversion to xarray or pandas, nearest gridpoint, regridding, wind speed, relative humidity, dewpoint, thermal-comfort indices, unit conversion, daily or country aggregation Also use when GRIB fails to decode, eccodes is missing, or earthkit 0.x code breaks on 1.x.
+Processes, computes and plots ECMWF weather and climate data with ECMWF's earthkit components — load it before writing ANY numpy, xarray, pandas, matplotlib or cartopy code for weather data, and for any local GRIB (.grib, .grib2) or NetCDF file. Covers reading and selecting fields (earthkit-data), ECMWF-styled maps, multi-panel figures, meteograms and plumes (earthkit-plots), ensemble mean/spread/percentiles, daily and monthly statistics, de-accumulation, climatologies, anomalies and area or country means (earthkit-transforms), wind, humidity, dewpoint, potential temperature, wet bulb, EFI and scores (earthkit-meteo), regridding, nearest gridpoint and country shapes (earthkit-geo), rivers and catchments (earthkit-hydro), unit conversion (earthkit-utils) and hindcast dates (earthkit-time). Also when earthkit code fails or lacks a feature — offers to report it upstream, only with approval.
 
 **Requirements:** Skill instructions are provider-neutral. Scripts use uv (PEP 723 inline dependencies) on Linux or macOS; earthkit ships eccodes as binary wheels, so no system install is needed. No Windows wheels — use WSL.
 
@@ -68,8 +68,9 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-earthkit/SKILL.md`](../plugins/e
 
 | Reference | Purpose |
 |---|---|
-| `references/pitfalls.md` | earthkit 1.x pitfalls (verified against earthkit-data 1.2.3, plots 1.0.4) |
-| `references/recipes.md` | earthkit recipes (1.x) |
+| `references/pitfalls.md` | earthkit 1.x pitfalls and known issues |
+| `references/recipes.md` | earthkit recipes (1.x, every block is executed by the test suite) |
+| `references/upstream.md` | Reporting earthkit bugs and contributing features |
 | `references/versions.md` | earthkit components and ECMWF clients — latest versions |
 
 ## `ecmwf-mars`

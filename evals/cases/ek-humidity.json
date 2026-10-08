@@ -1,0 +1,29 @@
+{
+  "id": "ek-humidity",
+  "prompt": "forecast.grib2 has ECMWF 2 m temperature and 2 m dewpoint. Compute the 2 m relative humidity and save a global map of it as rh.png.",
+  "setup": {
+    "copy": {
+      "tests/fixtures/ifs-2t-2d-5deg.grib2": "forecast.grib2"
+    }
+  },
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-earthkit"
+    },
+    {
+      "kind": "command",
+      "pattern": "earthkit\\.meteo|thermo\\.relative_humidity"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "17\\.62|243\\.12|17\\.27|237\\.3|6\\.112|6\\.1078|273\\.15|plt\\.contourf|(?<![\\w])ax\\.contourf"
+    },
+    {
+      "kind": "file",
+      "pattern": "rh.png"
+    }
+  ]
+}

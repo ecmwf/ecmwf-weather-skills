@@ -65,6 +65,7 @@ fmt: ## Apply ruff formatting, safe fixes, and refresh SKILL.md Contents line nu
 check: ## Consistency: manifests/versions, generated docs, plugin manifest (if claude CLI present)
 	$(PY) scripts/validate_packaging.py
 	$(PY) scripts/gen_docs.py --check
+	$(PY) scripts/upstream_drafts.py --check
 	@if command -v claude >/dev/null 2>&1; then claude plugin validate . ; \
 	 else echo "claude CLI not found — skipping 'claude plugin validate'"; fi
 
@@ -88,8 +89,9 @@ evals: ## Fresh-agent skill evals: AGENT=claude|codex|gemini MODEL=… CASES="id
 
 # ── Generated artefacts ──────────────────────────────────────────────────────
 
-docs: ## Regenerate docs/skills.md from every SKILL.md
+docs: ## Regenerate docs/skills.md and docs/upstream/README.md
 	$(PY) scripts/gen_docs.py
+	$(PY) scripts/upstream_drafts.py
 
 references: ## Regenerate references from live ECMWF catalogues (network)
 	$(PY) scripts/regenerate_references.py
