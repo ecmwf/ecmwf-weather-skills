@@ -5,7 +5,7 @@ compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scri
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.3.2"
+  version: "0.4.0"
 ---
 
 <!--
