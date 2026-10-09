@@ -6,6 +6,7 @@ import json
 import subprocess
 import sys
 
+import pytest
 from conftest import FIXTURES, SKILLS, load_script
 
 mars = load_script("ecmwf-mars", "mars")
@@ -385,3 +386,149 @@ def test_class_rr_needs_an_origin():
     req = {k: v for k, v in CERRA.items() if k != "origin"}
     errs = "\n".join(mars.lint(req)["errors"])
     assert "origin" in errs and "se-al-ec" in errs and "no-ar-cw" in errs
+
+
+CERRA_ENS = {**CERRA, "stream": "enda", "number": "0/to/9", "time": "00"}
+
+
+def test_cerra_ensemble_uses_its_own_grid():
+    e = mars.estimate(CERRA_ENS)
+    assert e["fields"] == 10 and e["points_per_field"] == 565 * 565
+
+
+def test_cerra_ensemble_needs_number():
+    # Without number MARS finds 10 fields and fails: "Expected 1, got 10".
+    req = {k: v for k, v in CERRA_ENS.items() if k != "number"}
+    assert any("number" in x for x in mars.lint(req)["errors"])
+    assert mars.lint(CERRA_ENS)["errors"] == []
+
+
+def test_cerra_ensemble_area_message_names_the_ensemble_grid():
+    errs = "\n".join(mars.lint({**CERRA_ENS, "area": "50/0/40/10"})["errors"])
+    assert "11 km" in errs and "ensemble" in errs
+
+
+def test_values_are_case_insensitive():
+    up = {**CERRA, "class": "RR", "type": "FC", "step": "6"}
+    r = mars.lint(up)
+    assert not any("not a common archive" in w for w in r["warnings"])
+    no_step = {k: v for k, v in up.items() if k != "step"}
+    assert any("step" in x for x in mars.lint(no_step)["errors"])
+
+
+def test_metkit_check_returns_none_without_pymetkit(monkeypatch):
+    monkeypatch.setitem(sys.modules, "pymetkit", None)  # import raises ImportError
+    assert mars.metkit_check("retrieve, class=od") is None
+
+
+def test_lint_says_values_were_not_checked_without_metkit(monkeypatch):
+    monkeypatch.setattr(mars, "metkit_check", lambda text: None)
+    r = mars.lint_with_metkit(CERRA)
+    assert r["metkit"] == "not installed"
+    assert "pymetkit" in r["metkit_hint"]
+
+
+def test_metkit_errors_are_added_and_shortened(monkeypatch):
+    long = "TypeMixed[name=levtype]: cannot expand 'xyz' " + "x" * 500
+    monkeypatch.setattr(mars, "metkit_check", lambda text: [mars._short(long)])
+    r = mars.lint_with_metkit({**CERRA, "levtype": "xyz"})
+    assert any(e.startswith("TypeMixed") and len(e) <= mars.METKIT_MAX for e in r["errors"])
+    assert r["metkit"] == "checked"
+
+
+METKIT = ["uv", "run", "--quiet", "--no-project", "--with", "pymetkit>=1.19,<2", "python3"]
+
+
+@pytest.mark.earthkit
+@pytest.mark.parametrize(
+    "req,needle",
+    [
+        (
+            "retrieve, class=od, stream=oper, type=an, levtype=xyz, param=2t, date=2024-01-01, "
+            "time=00",
+            "levtype",
+        ),
+        (
+            "retrieve, class=od, stream=oper, type=an, levtype=sfc, param=notaparam, "
+            "date=2024-01-01, time=00",
+            "notaparam",
+        ),
+        (
+            "retrieve, class=od, stream=oper, type=an, levtype=sfc, param=2t, date=2024-02-30, "
+            "time=00",
+            "20240230",
+        ),
+    ],
+)
+def test_lint_with_pymetkit_catches_bad_values(req, needle):
+    script = SKILLS / "ecmwf-mars" / "scripts" / "mars.py"
+    out = subprocess.run(
+        [*METKIT, str(script), "lint", req, "--json"], capture_output=True, text=True, timeout=600
+    )
+    r = json.loads(out.stdout)  # stdout stays clean JSON despite libeckit's C-level output
+    assert out.returncode == 2 and r["metkit"] == "checked"
+    assert any(e.startswith("metkit:") and needle in e for e in r["errors"]), r["errors"]
+
+
+@pytest.mark.earthkit
+def test_lint_with_pymetkit_accepts_valid_requests():
+    script = SKILLS / "ecmwf-mars" / "scripts" / "mars.py"
+    for req in (
+        "retrieve, class=rr, origin=se-al-ec, stream=enda, type=an, expver=prod, levtype=sfc, "
+        "param=2t, date=2010-01-01, time=00, number=0/to/9, area=50/0/40/10, grid=0.1/0.1",
+        "retrieve, class=od, stream=oper, type=fc, expver=1, levtype=sfc, param=2t/10u/10v, "
+        "date=2024-03-01/to/2024-03-31, time=00, step=0/to/72/by/6, grid=0.25/0.25, "
+        "area=72/-25/30/45",
+    ):
+        out = subprocess.run(
+            [*METKIT, str(script), "lint", req, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        r = json.loads(out.stdout)
+        assert out.returncode == 0 and r["metkit"] == "checked", r["errors"]
+
+
+def test_interrupted_retrieve_deletes_the_server_job(monkeypatch, tmp_path):
+    # ecmwf-api-client deletes its job only after a normal finish; an interrupted client
+    # (Ctrl-C, or SIGTERM from a timeout) leaves it queued and blocks the user's next requests.
+    import types
+
+    deleted = []
+
+    class Connection:
+        def __init__(self, *a, **k):
+            self.location = "https://api.ecmwf.int/v1/services/mars/requests/abc"
+
+        def cleanup(self):
+            deleted.append(self.location)
+
+    api = types.ModuleType("ecmwfapi.api")
+    api.Connection = Connection
+    pkg = types.ModuleType("ecmwfapi")
+    pkg.api = api
+
+    def from_source(name, req):
+        Connection()
+        raise KeyboardInterrupt
+
+    ekd = types.ModuleType("earthkit.data")
+    ekd.from_source = from_source
+    ek = types.ModuleType("earthkit")
+    ek.data = ekd
+    monkeypatch.setitem(sys.modules, "ecmwfapi", pkg)
+    monkeypatch.setitem(sys.modules, "ecmwfapi.api", api)
+    monkeypatch.setitem(sys.modules, "earthkit", ek)
+    monkeypatch.setitem(sys.modules, "earthkit.data", ekd)
+    with pytest.raises(KeyboardInterrupt):
+        mars.retrieve(CERRA, str(tmp_path / "x.grib"))
+    assert deleted == ["https://api.ecmwf.int/v1/services/mars/requests/abc"]
+    assert Connection.__init__.__name__ == "__init__"  # patch removed afterwards
+
+
+def test_sigterm_becomes_an_interrupt():
+    import signal
+
+    with pytest.raises(KeyboardInterrupt):
+        mars._interrupt(signal.SIGTERM, None)

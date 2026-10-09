@@ -57,6 +57,8 @@ Lists `a/b/c`, ranges `a/to/b`, steps `a/to/b/by/n`. Dates `YYYY-MM-DD`, `YYYYMM
   `origin` per product (`no-ar-cw`, `no-ar-ce`, `no-ar-pa`, `se-al-ec`, `fr-ms-ec`); 3-hourly
   analyses, forecasts to `step=30` from 00/12 UTC. Native Lambert grids (CARRA-West 1069×1269,
   CARRA-East 789×989, CERRA 1069×1069) — `area` only with `grid`.
+- CERRA ensemble (CERRA-EDA): `origin=se-al-ec, stream=enda, type=an|fc, number=0/to/9` (always
+  give `number`); 565×565 at 11 km, `time=00/06/12/18`, forecasts `step=1/to/6`.
 
 ## Example requests
 

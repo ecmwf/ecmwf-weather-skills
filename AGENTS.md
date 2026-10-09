@@ -332,6 +332,9 @@ expectations are meaningful for it.
 - Agents `cd` into skills and write files there: the harness runs each case on a private copy
   of the plugin, and every skill says where files go.
 
+- Queued services outlive the agent: a killed MARS or CDS client can leave its job on the
+  server, and the user's later requests (and later eval cases) wait behind it. A case that times
+  out on a queue is not a skill failure — check the account's queue before blaming the skill.
 - Passing is not enough: count the ad-hoc code capable models write around the tools
   (`cat > x.py`, `python3 - <<`, `uv run --with`). Every recurring workaround is a missing
   script feature — add it, then re-measure.

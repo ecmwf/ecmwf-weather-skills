@@ -1,0 +1,25 @@
+{
+  "id": "mars-lint-metkit",
+  "prompt": "Is this MARS request valid? Don't submit it.\n\nretrieve, class=od, stream=oper, type=an, expver=1, levtype=sfc, param=2m_temperature, date=2024-02-30, time=00",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "note": "Two value errors only the MARS language check (pymetkit) finds: the CDS name 2m_temperature (MARS: 2t / 167) and an impossible date.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-mars"
+    },
+    {
+      "kind": "command",
+      "pattern": "pymetkit"
+    },
+    {
+      "kind": "final",
+      "pattern": "\\b2t\\b|\\b167\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)30|february|feb"
+    }
+  ]
+}
