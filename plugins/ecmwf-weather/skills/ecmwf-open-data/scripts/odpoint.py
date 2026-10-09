@@ -5,13 +5,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = [
 #   "earthkit-data[ecmwf-opendata]>=1.2",
 #   "earthkit-geo>=1.1",
 #   "earthkit-meteo>=1.2",
 #   "earthkit-utils>=1.0",
 #   "earthkit-transforms[all]>=1.0",
+#   "scipy>=1.16",
 # ]
 # ///
 """Point forecast from ECMWF Open Data — nearest gridpoint time series.

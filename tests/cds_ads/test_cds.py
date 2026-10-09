@@ -517,3 +517,99 @@ def test_post_processing_values_are_checked():
 def test_era5_area_still_needs_no_grid():
     opts = cds.form_options(FORM_SL)
     assert "area" in opts
+
+
+# --- check verifies the key; malformed rc files ------------------------------------------------
+
+FAKE = "zz-fake-token-zz"
+CDS_RC = f"url: https://cds.climate.copernicus.eu/api\nkey: {FAKE}\n"
+
+
+def test_token_reads_json_rc_files(tmp_path):
+    rc = {"url": "https://cds.climate.copernicus.eu/api", "key": FAKE}
+    (tmp_path / ".cdsapirc").write_text(json.dumps(rc, indent=1))
+    assert cds._token("cds", {}, tmp_path) == FAKE
+
+
+def test_check_verifies_the_key(tmp_path, capsys):
+    (tmp_path / ".cdsapirc").write_text(CDS_RC)
+    seen = []
+
+    def fetch(url, headers):
+        seen.append((url, headers))
+        return 200, {"licences": [{"id": "cc-by"}, {"id": "licence-to-use-copernicus-products"}]}
+
+    assert cds.check(True, env={}, home=tmp_path, fetch=fetch) == 0
+    raw = capsys.readouterr().out
+    out = json.loads(raw)
+    assert out["cds_key"] == {"verified": True, "accepted_licences": 2}
+    assert seen == [
+        (
+            "https://cds.climate.copernicus.eu/api/profiles/v1/account/licences",
+            {"PRIVATE-TOKEN": FAKE},
+        )
+    ]
+    assert FAKE not in raw
+
+
+def test_check_rejected_key_is_blocked(tmp_path, capsys):
+    (tmp_path / ".cdsapirc").write_text(CDS_RC)
+    assert cds.check(True, env={}, home=tmp_path, fetch=lambda u, h: (401, {})) == 4
+    cap = capsys.readouterr()
+    assert "BLOCKED: CDS rejected the API key" in cap.err and FAKE not in cap.out + cap.err
+    assert json.loads(cap.out)["cds_key"]["verified"] is False
+
+
+def test_check_unreachable_store_is_a_network_barrier(tmp_path, capsys):
+    (tmp_path / ".cdsapirc").write_text(CDS_RC)
+
+    def fetch(url, headers):
+        raise urllib.error.URLError("timed out")
+
+    assert cds.check(False, env={}, home=tmp_path, fetch=fetch) == 2
+    assert "BLOCKED: cannot reach the ECMWF cds service" in capsys.readouterr().err
+
+
+def test_check_without_keys_makes_no_request(tmp_path, capsys):
+    def never(u, h):
+        raise AssertionError("no key, no request")
+
+    assert cds.check(True, env={}, home=tmp_path, fetch=never) == 4
+
+
+MALFORMED_CDSAPIRC = {
+    "polytope-layout": json.dumps({"user_key": FAKE, "user_email": "fake@example.invalid"}),
+    "invalid-json": '{"key": "' + FAKE + '",',
+    "empty": "",
+    "json-list": "[1, 2]",
+    "no-key-line": "url: https://cds.climate.copernicus.eu/api\ntoken: " + FAKE + "\n",
+    "not-utf8": b"\xff\xfe\x00\x81",
+}
+
+
+@pytest.mark.parametrize("name", sorted(MALFORMED_CDSAPIRC))
+def test_check_malformed_cdsapirc_is_blocked(tmp_path, capsys, name):
+    v = MALFORMED_CDSAPIRC[name]
+    rc = tmp_path / ".cdsapirc"
+    rc.write_bytes(v if isinstance(v, bytes) else v.encode())
+
+    def never(u, h):
+        raise AssertionError("no request with a malformed key file")
+
+    assert cds.check(False, env={}, home=tmp_path, fetch=never) == 4
+    err = capsys.readouterr().err
+    assert "BLOCKED: ~/.cdsapirc is malformed" in err and FAKE not in err
+    assert "key: <your personal access token>" in err
+
+
+def test_malformed_rc_names_keys(tmp_path):
+    (tmp_path / ".cdsapirc").write_text(MALFORMED_CDSAPIRC["no-key-line"])
+    with pytest.raises(cds.MalformedCredentials) as e:
+        cds._token("cds", {}, tmp_path)
+    assert e.value.keys == ["token", "url"]
+
+
+def test_validate_with_malformed_rc_reports_licences_unchecked(tmp_path):
+    (tmp_path / ".cdsapirc").write_text("[1, 2]")
+    with pytest.raises(cds.MalformedCredentials):
+        cds.accepted_licences("cds", env={}, home=tmp_path, fetch=lambda u, h: {})

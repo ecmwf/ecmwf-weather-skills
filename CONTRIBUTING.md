@@ -11,7 +11,7 @@ must come with **tests and documentation**.
 
 ## Prerequisites
 
-- [uv](https://docs.astral.sh/uv/) and Python ≥ 3.10
+- [uv](https://docs.astral.sh/uv/) and Python ≥ 3.12
 - GNU make
 - Linux or macOS (earthkit wheels); Windows via WSL
 - Optional: Node ≥ 20 (web-map JS tests), `claude` / `codex` CLIs (skill evals),

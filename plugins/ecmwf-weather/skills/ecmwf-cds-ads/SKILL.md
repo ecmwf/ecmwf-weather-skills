@@ -33,7 +33,7 @@ Run the scripts; don't read them. Run them from the user's working directory and
 files there, never inside the skill directory. Paths are relative to this skill.
 
 ```
-- [ ] 1. python3 scripts/cds.py check                    # exit 4 = no key (names only, never values)
+- [ ] 1. python3 scripts/cds.py check                    # verifies the key; exit 4 = no key, malformed or rejected
 - [ ] 2. python3 scripts/cds.py search "TEXT" [--store ads] → dataset id
 - [ ] 3. python3 scripts/cds.py describe ID               # allowed values, licence, DOI
 - [ ] 4. write req.json; python3 scripts/cds.py validate --dataset ID --request req.json
@@ -140,6 +140,7 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 | no key | `cds.py` prints `setup` steps; validated requests still work |
 | **dataset licence not accepted** (HTTP 403) | `validate`/`retrieve` print the exact steps: log in, open `…/datasets/<id>?tab=download#manage-licences`, "Terms of use" at the bottom, Accept — then confirm in `profile?tab=licences` |
 | key rejected (401) | re-copy the token from `…/how-to-api` |
+| key file malformed (no `key:` line, not UTF-8) | rewrite it as the two `url:`/`key:` lines the report shows |
 
 Check licences before every download; if one is missing, stop and give the steps — only the
 user can accept terms.

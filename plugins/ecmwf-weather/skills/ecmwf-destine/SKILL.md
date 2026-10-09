@@ -17,12 +17,12 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Access check (line 34)
-- No access yet (line 47)
-- Request workflow (line 63)
-- Which server holds the data (line 85)
-- Processing and plots (line 96)
-- Licence and attribution (line 104)
-- When blocked (line 113)
+- No access yet (line 48)
+- Request workflow (line 64)
+- Which server holds the data (line 86)
+- Processing and plots (line 97)
+- Licence and attribution (line 105)
+- When blocked (line 114)
 - References — `references/requests.md` (keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -37,11 +37,12 @@ files there, never inside the skill directory.
 python3 scripts/destine.py check --json     # never prints the token
 ```
 
-Exit 0: a token exists in `~/.polytopeapirc-destine` (or `DESTINE_POLYTOPE_KEY`). Exit 4: none.
-With a token it also calls the authenticated `GET /api/v1/collections` on each data bridge
-(LUMI, MareNostrum 5, Leonardo) and reports `digital_twin_access` — whether
-`destination-earth` is listed. Use that list to say what data is available; an `HTTP 401` per
-bridge means the token is invalid or expired. `retrieve` checks the target bridge first and
+With a token in `~/.polytopeapirc-destine` (or `DESTINE_POLYTOPE_KEY`) it calls the
+authenticated `GET /api/v1/collections` on each data bridge (LUMI, MareNostrum 5, Leonardo) and
+reports `digital_twin_access` — whether `destination-earth` is listed. Use that list to say
+what data is available. Exit 0: a bridge lists it (`--offline`: a token exists). Exit 4 with a
+BLOCKED report: no token, a malformed token file, every bridge rejecting the token (invalid or
+expired), or no bridge listing the collection (no upgraded access). Exit 2: no bridge answered. `retrieve` checks the target bridge first and
 blocks with instructions instead of sending a request that would fail.
 
 ## No access yet
@@ -127,5 +128,5 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 | Barrier | Report |
 |---|---|
 | no token | `destine.py setup`: register, request upgraded access, authenticate |
-| 401 | re-run `desp-authentication.py -u <user> -o ~/.polytopeapirc-destine` |
+| 401 / malformed token file | re-run `desp-authentication.py -u <user> -o ~/.polytopeapirc-destine` |
 | 403 | upgraded access not (yet) granted: `access-policy-upgrade` steps |

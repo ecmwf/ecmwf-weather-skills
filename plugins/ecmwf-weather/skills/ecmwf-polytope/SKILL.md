@@ -17,11 +17,11 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Access check (line 38)
-- Point forecast and ensemble workflow (line 57)
-- Other features (line 83)
-- Processing and plots (line 93)
-- Licence and attribution (line 101)
-- When blocked (line 108)
+- Point forecast and ensemble workflow (line 63)
+- Other features (line 89)
+- Processing and plots (line 99)
+- Licence and attribution (line 107)
+- When blocked (line 114)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -40,18 +40,24 @@ say so.
 Run it yourself — don't ask the user to run it — and report the result.
 
 ```bash
-python3 scripts/ptpoint.py --check --json    # never prints keys; takes about a second
+python3 scripts/ptpoint.py --check --json    # never prints keys; a few seconds
 ```
 
-The check calls Polytope's authenticated `GET /api/v1/collections` and lists the data
-collections this account may use (e.g. `ecmwf-mars`, `cems`, `ecmwf-time-critical`). Use that
-list — not assumptions — to say what data is available. Point forecasts need `ecmwf-mars`;
-`ptpoint.py` verifies it before every request and blocks with access steps if it is missing.
+The check lists the account's collections (`GET /api/v1/collections`, e.g. `ecmwf-mars`, `cems`)
+and then makes one tiny real request (2 m temperature, one point, one step) — the server lists
+every collection to everyone and only refuses data on submit, so only `"verified_by":
+"test_request"` proves point forecasts work. `--check --offline` lists collections only (no
+data request; it does not prove access). Credentials are read like polytope-client:
+`POLYTOPE_USER_KEY`/`_EMAIL`, `~/.polytope-client/config.yaml`, `~/.polytopeapirc` (or
+`POLYTOPE_KEY_PATH`), then `~/.ecmwfapirc`.
 
-- exit 0, `"verified": true` → use Polytope.
-- exit 4 → no credentials or no access: use the `ecmwf-open-data` skill (`odpoint.py`), say once that
-  Polytope access would make it hourly, native resolution and ~10 KB, and ask whether they'd
-  like instructions to obtain it; if yes, relay `uv run scripts/ptpoint.py --setup` as printed.
+- exit 0, `"point_forecasts": true` → use Polytope.
+- exit 4 → no credentials, malformed key file, key rejected, or no entitlement to operational
+  data: use the `ecmwf-open-data` skill (`odpoint.py`), relay the BLOCKED steps, say once that
+  Polytope access would make it hourly, native resolution and ~10 KB; with no credentials ask
+  whether they'd like instructions and relay `uv run scripts/ptpoint.py --setup` as printed.
+- exit 2 → not verified (no run released yet, or the service is slow or down): use
+  `ecmwf-open-data` now and say Polytope access is unconfirmed.
 - Destination Earth Digital Twin data is a different service and account: the `ecmwf-destine` skill.
 
 ## Point forecast and ensemble workflow
@@ -122,4 +128,7 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 | Barrier | Report |
 |---|---|
 | no credentials | `ptpoint.py --setup` steps; answer with `ecmwf-open-data` meanwhile |
-| 401/403 | key invalid, or dataset restricted (Member/Co-operating States, commercial, research licence) or not on Polytope |
+| key file malformed (wrong layout, not JSON) | rewrite as the report says; names only, never values |
+| 401 / key rejected | renew the key at https://api.ecmwf.int/v1/key/ |
+| 400 "insufficient permissions" | no entitlement to operational data: Computing Representative or licence; `ecmwf-open-data` meanwhile |
+| 403 | dataset restricted (Member/Co-operating States, commercial, research licence) or not on Polytope |

@@ -6,7 +6,7 @@
 [project]
 name = "ecmwf-weather-skills-dev"
 version = "0.0.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = []
 
 [dependency-groups]
@@ -19,6 +19,7 @@ earthkit = [
     "earthkit-utils>=1.0",
     "earthkit-transforms[all]>=1.0",
     "earthkit-plots>=1.0",
+    "scipy>=1.16",
 ]
 
 [tool.uv]
