@@ -15,6 +15,7 @@ Agents read `SKILL.md` first; this page is for humans browsing the repository.
 - [`ecmwf-destine`](#ecmwf-destine)
 - [`ecmwf-earthkit`](#ecmwf-earthkit)
 - [`ecmwf-mars`](#ecmwf-mars)
+- [`ecmwf-observations`](#ecmwf-observations)
 - [`ecmwf-open-data`](#ecmwf-open-data)
 - [`ecmwf-opencharts-wms`](#ecmwf-opencharts-wms)
 - [`ecmwf-polytope`](#ecmwf-polytope)
@@ -90,6 +91,24 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md`](../plugins/ecmwf
 | Reference | Purpose |
 |---|---|
 | `references/keywords.md` | MARS keywords and requests |
+
+## `ecmwf-observations`
+
+Retrieves weather station observations (SYNOP and METAR — 2 m temperature, dew point, humidity, wind, pressure, precipitation) from ECMWF's MARS archive, with the departures from ECMWF's first guess and analysis and QC flags — load it first for any request for observed or measured weather at a station or airport, past observations, a WMO station id or ICAO code, or comparing a forecast with what was observed. Use when a task mentions observations, station data, SYNOP, METAR, BUFR or ODB feedback, verifying or scoring a forecast against stations (bias, MAE, RMSE), observed heat index or humidex, or finding a station's WMO id or coordinates. Gives the latest METARs from NOAA Aviation Weather only when the user asks for them, always labelled non-ECMWF. Needs an ECMWF account with MARS observation rights; forecasts come from ecmwf-open-data or ecmwf-polytope, plots from ecmwf-earthkit.
+
+**Requirements:** scripts/obs.py stations, series --dry-run and --latest-metar run on plain Python 3. Retrievals, decoding, indices and scores need uv (PEP 723 inline dependencies ecmwf-api-client, pyodc, pdbufr, earthkit-utils, earthkit-meteo, thermofeel), an ECMWF Web API key and MARS observation rights.
+
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-observations/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-observations/SKILL.md)
+
+| Script | Purpose |
+|---|---|
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
+| `scripts/obs.py` | Station observations from ECMWF's MARS archive — series, thermal indices, forecast checks |
+
+| Reference | Purpose |
+|---|---|
+| `references/codes.md` | Observation codes |
+| `references/requests.md` | MARS observation requests |
 
 ## `ecmwf-open-data`
 

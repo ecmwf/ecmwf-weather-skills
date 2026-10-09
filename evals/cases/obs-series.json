@@ -1,0 +1,37 @@
+{
+  "id": "obs-series",
+  "prompt": "Get the observed 2 m temperature at the Lisbon synoptic station (WMO 08535) for the last 7 days from ECMWF's observation archive and save it as lisbon_t2m.csv. Tell me the warmest and coldest readings.",
+  "timeout": 1500,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-observations"
+    },
+    {
+      "kind": "command",
+      "pattern": "obs\\.py\\s+series\\b.*08535"
+    },
+    {
+      "kind": "file",
+      "pattern": "lisbon_t2m.csv"
+    },
+    {
+      "kind": "final",
+      "pattern": "°C|degC|deg C"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ECMWF|MARS"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|meteostat|ogimet|wunderground"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)aviationweather|--latest-metar"
+    }
+  ],
+  "note": "MARS observation route (feedback by default). Needs MARS rights including observations."
+}

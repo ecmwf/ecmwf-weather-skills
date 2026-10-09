@@ -663,6 +663,8 @@ def test_requests_never_carry_a_list_grid():
     # Polytope rejects grid lists with equal values ("Duplicate values found in list").
     for ens in (False, True):
         assert "grid" not in pt.build_request(1, 2, "20261001", "0000", 24, ens)
+
+
 # --- feels-like indices (thermofeel) -------------------------------------------------------------
 
 

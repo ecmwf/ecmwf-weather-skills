@@ -22,7 +22,8 @@
   ens-stats  ensemble mean / standard deviation / percentile maps from ensemble members
              (statistics with earthkit-transforms, maps with earthkit-plots)
   meteogram  multi-panel time series from point-forecast JSON
-             (odpoint.py / ptpoint.py --json; feels-like panel with --indices)
+             (odpoint.py / ptpoint.py --json; feels-like panel with --indices; an optional
+             "observations" block from ecmwf-observations obs.py verify is drawn as dots)
   indices    thermal-comfort index map from GRIB fields (thermofeel): heat index, humidex,
              apparent temperature, wind chill (2t, 2d, 10u, 10v); UTCI, WBGT, MRT (also sp,
              ssrd, ssr, strd, str and fdir — fdir is not in Open Data)
@@ -33,6 +34,8 @@
       # -> ens_mean.png, ens_std.png (add --stats mean,std,p10,p90 and --panel for one figure)
   uv run ekplot.py meteogram lisbon.json -o lisbon.png
   uv run ekplot.py indices fc.grib2 --index utci --step 12 --domain Europe -o utci.png
+  uv run ekplot.py map forecast.grib2 --param 2t --step 12 --units celsius \\
+      --obs stations.json -o t2m_obs.png   # station values (obs.py points) as dots
 
 Every figure carries the ECMWF CC-BY-4.0 attribution line.
 """
@@ -170,6 +173,13 @@ def feels_like_panel(point: dict) -> dict | None:
     }
 
 
+def observation_points(point: dict, key: str) -> tuple[list[str], list[float]]:
+    """Observed (times, values) for a panel from the point JSON's optional `observations`."""
+    rows = (point.get("observations") or {}).get("series", [])
+    pts = [(r["valid_time"].rstrip("Z"), r[key]) for r in rows if r.get(key) is not None]
+    return [t for t, _ in pts], [v for _, v in pts]
+
+
 def _times(point):
     import numpy as np
 
@@ -259,6 +269,17 @@ def plot_meteogram(point: dict, output: str):
                 ts.fill_between(lo, hi, alpha=0.3, color=p["colour"])
                 title += " — median and 10-90 % range"
             ts.line(da, color=p["colour"], linewidth=1.8)
+            ot, ov = observation_points(point, p["key"])
+            if ot:
+                ax.plot(
+                    np.array(ot, dtype="datetime64[m]"),
+                    ov,
+                    "o",
+                    color="black",
+                    markersize=3,
+                    label=point["observations"].get("label", "observed"),
+                )
+                ax.legend(loc="upper left", fontsize=8)
             if p["key"] == "tcc_pct":
                 ax.set_ylim(0, 100)
         ax.set_title(f"{title} ({p['units']})", loc="left", fontsize=10)
@@ -304,14 +325,37 @@ def plot_map(
     units=None,
     domain=None,
     level=None,
+    obs=None,
 ) -> None:
     import earthkit.plots as ekp
 
     sel = _select(path, param, step, level)
     kw = {k: v for k, v in {"units": units, "domain": domain}.items() if v}
     fig = ekp.quickplot(sel[0], **kw)  # style="auto": ECMWF style from the GRIB metadata
-    fig.attribution(attribution_text())
+    attribution = attribution_text()
+    if obs:
+        with open(obs) as fh:
+            attribution += f"; stations: {overlay_stations(fig, json.load(fh))}"
+    fig.attribution(attribution)
     fig.save(output)
+
+
+def overlay_stations(fig, obs: dict) -> str:
+    """Station values (ecmwf-observations `obs.py points` JSON) as dots coloured with the
+    field's own style, so a dot matches the shading when forecast and observation agree."""
+    import numpy as np
+    from earthkit.utils.units import convert_units
+
+    pts = obs.get("points", [])
+    if not pts:
+        raise ValueError("no station points in the observations JSON (obs.py points)")
+    style = fig.layers[0].style
+    values = np.array([p["value"] for p in pts], float)
+    if obs.get("units") and getattr(style, "units", None):
+        values = convert_units(values, style.units, source_units=obs["units"])
+    lons, lats = (np.array([p[k] for p in pts], float) for k in ("lon", "lat"))
+    fig.scatter(x=lons, y=lats, z=values, style=style, edgecolors="black", s=40, zorder=5)
+    return obs.get("source", "observations")
 
 
 # --- ensemble statistics -------------------------------------------------------------------------
@@ -716,6 +760,7 @@ def main(argv=None) -> int:
     m.add_argument("--level", type=int, help="pressure level for pl fields")
     m.add_argument("--units", help="e.g. celsius, hPa, mm")
     m.add_argument("--domain", help="e.g. Europe, 'United Kingdom', [W, E, S, N]")
+    m.add_argument("--obs", help="station values to overlay (ecmwf-observations obs.py points)")
     m.add_argument("-o", "--output", required=True)
     e = sub.add_parser("ens-stats", help="ensemble mean/std/percentile maps (earthkit-transforms)")
     e.add_argument("path")
@@ -745,7 +790,7 @@ def main(argv=None) -> int:
     try:
         with contextlib.redirect_stdout(sys.stderr):
             if a.cmd == "map":
-                plot_map(a.path, a.param, a.step, a.output, a.units, a.domain, a.level)
+                plot_map(a.path, a.param, a.step, a.output, a.units, a.domain, a.level, a.obs)
             elif a.cmd == "ens-stats":
                 files = plot_ens_stats(
                     a.path, a.param, a.output, a.stats, a.units, a.domain, a.step, a.panel

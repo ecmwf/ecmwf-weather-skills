@@ -17,7 +17,7 @@ def test_root_package_json_is_a_pi_package_listing_the_skills():
     assert pkg["license"] == "Apache-2.0"
     (path,) = pkg["pi"]["skills"]
     skills = sorted(p.parent.name for p in (ROOT / path).glob("*/SKILL.md"))
-    assert skills == sorted(p.parent.name for p in SKILLS.glob("*/SKILL.md")) and len(skills) == 7
+    assert skills == sorted(p.parent.name for p in SKILLS.glob("*/SKILL.md")) and len(skills) == 8
 
 
 def test_scripts_importing_siblings_never_write_bytecode():

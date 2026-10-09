@@ -115,6 +115,20 @@ remove the workaround from the skills.
 - **Each skill is self-contained** — repeat credential detection, Open Data fallback note, and
   attribution in every skill.
 - **Default model is IFS HRES** unless the user asks otherwise.
+- **ECMWF sources only** — skills and scripts never fetch weather data from third parties, and
+  every SKILL.md says so. One scoped exception, approved by the maintainer: `ecmwf-observations`
+  `obs.py` may call NOAA Aviation Weather (`aviationweather.gov`) for (1) station metadata
+  (ICAO ↔ WMO id, coordinates) and (2) the latest METARs **only** when the user asks for them,
+  or has no MARS observation rights and agrees after being told — every value labelled
+  "NOAA Aviation Weather (non-ECMWF)", never substituted silently. Only its
+  `noaa_station_info` / `noaa_latest_metar` functions use that host, with a User-Agent;
+  `tests/observations/test_obs.py` enforces it. WMO OSCAR/Surface (`oscar.wmo.int`) is used
+  for station metadata only. Any other exception needs the maintainer's approval first.
+- **Observations** come from MARS (`ecmwf-observations`): ODB feedback by default (~10 h
+  latency, with first-guess/analysis departures and QC), BUFR reports with `--raw` (~2 days).
+  MARS restricts reports (TYPE=OB) and feedback less than 24 h old; accounts without those
+  rights get a BLOCKED report with the Computing Representative route. Keep test retrievals to
+  one station and one or two days; cancel a job stuck for more than 10 min.
 - **earthkit first — in scripts and in what skills tell agents to write.** Processing,
   statistics, meteorological quantities and plots use earthkit components (≥ 1.0; earthkit-time
   0.1.x is the one exception, pinned exactly, for run/hindcast dates) — never hand-written
