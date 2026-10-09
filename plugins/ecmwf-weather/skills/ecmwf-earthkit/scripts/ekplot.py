@@ -5,11 +5,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = [
 #   "earthkit-plots>=1.0",
 #   "earthkit-data>=1.2",
 #   "earthkit-transforms[all]>=1.0",
+#   "scipy>=1.16",
 # ]
 # ///
 """Plot ECMWF data with earthkit-plots.

@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = ["pillow>=10"]
 # ///
 """ECMWF ecCharts WMS helper — layers, times, GetMap/GetLegend/GetFeatureInfo.

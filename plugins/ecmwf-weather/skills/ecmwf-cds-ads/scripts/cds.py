@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = ["earthkit-data[cds]>=1.2"]
 # ///
 """Copernicus Climate (CDS) and Atmosphere (ADS) Data Stores — discover, validate, retrieve.

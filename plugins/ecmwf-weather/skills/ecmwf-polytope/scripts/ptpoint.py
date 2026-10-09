@@ -5,12 +5,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = [
 #   "earthkit-data[polytope,covjsonkit]>=1.2",
 #   "earthkit-meteo>=1.2",
 #   "earthkit-utils>=1.0",
 #   "earthkit-transforms[all]>=1.0",
+#   "scipy>=1.16",
 # ]
 # ///
 """Point forecast via ECMWF Polytope — server-side extraction, a few KB instead of global fields.

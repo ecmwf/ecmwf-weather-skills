@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = ["earthkit-data[mars]>=1.2"]
 # ///
 """MARS archive helper — lint, estimate, plan, cost and retrieve MARS requests.

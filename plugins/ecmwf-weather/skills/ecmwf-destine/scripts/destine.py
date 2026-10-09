@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 European Centre for Medium-Range Weather Forecasts (ECMWF)
 # SPDX-License-Identifier: Apache-2.0
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = ["polytope-client>=0.7"]
 # ///
 """Destination Earth (DestinE) Digital Twin data via the DestinE Polytope service.
