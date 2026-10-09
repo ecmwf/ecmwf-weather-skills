@@ -344,7 +344,8 @@ def prepare_workdir(agent: str, case: dict, plugin: Path = PLUGIN) -> Path:
         d.mkdir(parents=True)
         for s in (plugin / "skills").iterdir():
             if (s / "SKILL.md").exists():
-                (d / s.name).symlink_to(s)
+                # copies, not symlinks: `find -type f` does not descend into symlinked dirs
+                shutil.copytree(s, d / s.name)
     return wd
 
 

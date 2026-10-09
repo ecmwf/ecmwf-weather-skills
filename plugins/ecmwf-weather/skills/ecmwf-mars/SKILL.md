@@ -1,6 +1,6 @@
 ---
 name: ecmwf-mars
-description: Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
+description: Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) ERA5 and the CARRA/CERRA regional reanalyses (class=rr) via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 license: Apache-2.0
 metadata:
@@ -19,10 +19,10 @@ SPDX-License-Identifier: Apache-2.0
 - Is MARS the right route? (line 30)
 - Request workflow (line 47)
 - Templates (lint-clean — start from these) (line 72)
-- Efficiency rules (line 91)
-- Processing and plots (line 103)
-- Licence and attribution (line 111)
-- When blocked (line 120)
+- Efficiency rules (line 102)
+- Processing and plots (line 114)
+- Licence and attribution (line 122)
+- When blocked (line 132)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -85,6 +85,17 @@ retrieve, class=od, stream=oper, type=fc, expver=1, levtype=sfc, param=2t/10u/10
     date=2024-03-01/to/2024-03-31, time=00, step=0/to/72/by/6, grid=0.25/0.25, area=72/-25/30/45
 ```
 
+CARRA/CERRA regional reanalysis (`class=rr`, product chosen by `origin`), cropped to an area:
+
+```
+retrieve, class=rr, origin=no-ar-ce, stream=oper, type=an, expver=prod, levtype=sfc,
+    param=2t, date=2020-01-01, time=12, area=81/10/76.5/34, grid=0.025/0.025
+```
+
+`origin`: `no-ar-cw` CARRA-West, `no-ar-ce` CARRA-East, `no-ar-pa` pan-CARRA, `se-al-ec` CERRA,
+`fr-ms-ec` CERRA-Land. Their Lambert grids cannot be cropped: `area` needs `grid` (lint
+enforces it). Without a MARS licence, the same data is free on the CDS (`ecmwf-cds-ads`).
+
 Ranges need `/to/` (`a/b` means just those two values). Even from a template, run `lint` on the
 final request and paste its output request in the answer.
 
@@ -114,6 +125,7 @@ and time statistics (earthkit-transforms) and meteorological quantities (earthki
   ECMWF licence; check before redistributing.
 - ERA5 (`class=ea`): Copernicus, CC BY 4.0 — "Generated using Copernicus Climate Change Service
   information <year>" + DOI 10.24381/cds.adbb2d47.
+- CARRA/CERRA (`class=rr`): Copernicus, CC BY 4.0 — same credit line + the dataset DOI.
 
 `lint` prints the applicable line; end the answer with it.
 

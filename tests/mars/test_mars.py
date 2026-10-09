@@ -349,3 +349,39 @@ def test_relative_dates_become_absolute_for_retrieval():
         mars.absolute_dates({"date": "2024-03-01/to/2024-03-31"}, today)["date"]
         == "2024-03-01/to/2024-03-31"
     )
+
+
+CERRA = {
+    "class": "rr",
+    "origin": "se-al-ec",
+    "stream": "oper",
+    "expver": "prod",
+    "type": "an",
+    "levtype": "sfc",
+    "param": "167",
+    "date": "2020-01-01",
+    "time": "12",
+}
+
+
+def test_regional_reanalysis_licence_is_copernicus_with_its_doi():
+    note = mars.licence_note(CERRA)
+    assert "CERRA" in note and "10.24381/cds.622a565a" in note and "ERA5" not in note
+    assert "CARRA" in mars.licence_note({**CERRA, "origin": "no-ar-cw"})
+
+
+def test_regional_reanalysis_size_uses_the_native_lambert_grid():
+    assert mars.estimate(CERRA)["points_per_field"] == 1069 * 1069
+    assert mars.estimate({**CERRA, "origin": "no-ar-ce"})["points_per_field"] == 789 * 989
+
+
+def test_lambert_area_without_grid_is_an_error():
+    errs = "\n".join(mars.lint({**CERRA, "area": "43/-10/36/-6"})["errors"])
+    assert "grid" in errs and "Lambert" in errs
+    assert mars.lint({**CERRA, "area": "43/-10/36/-6", "grid": "0.05/0.05"})["errors"] == []
+
+
+def test_class_rr_needs_an_origin():
+    req = {k: v for k, v in CERRA.items() if k != "origin"}
+    errs = "\n".join(mars.lint(req)["errors"])
+    assert "origin" in errs and "se-al-ec" in errs and "no-ar-cw" in errs

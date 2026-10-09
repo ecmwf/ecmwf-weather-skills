@@ -1,0 +1,28 @@
+{
+  "id": "carra-subset-question",
+  "prompt": "Can I download just Iceland from the CARRA Arctic reanalysis, or do I have to take the whole domain? Which dataset and request should I use? Don't download anything.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-cds-ads"
+    },
+    {
+      "kind": "final",
+      "pattern": "reanalysis-carra-single-levels"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)west"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\\bgrid\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)lambert|regrid|interpolat"
+    }
+  ]
+}

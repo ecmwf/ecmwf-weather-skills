@@ -11,6 +11,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- CARRA (Arctic, 2.5 km), CERRA and CERRA-Land (Europe, 5.5 km) and pan-CARRA regional
+  reanalyses: dataset ids, request templates, point time series (CERRA-Land), limits and
+  citations in `ecmwf-cds-ads` (`references/regional-reanalyses.md`), and the MARS keywords
+  (`class=rr`, `origin` per product) in `ecmwf-mars`. Verified with real downloads.
+- Subsetting these Lambert grids: `area` alone fails server-side (MARS cannot crop them);
+  `area` + `grid` regrids to regular lat/lon and crops. `cds.py validate` accepts `grid` and
+  flags `area` without `grid` when the form has no area input; `mars.py lint` does the same for
+  `class=rr` and requires `origin`.
+- Eval cases `cerra-area`, `carra-subset-question`, `cerra-land-point`, `mars-carra`.
+
+### Fixed
+
+- Eval harness: skills are copied, not symlinked, into the agent's skill directory — agents
+  searching with `find` missed symlinked skills and fell back to web search.
+- `mars.py lint` gave the ERA5 licence and DOI for `class=rr` and sized its fields as O1280;
+  it now names the CARRA/CERRA product, its DOI and native grid size.
+
 ### Changed
 
 - The nine earthkit issues found while writing the recipes are filed upstream

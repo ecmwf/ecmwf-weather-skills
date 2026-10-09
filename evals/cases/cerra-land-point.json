@@ -1,0 +1,24 @@
+{
+  "id": "cerra-land-point",
+  "prompt": "Give me daily precipitation for Lisbon for January 2020 from CERRA-Land, as a CSV file in this folder.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-cds-ads"
+    },
+    {
+      "kind": "command",
+      "pattern": "reanalysis-cerra-land-timeseries"
+    },
+    {
+      "kind": "file",
+      "pattern": "*.csv"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|meteostat"
+    }
+  ]
+}

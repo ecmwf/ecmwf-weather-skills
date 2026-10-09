@@ -476,3 +476,44 @@ def test_validate_reports_why_licence_was_not_checked(offline_store):
     offline_store.setattr(cds, "accepted_licences", boom)
     res = cds._validate_and_cost("cds", "x", REQ)
     assert res["licences"]["state"] == "unchecked" and "timed out" in res["licences"]["reason"]
+
+
+FORM_CERRA = json.loads((FIXTURES / "cds-form-cerra-sl.json").read_text())
+CERRA_REQ = {
+    "variable": ["2m_temperature"],
+    "level_type": "surface_or_atmosphere",
+    "data_type": ["reanalysis"],
+    "product_type": "analysis",
+    "year": ["2023"],
+    "month": ["07"],
+    "day": ["18"],
+    "time": ["12:00"],
+    "data_format": "grib",
+}
+
+
+def test_cerra_form_has_no_area_input():
+    assert "area" not in cds.form_options(FORM_CERRA)
+
+
+def test_grid_is_accepted_as_post_processing():
+    assert cds.validate({**CERRA_REQ, "grid": [0.05, 0.05]}, FORM_CERRA) == []
+
+
+def test_area_needs_grid_when_the_form_has_no_area():
+    # CARRA/CERRA are on Lambert grids: MARS cannot crop them, the job fails server-side.
+    errs = "\n".join(cds.validate({**CERRA_REQ, "area": [43, -10, 36, -6]}, FORM_CERRA))
+    assert "grid" in errs and "Lambert" in errs
+    ok = {**CERRA_REQ, "area": [43, -10, 36, -6], "grid": [0.05, 0.05]}
+    assert cds.validate(ok, FORM_CERRA) == []
+
+
+def test_post_processing_values_are_checked():
+    bad = {**CERRA_REQ, "area": [36, -10, 43, -6], "grid": [0.05]}
+    errs = "\n".join(cds.validate(bad, FORM_CERRA))
+    assert "[N, W, S, E]" in errs and "grid must be" in errs
+
+
+def test_era5_area_still_needs_no_grid():
+    opts = cds.form_options(FORM_SL)
+    assert "area" in opts
