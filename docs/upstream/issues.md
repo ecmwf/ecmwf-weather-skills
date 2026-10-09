@@ -90,3 +90,4 @@ Record in `issues.toml`: `status = "filed"` and `url = "<issue URL>"`; then
 | transforms-spatial-reduce-0-360.py | https://github.com/ecmwf/earthkit-transforms/issues/133 | filed 2026-10-08 |
 | transforms-spatial-reduce-return-as-pandas.py | https://github.com/ecmwf/earthkit-transforms/issues/134 | filed 2026-10-08 |
 | utils-convert-units-fieldlist-noop.py | https://github.com/ecmwf/earthkit-utils/issues/88 | filed 2026-10-08 |
+| (fix) earthkit-data XArrayGeography message | https://github.com/ecmwf/earthkit-data/pull/1181 | PR opened 2026-10-08, merged 2026-10-09 |

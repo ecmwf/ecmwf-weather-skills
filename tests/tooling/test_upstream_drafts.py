@@ -10,7 +10,8 @@ import tomllib
 from conftest import ROOT
 
 UP = ROOT / "docs" / "upstream"
-ISSUES = tomllib.loads((UP / "issues.toml").read_text())["issue"]
+DATA = tomllib.loads((UP / "issues.toml").read_text())
+ISSUES = DATA["issue"]
 
 
 @pytest.mark.parametrize("i", ISSUES, ids=lambda i: i["script"])
@@ -56,3 +57,10 @@ def test_draft_still_reproduces(i):
         out.stdout,
         out.stderr[-500:],
     )
+
+
+@pytest.mark.parametrize("pr", DATA.get("pr", []), ids=lambda p: p["url"])
+def test_pull_request_is_recorded(pr):
+    assert pr["repo"].startswith("ecmwf/earthkit-") and pr["title"]
+    assert pr["url"].startswith(f"https://github.com/{pr['repo']}/pull/")
+    assert pr["status"] in ("open", "merged", "closed")
