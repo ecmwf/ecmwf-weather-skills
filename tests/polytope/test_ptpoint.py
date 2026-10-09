@@ -359,11 +359,12 @@ def test_check_reports_collections(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(pt, "credentials", lambda: "~/.ecmwfapirc")
     monkeypatch.setattr(pt, "auth_header", lambda: "Bearer zz-fake-secret-zz")
     monkeypatch.setattr(pt, "list_collections", lambda addr, auth: ["cems", "ecmwf-mars"])
-    assert pt.check(True) == 0
+    assert pt.check(True, offline=True) == 0
     raw = capsys.readouterr().out
     out = json.loads(raw)
     assert out["collections"] == ["cems", "ecmwf-mars"] and out["verified"] is True
-    assert out["point_forecasts"] is True and "zz-fake-secret-zz" not in raw
+    assert out["point_forecasts"] is True and out["verified_by"] == "collection_list"
+    assert "zz-fake-secret-zz" not in raw
 
 
 def test_check_without_ecmwf_mars(monkeypatch, capsys):
@@ -392,3 +393,273 @@ def test_point_request_blocked_when_collection_not_available(monkeypatch, capsys
     monkeypatch.setattr(pt, "fetch_latest", never)
     assert pt.main(["--lat", "1", "--lon", "2"]) == 4
     assert "BLOCKED" in capsys.readouterr().err
+
+
+# --- credentials: polytope-client's sources and malformed files ------------------------------
+
+FAKE_KEY, FAKE_EMAIL = "zz-fake-key-zz", "fake@example.invalid"
+
+
+def test_auth_header_reads_the_polytope_client_yaml_config(tmp_path):
+    cfg = tmp_path / ".polytope-client"
+    cfg.mkdir()
+    (cfg / "config.yaml").write_text(f"user_key: '{FAKE_KEY}'\nuser_email: {FAKE_EMAIL}\n")
+    (tmp_path / ".polytopeapirc").write_text('{"user_key": "other"}')
+    assert pt.auth_header(env={}, home=tmp_path) == f"EmailKey {FAKE_EMAIL}:{FAKE_KEY}"
+    assert pt.credentials(env={}, home=tmp_path) == "~/.polytope-client/config.yaml"
+
+
+def test_auth_header_honours_polytope_config_path(tmp_path):
+    cfg = tmp_path / "elsewhere"
+    cfg.mkdir()
+    (cfg / "config.yaml").write_text(f'user_key: "{FAKE_KEY}"\n')
+    env = {"POLYTOPE_CONFIG_PATH": str(cfg)}
+    assert pt.auth_header(env=env, home=tmp_path) == f"Bearer {FAKE_KEY}"
+
+
+def test_auth_header_honours_polytope_key_path(tmp_path):
+    key = tmp_path / "keys.json"
+    key.write_text(json.dumps({"user_key": FAKE_KEY, "user_email": FAKE_EMAIL}))
+    (tmp_path / ".ecmwfapirc").write_text('{"key": "other", "email": "o@x.int"}')
+    env = {"POLYTOPE_KEY_PATH": str(key)}
+    assert pt.auth_header(env=env, home=tmp_path) == f"EmailKey {FAKE_EMAIL}:{FAKE_KEY}"
+    assert pt.credentials(env=env, home=tmp_path) == "POLYTOPE_KEY_PATH"
+
+
+def test_environment_beats_every_file(tmp_path):
+    (tmp_path / ".polytopeapirc").write_text("not json")
+    env = {"POLYTOPE_USER_KEY": FAKE_KEY, "POLYTOPE_USER_EMAIL": FAKE_EMAIL}
+    assert pt.auth_header(env=env, home=tmp_path) == f"EmailKey {FAKE_EMAIL}:{FAKE_KEY}"
+
+
+MALFORMED_POLYTOPEAPIRC = {
+    "ecmwfapirc-layout": json.dumps({"key": FAKE_KEY, "email": FAKE_EMAIL}),
+    "invalid-json": '{"user_key": "' + FAKE_KEY + '",',
+    "empty": "",
+    "yaml": f"user_key: {FAKE_KEY}\nuser_email: {FAKE_EMAIL}\n",
+    "json-list": "[1, 2]",
+}
+
+
+@pytest.mark.parametrize("name", sorted(MALFORMED_POLYTOPEAPIRC))
+def test_malformed_polytopeapirc_is_reported_not_raised(tmp_path, name):
+    (tmp_path / ".polytopeapirc").write_text(MALFORMED_POLYTOPEAPIRC[name])
+    with pytest.raises(pt.MalformedCredentials) as e:
+        pt.auth_header(env={}, home=tmp_path)
+    b = pt.malformed_barrier(e.value)
+    text = json.dumps(b)
+    assert b["blocked"] == "~/.polytopeapirc is malformed"
+    assert FAKE_KEY not in text and FAKE_EMAIL not in text
+    assert '"user_key": "<key>"' in "\n".join(b["user_steps"])
+
+
+def test_malformed_names_the_keys_found(tmp_path):
+    (tmp_path / ".polytopeapirc").write_text(MALFORMED_POLYTOPEAPIRC["ecmwfapirc-layout"])
+    with pytest.raises(pt.MalformedCredentials) as e:
+        pt.auth_header(env={}, home=tmp_path)
+    assert e.value.keys == ["email", "key"] and "user_key" in e.value.problem
+
+
+def test_not_utf8_polytopeapirc(tmp_path):
+    (tmp_path / ".polytopeapirc").write_bytes(b"\xff\xfe\x00\x81")
+    with pytest.raises(pt.MalformedCredentials, match="UTF-8"):
+        pt.auth_header(env={}, home=tmp_path)
+
+
+def test_ecmwfapirc_fallback_in_polytope_layout_is_malformed(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text(json.dumps({"user_key": FAKE_KEY}))
+    with pytest.raises(pt.MalformedCredentials) as e:
+        pt.auth_header(env={}, home=tmp_path)
+    assert e.value.source == "~/.ecmwfapirc" and e.value.keys == ["user_key"]
+
+
+def test_check_with_malformed_file_is_blocked(monkeypatch, capsys, tmp_path):
+    (tmp_path / ".polytopeapirc").write_text("[1, 2]")
+    monkeypatch.setattr(pt.Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(pt.os, "environ", {})
+
+    def never(*a, **k):
+        raise AssertionError("no request with a malformed key file")
+
+    monkeypatch.setattr(pt, "list_collections", never)
+    assert pt.check(False, offline=True) == 4
+    assert "BLOCKED: ~/.polytopeapirc is malformed" in capsys.readouterr().err
+
+
+# --- check: one tiny real feature extraction ------------------------------------------------
+
+ADDR = "polytope.example.invalid"
+JOB = f"https://{ADDR}/api/v1/requests/job-1"
+TINY = json.dumps(OPER).encode()
+
+
+class FakePolytope:
+    """Scripted HTTP answers: POST (submit), GET (poll / download), DELETE (job removal)."""
+
+    def __init__(self, submit, polls=(), download=(200, TINY)):
+        self.submit, self.polls, self.download = list(submit), list(polls), download
+        self.calls = []
+
+    def __call__(self, method, url, headers, body=None):
+        self.calls.append((method, url, dict(headers), body))
+        if method == "POST":
+            return self.submit.pop(0)
+        if method == "DELETE":
+            return 200, {}, b""
+        if url.endswith("/download/job-1"):
+            return self.download[0], {}, self.download[1]
+        return self.polls.pop(0)
+
+
+def accepted():
+    return 202, {"location": "./job-1"}, b'{"status": "queued"}'
+
+
+def ready():
+    return 303, {"location": f"https://{ADDR}/api/v1/download/job-1"}, b""
+
+
+def _check(monkeypatch, http, offline=False):
+    monkeypatch.setattr(pt, "ADDRESS", ADDR)
+    monkeypatch.setattr(pt, "credentials", lambda: "~/.ecmwfapirc")
+    monkeypatch.setattr(pt, "auth_header", lambda: "Bearer zz-fake-secret-zz")
+    monkeypatch.setattr(pt, "list_collections", lambda addr, auth: ["cems", "ecmwf-mars"])
+    monkeypatch.setattr(
+        pt.ecmwf_status,
+        "network_barrier",
+        lambda svc, err: {
+            "blocked": f"cannot reach the ECMWF {svc} service",
+            "why": err,
+            "user_steps": ["1. retry"],
+            "agent": "retry once",
+            "status": {"state": "unknown"},
+        },
+    )
+    return pt.check(True, offline=offline, http=http, sleep=lambda s: None)
+
+
+def test_check_test_request_success(monkeypatch, capsys):
+    http = FakePolytope([accepted()], polls=[accepted(), ready()])
+    assert _check(monkeypatch, http) == 0
+    raw = capsys.readouterr().out
+    out = json.loads(raw)
+    assert out["point_forecasts"] is True and out["verified_by"] == "test_request"
+    assert out["seconds"] >= 0 and "zz-fake-secret-zz" not in raw
+    method, url, _, body = http.calls[0]
+    assert (method, url) == ("POST", f"https://{ADDR}/api/v1/requests/ecmwf-mars")
+    sent = json.loads(body)
+    assert sent["verb"] == "retrieve"
+    req = json.loads(sent["request"])
+    assert req["param"] == "167" and req["feature"]["range"] == {"start": 0, "end": 0}
+    assert req["stream"] == "oper" and req["class"] == "od" and "grid" not in req
+    assert http.calls[1][1] == JOB  # "./job-1" resolved against the submit URL
+    assert ("DELETE", JOB) in [(m, u) for m, u, *_ in http.calls]
+
+
+def test_check_download_on_another_host_gets_no_key(monkeypatch, capsys):
+    other = (303, {"location": "https://cache.example.invalid/x/download/job-1"}, b"")
+    http = FakePolytope([accepted()], polls=[other])
+    assert _check(monkeypatch, http) == 0
+    download = next(c for c in http.calls if "cache.example.invalid" in c[1])
+    assert "Authorization" not in download[2]
+
+
+def test_check_insufficient_permissions_is_an_entitlement_barrier(monkeypatch, capsys):
+    msg = b'{"message": "Your request could not be processed: insufficient permissions. x"}'
+    http = FakePolytope([(400, {}, msg)])
+    assert _check(monkeypatch, http) == 4
+    cap = capsys.readouterr()
+    out = json.loads(cap.out)
+    assert out["point_forecasts"] is False and "entitlement" in out["blocked"]["blocked"]
+    assert "Computing Representative" in cap.err and "ecmwf-open-data" in cap.err
+    assert [m for m, *_ in http.calls] == ["POST"]  # no retry with another run
+
+
+def test_check_not_released_tries_the_previous_run_once(monkeypatch, capsys):
+    nodata = (400, {}, b'{"message": "Data not released yet for this date"}')
+    http = FakePolytope([nodata, nodata])
+    assert _check(monkeypatch, http) == 2
+    out = json.loads(capsys.readouterr().out)
+    assert out["verified"] is None and out["point_forecasts"] is None
+    posts = [json.loads(json.loads(b)["request"]) for m, u, h, b in http.calls if m == "POST"]
+    assert len(posts) == 2 and (posts[0]["date"], posts[0]["time"]) != (
+        posts[1]["date"],
+        posts[1]["time"],
+    )
+
+
+def test_check_not_released_then_previous_run_succeeds(monkeypatch, capsys):
+    nodata = (400, {}, b'{"message": "no data found"}')
+    http = FakePolytope([nodata, accepted()], polls=[ready()])
+    assert _check(monkeypatch, http) == 0
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_check_key_rejected(monkeypatch, capsys, status):
+    http = FakePolytope([(status, {}, b'{"message": "Unauthorized"}')])
+    assert _check(monkeypatch, http) == 4
+    assert "rejected the key" in json.loads(capsys.readouterr().out)["blocked"]["blocked"]
+
+
+@pytest.mark.parametrize("status", [429, 500, 503])
+def test_check_service_trouble_is_a_network_barrier(monkeypatch, capsys, status):
+    http = FakePolytope([(status, {}, b"busy")])
+    assert _check(monkeypatch, http) == 2
+    assert "cannot reach" in json.loads(capsys.readouterr().out)["blocked"]["blocked"]
+
+
+def test_check_poll_timeout_is_a_network_barrier_and_deletes_the_job(monkeypatch, capsys):
+    clock = iter(range(0, 1000, 7))
+    monkeypatch.setattr(pt.time, "monotonic", lambda: next(clock))
+    http = FakePolytope([accepted()], polls=[accepted()] * 50)
+    assert _check(monkeypatch, http) == 2
+    assert ("DELETE", JOB) in [(m, u) for m, u, *_ in http.calls]
+
+
+def test_check_connection_error_is_a_network_barrier(monkeypatch, capsys):
+    def http(method, url, headers, body=None):
+        raise OSError("Connection refused")
+
+    assert _check(monkeypatch, http) == 2
+
+
+def test_check_offline_makes_no_data_request(monkeypatch, capsys):
+    def http(*a, **k):
+        raise AssertionError("--offline must not submit a request")
+
+    assert _check(monkeypatch, http, offline=True) == 0
+    assert json.loads(capsys.readouterr().out)["verified_by"] == "collection_list"
+
+
+def test_insufficient_permissions_barrier():
+    b = pt.barrier_for_error("HTTP 400: insufficient permissions")
+    assert "entitlement" in b["blocked"]
+
+
+def test_fetch_latest_stops_on_insufficient_permissions(monkeypatch):
+    tried = []
+
+    def fetch(req):
+        tried.append(req["date"])
+        raise RuntimeError("Your request could not be processed: insufficient permissions.")
+
+    monkeypatch.setattr(pt, "fetch", fetch)
+    with pytest.raises(RuntimeError, match="insufficient permissions"):
+        pt.fetch_latest(1, 2, 24, False)
+    assert len(tried) == 1
+
+
+def test_fetch_latest_maps_the_client_crash_on_an_expired_key(monkeypatch):
+    def fetch(req):
+        raise TypeError("__class__ must be set to a class")
+
+    monkeypatch.setattr(pt, "fetch", fetch)
+    with pytest.raises(RuntimeError) as e:
+        pt.fetch_latest(1, 2, 24, False)
+    assert pt.barrier_for_error(str(e.value))["blocked"] == "Polytope rejected the key"
+
+
+def test_requests_never_carry_a_list_grid():
+    # Polytope rejects grid lists with equal values ("Duplicate values found in list").
+    for ens in (False, True):
+        assert "grid" not in pt.build_request(1, 2, "20261001", "0000", 24, ens)

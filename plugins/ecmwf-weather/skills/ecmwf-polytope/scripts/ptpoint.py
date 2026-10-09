@@ -23,6 +23,7 @@ earthkit components, each for its job:
   earthkit-transforms      de-accumulation, ensemble percentiles, daily statistics
 
   uv run ptpoint.py --check                                  # credentials + test request
+  python3 ptpoint.py --check --offline                       # collections list only
   uv run ptpoint.py --lat 38.72 --lon -9.14                  # IFS HRES, hourly, 0-240 h
   uv run ptpoint.py --lat 38.72 --lon -9.14 --steps 0-24 --json
   uv run ptpoint.py --lat 51.45 --lon -0.97 --ensemble --steps 0-120   # 50-member percentiles
@@ -41,6 +42,10 @@ import json
 import os
 import re
 import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -83,16 +88,167 @@ UNITS = {
 # --- credentials ------------------------------------------------------------------------------
 
 
-def credentials(env=os.environ, home: Path | None = None) -> str | None:
-    """Where polytope-client will find a key (name only — never the value)."""
-    home = home or Path.home()
-    if env.get("POLYTOPE_USER_KEY"):
-        return "POLYTOPE_USER_KEY"
-    if (home / ".polytopeapirc").exists():
-        return "~/.polytopeapirc"
-    if (home / ".ecmwfapirc").exists():
-        return "~/.ecmwfapirc"
-    return None
+# Names reported from a broken credentials file: identifier-like only, so a value that happens
+# to sit on a line of its own (a pasted key) is never echoed as a "name".
+KEY_NAME = re.compile(r"[A-Za-z_]{1,24}")
+
+
+class MalformedCredentials(ValueError):
+    """A credentials source exists but cannot be used. Carries key names, never values."""
+
+    def __init__(self, source: str, problem: str, keys=(), layout: str = "polytope"):
+        self.source, self.problem, self.layout = source, problem, layout
+        self.keys = sorted({str(k) for k in keys if KEY_NAME.fullmatch(str(k))})
+        super().__init__(f"{source} is malformed: {problem}")
+
+
+def _user_path(value: str, home: Path) -> Path:
+    """Expand a leading ~ against `home` (polytope-client expands it against the real home)."""
+    v = str(value)
+    if v == "~" or v.startswith("~/"):
+        return home / v[2:]
+    return Path(v)
+
+
+def _read_text(path: Path, label: str, layout: str) -> str:
+    try:
+        raw = path.read_bytes()
+    except OSError as e:
+        problem = f"cannot be read ({e.strerror or type(e).__name__})"
+        raise MalformedCredentials(label, problem, layout=layout) from None
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise MalformedCredentials(label, "is not UTF-8 text", layout=layout) from None
+
+
+def _text_key_names(text: str) -> list[str]:
+    return re.findall(r"(?m)^\s*([A-Za-z_]{1,24})\s*[:=]", text)
+
+
+def _json_object(path: Path, label: str, layout: str) -> dict:
+    text = _read_text(path, label, layout)
+    if not text.strip():
+        raise MalformedCredentials(label, "is empty", layout=layout)
+    try:
+        d = json.loads(text)
+    except json.JSONDecodeError:
+        names = _text_key_names(text)
+        hint = " (it looks like a 'key: value' file)" if names else ""
+        raise MalformedCredentials(label, f"is not JSON{hint}", names, layout) from None
+    if not isinstance(d, dict):
+        problem = f"holds a JSON {type(d).__name__}, not an object"
+        raise MalformedCredentials(label, problem, layout=layout)
+    return d
+
+
+def _yaml_config(path: Path, label: str) -> dict:
+    """Top-level 'name: value' pairs of polytope-client's config.yaml (standard library only:
+    the file is flat — address, user_key, user_email, key_path, ...)."""
+    out = {}
+    for line in _read_text(path, label, "yaml").splitlines():
+        m = re.match(r"([A-Za-z_]\w*)\s*:\s*(.*?)\s*$", line)
+        if m and not line[:1].isspace():
+            v = re.sub(r"\s+#.*$", "", m[2])
+            if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"":
+                v = v[1:-1]
+            out[m[1]] = v
+        elif line.strip() and not line.lstrip().startswith(("#", "-")) and not line[:1].isspace():
+            raise MalformedCredentials(label, "is not a YAML mapping", out.keys(), "yaml")
+    return out
+
+
+def _text_value(d: dict, name: str) -> str | None:
+    v = d.get(name)
+    return v if isinstance(v, str) and v.strip() else None
+
+
+def _locate(env, home: Path) -> tuple[str | None, str | None, str | None]:
+    """(source name, key, email) in polytope-client's order: POLYTOPE_USER_KEY/EMAIL, the
+    config.yaml in ~/.polytope-client (or POLYTOPE_CONFIG_PATH), the key file ~/.polytopeapirc
+    (or POLYTOPE_KEY_PATH / key_path; user_key, user_email), then ~/.ecmwfapirc (key, email).
+    Raises MalformedCredentials where the first source found is unusable."""
+    key, email = env.get("POLYTOPE_USER_KEY"), env.get("POLYTOPE_USER_EMAIL")
+    if key:
+        return "POLYTOPE_USER_KEY", key, email
+    if env.get("POLYTOPE_CONFIG_PATH"):
+        cfg_dir, cfg_label = _user_path(env["POLYTOPE_CONFIG_PATH"], home), "POLYTOPE_CONFIG_PATH"
+        cfg_label += "/config.yaml"
+    else:
+        cfg_dir, cfg_label = home / ".polytope-client", "~/.polytope-client/config.yaml"
+    cfg = (
+        _yaml_config(cfg_dir / "config.yaml", cfg_label)
+        if (cfg_dir / "config.yaml").is_file()
+        else {}
+    )
+    if _text_value(cfg, "user_key"):
+        return cfg_label, cfg["user_key"], email or _text_value(cfg, "user_email")
+    if env.get("POLYTOPE_KEY_PATH"):
+        key_file, label = _user_path(env["POLYTOPE_KEY_PATH"], home), "POLYTOPE_KEY_PATH"
+    elif _text_value(cfg, "key_path"):
+        key_file, label = _user_path(cfg["key_path"], home), f"key_path in {cfg_label}"
+    else:
+        key_file, label = home / ".polytopeapirc", "~/.polytopeapirc"
+    if key_file.is_file():
+        d = _json_object(key_file, label, "polytope")
+        if not _text_value(d, "user_key"):
+            hint = " (key/email are ~/.ecmwfapirc's names)" if "key" in d else ""
+            raise MalformedCredentials(label, f"has no user_key{hint}", d.keys(), "polytope")
+        return label, d["user_key"], _text_value(d, "user_email")
+    rc = home / ".ecmwfapirc"
+    if rc.is_file():
+        d = _json_object(rc, "~/.ecmwfapirc", "ecmwf")
+        if not _text_value(d, "key"):
+            hint = " (user_key belongs in ~/.polytopeapirc)" if "user_key" in d else ""
+            raise MalformedCredentials("~/.ecmwfapirc", f"has no key{hint}", d.keys(), "ecmwf")
+        return "~/.ecmwfapirc", d["key"], _text_value(d, "email")
+    return None, None, None
+
+
+def credentials(env=None, home: Path | None = None) -> str | None:
+    """Where polytope-client will find a key (name only — never the value). A malformed source
+    is still named here; auth_header() reports what is wrong with it."""
+    env = os.environ if env is None else env
+    try:
+        return _locate(env, home or Path.home())[0]
+    except MalformedCredentials as e:
+        return e.source
+
+
+def malformed_barrier(e: MalformedCredentials) -> dict:
+    """BLOCKED report for a credentials source that exists but is unusable (names only)."""
+    keys = ", ".join(e.keys) or "none readable"
+    if e.layout == "yaml":
+        fix = (
+            f"2. Fix {e.source}: one 'name: value' per line, e.g.\n"
+            "   user_key: <key>\n   user_email: <email>\n"
+            "   (or delete those two lines and use ~/.polytopeapirc)"
+        )
+    elif e.layout == "ecmwf":
+        fix = (
+            "2. Rewrite ~/.ecmwfapirc as JSON, then run: chmod 600 ~/.ecmwfapirc\n"
+            '   {"url": "https://api.ecmwf.int/v1", "key": "<key>", "email": "<email>"}\n'
+            '   — or create ~/.polytopeapirc with {"user_email": "<email>", "user_key": "<key>"}'
+        )
+    else:
+        f = "~/.polytopeapirc" if e.source == "~/.polytopeapirc" else "that file"
+        fix = (
+            f"2. Rewrite {f} as JSON, then run: chmod 600 {f}\n"
+            '   {"user_email": "<email>", "user_key": "<key>"}'
+        )
+    return {
+        "blocked": f"{e.source} is malformed",
+        "why": f"it {e.problem}; keys found: {keys}. polytope-client cannot use it either.",
+        "user_steps": [
+            "1. Log in and open https://api.ecmwf.int/v1/key/ — it shows your key and email.",
+            fix,
+            '3. Polytope reads "user_key"/"user_email"; ~/.ecmwfapirc (MARS) uses "url"/"key"/'
+            '"email". One file may contain both layouts.',
+            "4. Re-run: uv run ptpoint.py --check",
+        ],
+        "agent": "Answer from the ecmwf-open-data skill now and relay these steps; never open "
+        "or print the file and never ask for the key in chat.",
+    }
 
 
 # --- request ------------------------------------------------------------------------------------
@@ -453,6 +609,10 @@ def fetch_latest(lat, lon, end_step, ensemble, date=None, time=None) -> tuple[di
             Exception
         ) as e:  # polytope-client raises generic errors; retry older runs on "no data"
             msg = str(e)
+            if INSUFFICIENT.search(msg):  # an older run is refused the same way
+                raise RuntimeError(f"Polytope: {msg.splitlines()[-1]}") from e
+            if "__class__ must be set to a class" in msg:  # polytope-client crashing on a 401
+                raise RuntimeError("Polytope rejected the key (HTTP 401)") from e
             if any(k in msg for k in ("401", "403", "Unauthorized", "Forbidden")):
                 raise RuntimeError(
                     "Polytope rejected the credentials (no access for this account) — "
@@ -478,10 +638,51 @@ def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
     return code
 
 
+# The answer Polytope gives (HTTP 400) when the account may list the collection but not read it.
+INSUFFICIENT = re.compile(r"(?i)insufficient permissions")
+
+
+def entitlement_barrier() -> dict:
+    return {
+        "blocked": "this ECMWF account has no entitlement to operational forecast data",
+        "why": "Polytope accepted the key — and lists the 'ecmwf-mars' collection to every "
+        "user — but refused the data request with 'insufficient permissions': operational IFS "
+        "data is licensed per account.",
+        "user_steps": [
+            "1. Users at a Member or Co-operating State national meteorological service: ask "
+            "your Computing Representative "
+            "(https://www.ecmwf.int/en/about/contact-us/computing-representatives) to grant "
+            "your ECMWF account access to operational data.",
+            "2. Everyone else: operational data needs an ECMWF licence or service agreement "
+            "(https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements); "
+            "questions: https://support.ecmwf.int",
+            "3. Once granted, re-run: uv run ptpoint.py --check",
+        ],
+        "agent": "Answer now with the ecmwf-open-data skill (uv run "
+        "<ecmwf-open-data>/scripts/odpoint.py --lat LAT --lon LON: the same IFS model, free) "
+        "and give these steps; do not retry Polytope until the user confirms access.",
+    }
+
+
+def key_rejected_barrier(detail: str = "") -> dict:
+    return {
+        "blocked": "Polytope rejected the key",
+        "why": f"{detail + ': ' if detail else ''}the key is mistyped, from another account, "
+        "or expired (ECMWF keys last a year).",
+        "user_steps": [*setup_steps()[:3], "4. Re-run: uv run ptpoint.py --check"],
+        "agent": "Answer from the ecmwf-open-data skill now and give these steps; never ask "
+        "for the key in chat; do not retry until the user has a fresh key.",
+    }
+
+
 def barrier_for_error(message: str) -> dict | None:
     if ecmwf_status.NETWORK_ERROR.search(message):
         return ecmwf_status.network_barrier("polytope", message.splitlines()[-1][:200])
-    if re.search(r"(?i)\b40[13]\b|unauthori[sz]ed|forbidden|rejected the credentials", message):
+    if INSUFFICIENT.search(message):
+        return entitlement_barrier()
+    if re.search(r"(?i)\b401\b|unauthori[sz]ed|rejected the key", message):
+        return key_rejected_barrier()
+    if re.search(r"(?i)\b403\b|forbidden|rejected the credentials", message):
         return {
             "blocked": "Polytope refused this account",
             "why": "the key is invalid, or the requested dataset is restricted (Member and "
@@ -521,30 +722,16 @@ class AccessDenied(Exception):
 
 
 def auth_header(env=None, home: Path | None = None) -> str | None:
-    """Authorization header from the same sources as polytope-client — never printed.
-
-    POLYTOPE_USER_KEY(+EMAIL) > ~/.polytopeapirc > ~/.ecmwfapirc."""
+    """Authorization header from the same sources, in the same order, as polytope-client —
+    never printed. None without credentials; MalformedCredentials for an unusable source."""
     env = os.environ if env is None else env
-    home = home or Path.home()
-    key, email = env.get("POLYTOPE_USER_KEY"), env.get("POLYTOPE_USER_EMAIL")
-    if not key:
-        for f, kk, ek in (
-            (".polytopeapirc", "user_key", "user_email"),
-            (".ecmwfapirc", "key", "email"),
-        ):
-            if (home / f).exists():
-                d = json.loads((home / f).read_text())
-                key, email = d.get(kk), d.get(ek)
-                break
+    _, key, email = _locate(env, home or Path.home())
     if not key:
         return None
     return f"EmailKey {email}:{key}" if email else f"Bearer {key}"
 
 
 def _get_json(url: str, headers: dict) -> tuple[int, dict]:
-    import urllib.error
-    import urllib.request
-
     req = urllib.request.Request(url, headers={"User-Agent": "ecmwf-weather-skills", **headers})
     try:
         with urllib.request.urlopen(req, timeout=COLLECTIONS_TIMEOUT_S) as r:
@@ -573,8 +760,128 @@ def collection_barrier(collection: str, available: list[str]) -> dict:
     }
 
 
-def check(as_json: bool) -> int:
-    """Credentials + the account's collections (seconds; no data request)."""
+# --- the check's test request: one real feature extraction over plain HTTP ----------------------
+# polytope-client is not used here: it retries 10 times with 120 s sleeps on server errors and
+# crashes on an expired key, which would turn a seconds-long check into minutes or a traceback.
+
+# Reading (ECMWF headquarters): a land gridpoint present in every run.
+TEST_POINT = (51.45, -0.97)
+# A one-point, one-step extraction is ready in seconds; past a minute report the service as slow.
+TEST_POLL_S = 60
+POLL_EVERY_S = 1.0
+HTTP_TIMEOUT_S = 30
+NO_DATA = re.compile(
+    r"(?i)not (yet )?released|no data|not found|not available|nothing to retrieve|no matching"
+)
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Redirects are followed by hand: the key is only sent back to the Polytope host."""
+
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def _http(method: str, url: str, headers: dict, body: bytes | None = None):
+    """(status, lower-cased headers, body bytes) — HTTP errors and redirects are answers too."""
+    opener = urllib.request.build_opener(_NoRedirect)
+    req = urllib.request.Request(
+        url, data=body, method=method, headers={"User-Agent": "ecmwf-weather-skills", **headers}
+    )
+    try:
+        with opener.open(req, timeout=HTTP_TIMEOUT_S) as r:
+            return r.status, {k.lower(): v for k, v in r.headers.items()}, r.read()
+    except urllib.error.HTTPError as e:
+        hdrs = {k.lower(): v for k, v in (e.headers or {}).items()}
+        return e.code, hdrs, e.read() or b""
+
+
+def test_request_body(date: str, time_: str) -> bytes:
+    """What polytope-client POSTs for ptpoint's own request, cut to 2 m temperature at step 0.
+    The request travels as text (polytope-client sends YAML; JSON is valid YAML)."""
+    req = build_request(*TEST_POINT, date, time_, end_step=0)
+    req["param"] = "167"
+    return json.dumps({"verb": "retrieve", "request": json.dumps(req)}).encode()
+
+
+def _message(body: bytes) -> str:
+    try:
+        d = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return body[:300].decode("utf-8", "replace").strip()
+    return str(d.get("message", d) if isinstance(d, dict) else d)[:300]
+
+
+def _classify(status: int, message: str) -> str:
+    if status in (401, 403):
+        return "key"
+    if INSUFFICIENT.search(message):
+        return "entitlement"
+    if status in (400, 404) and NO_DATA.search(message):
+        return "no_data"
+    if status == 429 or status >= 500:
+        return "network"
+    return "error"
+
+
+def _one_test_request(address: str, auth: str, run, http, sleep) -> dict:
+    submit = f"https://{address}/api/v1/requests/{COLLECTION}"
+    headers = {"Authorization": auth, "Content-Type": "application/json"}
+    job = None
+
+    def key_for(url: str) -> dict:  # the key goes back to the Polytope host only
+        same = urllib.parse.urlsplit(url).netloc == address and url.startswith("https://")
+        return {"Authorization": auth} if same else {}
+
+    try:
+        status, hdrs, body = http("POST", submit, headers, test_request_body(*run))
+        if status == 202:
+            job = urllib.parse.urljoin(submit, hdrs.get("location", ""))
+            deadline = time.monotonic() + TEST_POLL_S
+            while status == 202:
+                if time.monotonic() > deadline:
+                    return {"result": "network", "error": f"no result within {TEST_POLL_S} s"}
+                sleep(POLL_EVERY_S)
+                status, hdrs, body = http("GET", job, key_for(job))
+        if status in (301, 302, 303, 307):
+            url = urllib.parse.urljoin(job or submit, hdrs.get("location", ""))
+            if not url.startswith("https://"):
+                return {"result": "error", "error": "Polytope redirected to a non-https URL"}
+            status, hdrs, body = http("GET", url, key_for(url))
+        if status != 200:
+            msg = _message(body)
+            return {"result": _classify(status, msg), "error": f"HTTP {status}: {msg}"}
+        try:
+            parse_covjson(json.loads(body))
+        except (ValueError, KeyError, IndexError, TypeError):
+            return {"result": "error", "error": "Polytope answered with unexpected content"}
+        return {"result": "ok", "bytes": len(body)}
+    except (OSError, TimeoutError) as e:  # URLError, connection refused, socket timeout
+        return {"result": "network", "error": str(e)[:300]}
+    finally:
+        if job:
+            with contextlib.suppress(Exception):  # best effort: the job expires server-side
+                http("DELETE", job, key_for(job))
+
+
+def test_request(address: str, auth: str, http=_http, sleep=time.sleep, runs=None) -> dict:
+    """One tiny real extraction: the only proof the account may read operational data (the
+    server lists every collection to everyone and checks permission on submit). A run not yet
+    released is retried once with the previous run."""
+    runs = runs or candidate_runs()[:2]
+    t0 = time.monotonic()
+    for run in runs[:2]:
+        r = _one_test_request(address, auth, run, http, sleep)
+        r["run"] = f"{run[0]} {run[1]}"
+        if r["result"] != "no_data":
+            break
+    r["seconds"] = round(time.monotonic() - t0, 1)
+    return r
+
+
+def check(as_json: bool, offline: bool = False, http=_http, sleep=time.sleep) -> int:
+    """Credentials, the account's collections and (unless offline) one tiny real request.
+    Exit 0 usable, 4 blocked, 2 not verified (no data yet, service trouble)."""
     src = credentials()
     res = {
         "polytope": bool(src),
@@ -583,39 +890,92 @@ def check(as_json: bool) -> int:
         "fallback": "ecmwf-open-data skill: uv run <ecmwf-open-data>/scripts/odpoint.py "
         "--lat LAT --lon LON",
     }
+    code = 0 if src else 4
     if src:
         try:
-            cols = list_collections(ADDRESS, auth_header())
+            auth = auth_header()
+        except MalformedCredentials as e:
+            return blocked(malformed_barrier(e), as_json)
+        try:
+            cols = list_collections(ADDRESS, auth)
             res.update(verified=True, collections=cols, point_forecasts=COLLECTION in cols)
+            res["verified_by"] = "collection_list"
             if COLLECTION not in cols:
-                res["polytope"] = False
+                res["polytope"], code = False, 4
                 res["offer"] = (
                     f"Polytope works but '{COLLECTION}' (operational forecasts) is not "
                     "among this account's collections; use ecmwf-open-data and offer "
                     "the access steps (ptpoint.py --setup)."
                 )
+            elif not offline:
+                code = _apply_test_request(res, test_request(ADDRESS, auth, http, sleep))
         except AccessDenied as e:
             res.update(polytope=False, verified=False, error=str(e))
+            code = 4
         except Exception as e:
             b = barrier_for_error(str(e))
             res.update(polytope=False, verified=None, error=str(e).splitlines()[-1][:300])
+            code = 4
             if b:
-                res["status"] = b.get("why")
+                res["status"] = b.get("status")
     if not res["polytope"] and "offer" not in res:
         res["offer"] = (
             "Say once what Polytope would add (hourly point data in KB) and offer "
             "step-by-step setup instructions (ptpoint.py --setup); give them only if "
             "accepted. Destination Earth data: the ecmwf-destine skill."
         )
-    print(json.dumps(res, indent=2) if as_json else "\n".join(f"{k}: {v}" for k, v in res.items()))
-    return 0 if res["polytope"] else 4
+    if as_json:
+        print(json.dumps(res, indent=2))
+    else:
+        print("\n".join(f"{k}: {v}" for k, v in res.items() if k != "blocked"))
+    return code
+
+
+def _apply_test_request(res: dict, r: dict) -> int:
+    """Record the test request's outcome in the check result; returns the exit code."""
+    res.update(test_run=r["run"], seconds=r["seconds"])
+    if r["result"] == "ok":
+        res.update(point_forecasts=True, verified_by="test_request")
+        return 0
+    res.update(polytope=False, error=r["error"])
+    if r["result"] == "no_data":
+        res.update(
+            verified=None,
+            point_forecasts=None,
+            offer=(
+                "No recent run answered yet (not released); Polytope access is unconfirmed. "
+                "Use ecmwf-open-data meanwhile and re-run the check later."
+            ),
+        )
+        return 2
+    b = {
+        "entitlement": entitlement_barrier,
+        "key": lambda: key_rejected_barrier(r["error"][:40]),
+        "network": lambda: ecmwf_status.network_barrier("polytope", r["error"]),
+    }.get(r["result"])
+    if b is None:  # an unexpected answer: report it, don't guess a barrier
+        res.update(verified=None, point_forecasts=None)
+        return 2
+    res["blocked"] = b()
+    res["point_forecasts"] = False if r["result"] != "network" else None
+    if r["result"] == "key":
+        res["verified"] = False
+    blocked(res["blocked"])  # the report on stderr; stdout keeps one document
+    return 2 if r["result"] == "network" else 4
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument("--check", action="store_true", help="report access (never prints keys)")
+    ap.add_argument(
+        "--check", action="store_true", help="report access with a tiny test request (no keys)"
+    )
+    ap.add_argument(
+        "--offline",
+        action="store_true",
+        help="with --check: only list the account's collections (no data request)",
+    )
     ap.add_argument("--setup", action="store_true", help="how to obtain Polytope credentials")
     ap.add_argument("--lat", type=float)
     ap.add_argument("--lon", type=float)
@@ -642,7 +1002,7 @@ def main(argv=None) -> int:
         print("\n".join(setup_steps()))
         return 0
     if a.check:
-        return check(a.json)
+        return check(a.json, offline=a.offline)
     if a.lat is None or a.lon is None:
         ap.error("--lat and --lon are required (or use --check)")
     if not credentials():
@@ -660,6 +1020,8 @@ def main(argv=None) -> int:
     # Confirm the account can use the collection before requesting data (fast, authenticated).
     try:
         cols = list_collections(ADDRESS, auth_header())
+    except MalformedCredentials as e:
+        return blocked(malformed_barrier(e), a.json)
     except AccessDenied as e:
         return blocked(barrier_for_error(str(e)), a.json)
     except Exception as e:
