@@ -19,6 +19,7 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/133) | `ecmwf/earthkit-transforms` | spatial.reduce returns NaN for western-hemisphere polygons when longitudes run 0-360 | [`transforms-spatial-reduce-0-360.py`](transforms-spatial-reduce-0-360.py) |
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/134) | `ecmwf/earthkit-transforms` | spatial.reduce(..., return_as='pandas') crashes (return_as passed on to nanmean) | [`transforms-spatial-reduce-return-as-pandas.py`](transforms-spatial-reduce-return-as-pandas.py) |
 | [filed](https://github.com/ecmwf/earthkit-utils/issues/88) | `ecmwf/earthkit-utils` | units.convert_units on a FieldList silently returns the data unconverted | [`utils-convert-units-fieldlist-noop.py`](utils-convert-units-fieldlist-noop.py) |
+| draft | `ecmwf/earthkit-data` | mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1' | [`data-mars-relative-date-string.py`](data-mars-relative-date-string.py) |
 
 ## Pull requests
 
@@ -367,5 +368,47 @@ print("REPRODUCED:" if abs(after - before) < 1e-6 else "NOT REPRODUCED:", before
 **Suggested fix:** Support FieldList (convert values, update units metadata) or raise TypeError.
 
 **Workaround:** Convert xarray, or convert at plot time with earthkit-plots units=.
+
+Found while writing verified earthkit recipes for the ECMWF agent skills (https://github.com/ecmwf/ecmwf-weather-skills).
+
+## mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1'
+
+Repository: `ecmwf/earthkit-data` · bug · draft
+
+**What happens:** ValueError: Invalid datetime '-1' while normalising the request, before anything is sent.
+
+**Expected:** The request goes to MARS, which accepts relative dates such as "-1" (yesterday); the integer -1 already works.
+
+**Reproducer** (self-contained; `uv run --script repro.py`):
+
+```python
+# /// script
+# dependencies = ["earthkit-data[mars]==1.2.4"]
+# ///
+"""The mars source rejects date="-1" (a MARS relative date, as a string); the integer -1 works."""
+
+import earthkit.data as ekd
+
+request = {
+    "class": "od",
+    "stream": "oper",
+    "type": "fc",
+    "levtype": "sfc",
+    "param": "2t",
+    "date": "-1",
+    "time": "00",
+    "step": "0",
+    "grid": "5/5",
+}
+try:
+    ekd.from_source("mars", request, prompt=False)
+    print("NOT REPRODUCED: date='-1' accepted")
+except ValueError as e:
+    print("REPRODUCED:" if "Invalid datetime" in str(e) else "NOT REPRODUCED:", e)
+```
+
+**Suggested fix:** Accept negative integers given as strings in the date normaliser (as for int), or pass them through unchanged.
+
+**Workaround:** Give the integer -1 or an ISO date.
 
 Found while writing verified earthkit recipes for the ECMWF agent skills (https://github.com/ecmwf/ecmwf-weather-skills).

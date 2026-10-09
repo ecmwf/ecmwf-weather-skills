@@ -1,7 +1,7 @@
 ---
 name: ecmwf-polytope
-description: Extracts just the data needed from ECMWF's operational forecasts with Polytope feature extraction — hourly point time series (meteograms), 50-member ensemble percentiles at a point, vertical profiles, polygons, bounding boxes, circles and trajectories — in kilobytes instead of downloading global fields. Use when the user has ECMWF credentials (POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc) and asks for a forecast or meteogram at a place, forecast uncertainty, ensemble spread, percentiles or likely ranges at a location (preferred over open-data for any ensemble question at a point), weather along a route or inside a region, Polytope requests or errors, the earthkit polytope source, or whether they have Polytope access. Falls back to the ecmwf-open-data skill when there are no credentials.
-compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — earthkit-data[polytope,covjsonkit], earthkit-meteo, earthkit-utils) and network access to polytope.ecmwf.int. `--check` without credentials runs on plain Python 3.
+description: Extracts just the data needed from ECMWF's operational forecasts with Polytope feature extraction — hourly point time series (meteograms), 50-member ensemble percentiles at a point, vertical profiles, polygons, bounding boxes, circles and trajectories — in kilobytes instead of downloading global fields. Use when the user has ECMWF credentials (POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc) and asks for a forecast, feels-like temperature or meteogram at a place, forecast uncertainty, ensemble spread, percentiles or likely ranges at a location (preferred over open-data for any ensemble question at a point), weather along a route or inside a region, Polytope requests or errors, the earthkit polytope source, or whether they have Polytope access. Falls back to the ecmwf-open-data skill when there are no credentials.
+compatibility: scripts/ptpoint.py needs uv (PEP 723 inline dependencies — earthkit-data[polytope,covjsonkit], earthkit-meteo, earthkit-utils, thermofeel) and network access to polytope.ecmwf.int. `--check` without credentials runs on plain Python 3.
 license: Apache-2.0
 metadata:
   author: ECMWF
@@ -18,10 +18,10 @@ SPDX-License-Identifier: Apache-2.0
 ## Contents
 - Access check (line 38)
 - Point forecast and ensemble workflow (line 63)
-- Other features (line 89)
-- Processing and plots (line 99)
-- Licence and attribution (line 107)
-- When blocked (line 114)
+- Other features (line 92)
+- Processing and plots (line 102)
+- Licence and attribution (line 110)
+- When blocked (line 117)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -79,6 +79,9 @@ files there, never inside the skill directory.
 - Output (UTC, hourly to 90 h, then 3-hourly/6-hourly): `t2m_C`, `precip_mm` (since previous
   step), `wind_speed_ms`, `wind_dir_deg`, `msl_hPa`, `tcc_pct`; ensemble adds `*_p10/_p50/_p90`
   and `members`.
+- "Feels like", heat index, wind chill: add `--indices` — `heat_index_C`, `humidex_C`,
+  `apparent_temperature_C`, `wind_chill_C` (thermofeel; ensemble: p10/p50/p90; wind chill
+  `null` outside its validity) and an `indices_note` to relay. Never code the formulas yourself.
 - `--next-hours N` returns exactly the next N hours from now (the run started hours ago, so
   `--steps 0-N` covers less); `--tz ZONE` adds `local_time`; `--from-now` drops past rows; `--daily` adds per-local-day high,
   low and precipitation — for `--ensemble` as p10/p50/p90 of each member's daily value, which

@@ -54,6 +54,8 @@ def test_recipe_runs(code, tmp_path):
     shutil.copy(FIXTURES / "ifs-sfc-5deg-20261002-00z.grib2", tmp_path / "forecast.grib2")
     shutil.copy(FIXTURES / "ifs-ens-2t-5members-5deg.grib2", tmp_path / "ens.grib2")
     shutil.copy(FIXTURES / "era5-lisbon-t2m-2020-01.csv", tmp_path / "lisbon.csv")
+    shutil.copy(FIXTURES / "ifs-od-comfort-5deg-20261009-00z.grib2", tmp_path / "comfort.grib2")
+    shutil.copy(FIXTURES / "ifs-rad-5deg.grib2", tmp_path / "rad.grib2")
     script = tmp_path / "recipe.py"
     script.write_text(code)
     out = subprocess.run(
