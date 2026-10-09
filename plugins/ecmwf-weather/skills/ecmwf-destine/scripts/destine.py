@@ -12,7 +12,7 @@ Digital Twin data needs UPGRADED access on the DestinE Platform — `setup` expl
 request it. The token lives in ~/.polytopeapirc-destine (or DESTINE_POLYTOPE_KEY) so it never
 overwrites an ECMWF Polytope key in ~/.polytopeapirc.
 
-  python3 destine.py check                     # token present? (never printed)
+  python3 destine.py check                     # token and collections per bridge (never printed)
   python3 destine.py setup                     # how to request access and authenticate
   python3 destine.py request climate-dt --param 167 --start 2014-01-01 --end 2014-01-31
   python3 destine.py request extremes-dt --param 167 --lat 38.72 --lon -9.14
@@ -61,12 +61,61 @@ def token_source(env=os.environ, home: Path | None = None) -> str | None:
     return None
 
 
+class MalformedToken(ValueError):
+    """The token file exists but holds no usable token. Carries key names, never values."""
+
+    def __init__(self, problem: str, keys=()):
+        self.problem = problem
+        self.keys = sorted({str(k) for k in keys if re.fullmatch(r"[A-Za-z_]{1,24}", str(k))})
+        super().__init__(f"~/{TOKEN_FILE} is malformed: {problem}")
+
+
 def read_token(env=os.environ, home: Path | None = None) -> str | None:
+    """The token (DESTINE_POLYTOPE_KEY, else user_key in ~/.polytopeapirc-destine); None when
+    neither exists; MalformedToken when the file cannot be used."""
     home = home or Path.home()
     if env.get(TOKEN_ENV):
         return env[TOKEN_ENV]
     f = home / TOKEN_FILE
-    return json.loads(f.read_text()).get("user_key") if f.exists() else None
+    if not f.exists():
+        return None
+    try:
+        text = f.read_bytes().decode("utf-8")
+    except OSError as e:
+        raise MalformedToken(f"cannot be read ({e.strerror or type(e).__name__})") from None
+    except UnicodeDecodeError:
+        raise MalformedToken("is not UTF-8 text") from None
+    if not text.strip():
+        raise MalformedToken("is empty")
+    try:
+        d = json.loads(text)
+    except json.JSONDecodeError:
+        names = re.findall(r"(?m)^\s*([A-Za-z_]{1,24})\s*[:=]", text)
+        raise MalformedToken("is not JSON", names) from None
+    if not isinstance(d, dict):
+        raise MalformedToken(f"holds a JSON {type(d).__name__}, not an object")
+    key = d.get("user_key")
+    if not (isinstance(key, str) and key.strip()):
+        raise MalformedToken("has no user_key", d.keys())
+    return key
+
+
+def malformed_barrier(e: MalformedToken) -> dict:
+    return {
+        "blocked": f"~/{TOKEN_FILE} is malformed",
+        "why": f"it {e.problem}; keys found: {', '.join(e.keys) or 'none readable'}. It must "
+        'be JSON with the token under "user_key", as desp-authentication.py writes it.',
+        "user_steps": [
+            "1. Write a fresh token file (your password is prompted, never put it on the "
+            "command line):\n   python polytope-examples/desp-authentication.py -u <DestinE "
+            f"username> -o ~/{TOKEN_FILE}\n   chmod 600 ~/{TOKEN_FILE}",
+            "   (polytope-examples: https://github.com/destination-earth-digital-twins/"
+            "polytope-examples; python3 destine.py setup has every step.)",
+            "2. Re-run: python3 destine.py check",
+        ],
+        "agent": "Relay these steps; never open or print the file and never ask for the token "
+        "or password in chat.",
+    }
 
 
 def setup_steps() -> list[str]:
@@ -309,6 +358,15 @@ def attribution(dataset: str) -> dict:
 # --- retrieve (polytope-client) ------------------------------------------------------------------
 
 
+def normalise_grid(req: dict) -> dict:
+    """grid as the "dx/dy" text Polytope expects: it rejects a list with equal values
+    ("Duplicate values found in list for key 'grid'")."""
+    g = req.get("grid")
+    if isinstance(g, (list, tuple)):
+        return {**req, "grid": "/".join(str(v) for v in g)}
+    return dict(req)
+
+
 def retrieve(req: dict, output: str) -> None:
     import contextlib
 
@@ -317,11 +375,69 @@ def retrieve(req: dict, output: str) -> None:
     token = read_token()
     with contextlib.redirect_stdout(sys.stderr):
         Client(address=address_for(req), user_key=token, quiet=True).retrieve(
-            COLLECTION, req, output
+            COLLECTION, normalise_grid(req), output
         )
 
 
 # --- CLI ------------------------------------------------------------------------------------------
+
+
+def check(as_json: bool, offline: bool = False, env=None, home=None, fetch=_get_json) -> int:
+    """Token (name only) and, unless offline, the collections each data bridge lists for it.
+    Exit 0 when a bridge lists the Digital Twin collection (or offline with a token), 4 when
+    the token is missing, malformed or refused, 2 when no bridge answers."""
+    env = os.environ if env is None else env
+    src = token_source(env, home)
+    res: dict = {"token": src, "addresses": {"lumi": LUMI, "mn5": MN5, "leonardo": LEONARDO}}
+    code, barrier = (0, None) if src else (4, None)
+    if src:
+        try:
+            token = read_token(env, home)
+        except MalformedToken as e:
+            return blocked(malformed_barrier(e), as_json)
+        if offline:
+            res["collections"] = "not queried (--offline)"
+        else:
+            cols = collections_by_bridge(token, fetch)
+            res["collections"] = cols
+            res["digital_twin_access"] = any(
+                isinstance(c, list) and COLLECTION in c for c in cols.values()
+            )
+            if not res["digital_twin_access"]:
+                code, barrier = _check_barrier(cols)
+    else:
+        res["offer"] = (
+            "No DestinE token found. Digital Twin data needs upgraded access on the "
+            "DestinE Platform. Offer the user step-by-step instructions "
+            "(python3 destine.py setup)."
+        )
+    if barrier:
+        res["blocked"] = barrier
+        blocked(barrier)  # the report on stderr; stdout keeps one document
+    if as_json:
+        print(json.dumps(res, indent=2))
+    else:
+        print("\n".join(f"{k}: {v}" for k, v in res.items() if k != "blocked"))
+    return code
+
+
+def _check_barrier(cols: dict) -> tuple[int, dict]:
+    """No bridge lists the collection: why, from the bridges' answers."""
+    errors = [c for c in cols.values() if isinstance(c, str)]
+    if len(errors) == len(cols):  # every bridge failed: the token, or the network
+        offline = ecmwf_status.NETWORK_ERROR
+        refused = [e for e in errors if not offline.search(e) and barrier_for_error(e)]
+        if refused:
+            return 4, barrier_for_error(refused[0])
+        return 2, ecmwf_status.network_barrier("destine", errors[0].removeprefix("error: "))
+    listed = sorted({x for c in cols.values() if isinstance(c, list) for x in c})
+    return 4, {
+        "blocked": f"no data bridge lists the '{COLLECTION}' collection for this token",
+        "why": f"the token can use: {', '.join(listed) or 'no collections'} — Digital Twin "
+        "data needs upgraded access granted by the European Commission.",
+        "user_steps": [*setup_steps()[:3], setup_steps()[5]],
+        "agent": "Give these steps; offer ecmwf-open-data or ecmwf-cds-ads alternatives meanwhile.",
+    }
 
 
 def main(argv=None) -> int:
@@ -353,25 +469,7 @@ def main(argv=None) -> int:
         print("\n".join(setup_steps()))
         return 0
     if a.cmd == "check":
-        src = token_source()
-        res = {"token": src, "addresses": {"lumi": LUMI, "mn5": MN5, "leonardo": LEONARDO}}
-        if src and not a.offline:
-            res["collections"] = collections_by_bridge(read_token())
-            res["digital_twin_access"] = any(
-                isinstance(c, list) and COLLECTION in c for c in res["collections"].values()
-            )
-        elif src:
-            res["collections"] = "not queried (--offline)"
-        if not src:
-            res["offer"] = (
-                "No DestinE token found. Digital Twin data needs upgraded access on the "
-                "DestinE Platform. Offer the user step-by-step instructions "
-                "(python3 destine.py setup)."
-            )
-        print(
-            json.dumps(res, indent=2) if a.json else "\n".join(f"{k}: {v}" for k, v in res.items())
-        )
-        return 0 if src else 4
+        return check(a.json, a.offline)
     if a.cmd == "request":
         try:
             req = template(
@@ -399,6 +497,10 @@ def main(argv=None) -> int:
     if errs:
         print("error: " + "; ".join(errs), file=sys.stderr)
         return 2
+    try:
+        read_token()
+    except MalformedToken as e:
+        return blocked(malformed_barrier(e))
     if not token_source():
         return blocked(
             {
