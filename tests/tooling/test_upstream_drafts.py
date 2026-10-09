@@ -3,6 +3,7 @@
 """Draft upstream issues: complete, with a self-contained reproducer each; drafts never filed
 without a URL recorded."""
 
+import re
 import subprocess
 
 import pytest
@@ -41,20 +42,39 @@ def test_readme_is_generated():
     assert out.returncode == 0, out.stdout + out.stderr
 
 
+def latest(code: str) -> str:
+    """The reproducer with exact pins relaxed, so it runs against the latest releases."""
+    return re.sub(r'"([A-Za-z0-9_.\[\]-]+)==([0-9][^"]*)"', r'"\1>=\2"', code)
+
+
+def test_latest_relaxes_exact_pins():
+    code = '# dependencies = ["earthkit-meteo==1.2.0", "numpy", "earthkit-transforms[all]==1.0.0"]'
+    assert latest(code) == (
+        '# dependencies = ["earthkit-meteo>=1.2.0", "numpy", "earthkit-transforms[all]>=1.0.0"]'
+    )
+
+
 @pytest.mark.live
 @pytest.mark.parametrize(
-    "i", [i for i in ISSUES if i["status"] == "draft"], ids=lambda i: i["script"]
+    "i", [i for i in ISSUES if i["status"] != "fixed"], ids=lambda i: i["script"]
 )
-def test_draft_still_reproduces(i):
+def test_open_issue_still_reproduces_on_the_latest_release(i, tmp_path):
+    """Fails when upstream releases a fix: then set status = "fixed" (with the version) in
+    issues.toml and remove the workaround from the skills."""
+    script = tmp_path / i["script"]
+    script.write_text(latest((UP / i["script"]).read_text()))
     out = subprocess.run(
-        ["uv", "run", "--quiet", "--script", str(UP / i["script"])],
+        ["uv", "run", "--quiet", "--refresh", "--script", str(script)],
         capture_output=True,
         text=True,
         timeout=900,
-        cwd=UP,
+        cwd=tmp_path,
     )
-    assert "REPRODUCED" in out.stdout and "NOT REPRODUCED" not in out.stdout, (
-        out.stdout,
+    fixed = "NOT REPRODUCED" in out.stdout or "REPRODUCED" not in out.stdout
+    assert not fixed, (
+        f"{i['url'] if i.get('url') else i['script']} no longer reproduces on the latest "
+        f"release — fixed upstream? Update issues.toml and drop the workaround.",
+        out.stdout[-500:],
         out.stderr[-500:],
     )
 
