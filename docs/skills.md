@@ -78,7 +78,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-earthkit/SKILL.md`](../plugins/e
 
 Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) ERA5 and the CARRA/CERRA regional reanalyses (class=rr) via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 
-**Requirements:** scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
+**Requirements:** scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. check --probe, cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 
 Source: [`../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md)
 

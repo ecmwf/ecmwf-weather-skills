@@ -19,6 +19,7 @@ systems; `uv run` installs earthkit-data[mars] (ecmwf-api-client). Requests can 
 text ("retrieve, class=od, ...").
 
   python3 mars.py check                          # credentials / local client (names only)
+  uv run  mars.py check --probe                  # + MARS rights (cost-only request)
   python3 mars.py lint request.json              # errors, warnings, size estimate, MARS text
   python3 mars.py plan request.json              # split into tape-friendly monthly chunks
   uv run  mars.py cost request.json              # server-side size, tape vs disk (minutes: queued)
@@ -38,6 +39,7 @@ import shutil
 import signal
 import sys
 import tempfile
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -471,15 +473,131 @@ def credentials(env=os.environ, home: Path | None = None, which=shutil.which) ->
     return {"webapi": web, "mars_client": client}
 
 
+WEBAPI_ENV = ("ECMWF_API_URL", "ECMWF_API_KEY", "ECMWF_API_EMAIL")
+WEBAPI_KEYS = ("url", "key", "email")
+ENV_SOURCE = "ECMWF_API_* environment"
+# Names reported from a broken credentials file: identifier-like only, so a value that happens
+# to sit on a line of its own (a pasted key) is never echoed as a "name".
+KEY_NAME = re.compile(r"[A-Za-z_]{1,24}")
+
+
+class MalformedCredentials(ValueError):
+    """A credentials source exists but cannot be used. Carries key names, never values."""
+
+    def __init__(self, source: str, problem: str, keys=()):
+        self.source, self.problem = source, problem
+        self.keys = sorted({str(k) for k in keys if KEY_NAME.fullmatch(str(k))})
+        super().__init__(f"{source} is malformed: {problem}")
+
+
+def _text_key_names(text: str) -> list[str]:
+    """Key names of 'name: value' / 'name = value' lines (CDS-style or INI-like files)."""
+    return re.findall(r"(?m)^\s*([A-Za-z_]{1,24})\s*[:=]", text)
+
+
+def _read_webapi_rc(rc: Path, label: str) -> dict:
+    """The rc file's url/key/email, as ecmwf-api-client needs them (JSON with those keys)."""
+    try:
+        raw = rc.read_bytes()
+    except OSError as e:
+        problem = f"cannot be read ({e.strerror or type(e).__name__})"
+        raise MalformedCredentials(label, problem) from None
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise MalformedCredentials(label, "is not UTF-8 text") from None
+    if not text.strip():
+        raise MalformedCredentials(label, "is empty")
+    try:
+        d = json.loads(text)
+    except json.JSONDecodeError:
+        names = _text_key_names(text)
+        hint = " (it looks like a CDS/ADS-style 'key: value' file)" if names else ""
+        raise MalformedCredentials(label, f"is not JSON{hint}", names) from None
+    if not isinstance(d, dict):
+        raise MalformedCredentials(label, f"holds a JSON {type(d).__name__}, not an object")
+    missing = sorted(k for k in WEBAPI_KEYS if not (isinstance(d.get(k), str) and d[k].strip()))
+    if missing:
+        raise MalformedCredentials(label, f"has no {', '.join(missing)}", d.keys())
+    return {k: d[k] for k in WEBAPI_KEYS}
+
+
 def _webapi_settings(env, home: Path) -> dict | None:
-    if all(env.get(k) for k in ("ECMWF_API_KEY", "ECMWF_API_URL", "ECMWF_API_EMAIL")):
+    """url/key/email in ecmwf-api-client's order: all three ECMWF_API_* variables, else the file
+    named by ECMWF_API_RC_FILE, else ~/.ecmwfapirc. None when nothing is configured; raises
+    MalformedCredentials where the client would fail (it never falls back past a broken source).
+    """
+    present = [k for k in WEBAPI_ENV if env.get(k)]
+    if len(present) == len(WEBAPI_ENV):
         return {
             "url": env["ECMWF_API_URL"],
             "key": env["ECMWF_API_KEY"],
             "email": env["ECMWF_API_EMAIL"],
         }
-    rc = Path(env["ECMWF_API_RC_FILE"]) if env.get("ECMWF_API_RC_FILE") else home / ".ecmwfapirc"
-    return json.loads(rc.read_text()) if rc.exists() else None
+    if present:
+        missing = [k for k in WEBAPI_ENV if k not in present]
+        raise MalformedCredentials(
+            ENV_SOURCE,
+            f"sets {', '.join(present)} but not {', '.join(missing)} — "
+            "ecmwf-api-client needs all three or none",
+            present,
+        )
+    if env.get("ECMWF_API_RC_FILE"):
+        rc, label = Path(env["ECMWF_API_RC_FILE"]), "the file named by ECMWF_API_RC_FILE"
+        if not rc.is_file():
+            raise MalformedCredentials(label, "does not exist")
+        return _read_webapi_rc(rc, label)
+    rc = home / ".ecmwfapirc"
+    return _read_webapi_rc(rc, "~/.ecmwfapirc") if rc.exists() else None
+
+
+def malformed_barrier(e: MalformedCredentials) -> dict:
+    """BLOCKED report for a credentials source that exists but is unusable (names only)."""
+    keys = ", ".join(e.keys) or "none readable"
+    if e.source == ENV_SOURCE:
+        return {
+            "blocked": "the ECMWF_API_* environment variables are incomplete",
+            "why": f"the environment {e.problem}.",
+            "user_steps": [
+                "1. Log in and open https://api.ecmwf.int/v1/key/ — it shows your url, key and "
+                "email.",
+                "2. Set all three together — ECMWF_API_URL=https://api.ecmwf.int/v1, "
+                "ECMWF_API_KEY and ECMWF_API_EMAIL — or unset them all and use ~/.ecmwfapirc "
+                "(python3 mars.py setup).",
+                "3. Re-run: python3 mars.py check",
+            ],
+            "agent": "Relay these steps; never ask for the key in chat or print the variables; "
+            "do not retry until the user confirms.",
+        }
+    f = "~/.ecmwfapirc" if e.source == "~/.ecmwfapirc" else "that file"
+    return {
+        "blocked": f"{e.source} is malformed",
+        "why": f"it {e.problem}; keys found: {keys}. ecmwf-api-client cannot use it, so every "
+        "MARS request would fail.",
+        "user_steps": [
+            "1. Log in and open https://api.ecmwf.int/v1/key/ — it shows your url, key and email.",
+            f"2. Rewrite {f} as JSON with exactly these keys, then run: chmod 600 {f}\n"
+            '   {"url": "https://api.ecmwf.int/v1", "key": "<key>", "email": "<email>"}',
+            '3. "user_key" and "user_email" are Polytope\'s names (its file is ~/.polytopeapirc); '
+            "ecmwf-api-client does not accept them. One file may contain both layouts (all "
+            "five keys) if you want to share it.",
+            "4. Re-run: python3 mars.py check",
+        ],
+        "agent": "Relay these steps; never open or print the file and never ask for the key in "
+        "chat; do not retry until the user confirms the file is fixed.",
+    }
+
+
+def key_prompt_barrier() -> dict:
+    """earthkit-data prompts for a key when it finds none; without a terminal that fails."""
+    return {
+        "blocked": "no usable ECMWF Web API key for this MARS request",
+        "why": "earthkit-data found no key and tried to prompt for one, but there is no terminal "
+        "to type it into (and keys must never be typed into an agent session).",
+        "user_steps": [*setup_steps()[:3], "4. Re-run: python3 mars.py check"],
+        "agent": "Give these steps; never ask for the key in chat; do not retry until the user "
+        "confirms the key file exists.",
+    }
 
 
 def _http_json(url: str, headers: dict) -> tuple[int, dict]:
@@ -599,18 +717,87 @@ def licence_note(req: dict) -> str:
 def server_cost(req: dict) -> dict:
     from ecmwfapi import ECMWFService
 
-    out = Path(".mars-cost.txt")
     text = "list,\n" + ",\n".join(
         f"{k}={v}"
         for k, v in {**req, "output": "cost"}.items()
         if k not in ("grid", "area", "target")
     )
-    with contextlib.redirect_stdout(sys.stderr):  # ecmwf-api-client logs to stdout
-        ECMWFService("mars", quiet=True).execute(text, str(out))
-    try:
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "cost.txt"
+        # ecmwf-api-client logs to stdout
+        with _webapi_jobs_cancelled_on_interrupt(), contextlib.redirect_stdout(sys.stderr):
+            ECMWFService("mars", quiet=True).execute(text, str(out))
         return parse_cost(out.read_text())
+
+
+# A cost-only list of yesterday's operational 2 m temperature analysis: tiny, always archived,
+# and refused with "no access" when the account has no MARS rights.
+PROBE_REQUEST = {
+    "class": "od",
+    "stream": "oper",
+    "type": "an",
+    "expver": "1",
+    "levtype": "sfc",
+    "param": "2t",
+    "date": "-1",
+    "time": "00",
+}
+# A cost-only list answers in seconds when the Web API queue is free; past two minutes the
+# answer is "unknown" rather than keeping the agent waiting behind a busy queue.
+PROBE_TIMEOUT_S = 120
+PROBE_RUN = "uv run scripts/mars.py check --probe"
+
+
+class ProbeTimeout(Exception):
+    """The MARS rights probe got no answer in time."""
+
+
+@contextlib.contextmanager
+def _deadline(seconds: int):
+    """Raise ProbeTimeout after `seconds` (SIGALRM; no limit where the platform lacks it)."""
+    if not hasattr(signal, "SIGALRM"):
+        yield
+        return
+
+    def fire(signum, frame):
+        raise ProbeTimeout(f"no answer from MARS within {seconds} s")
+
+    old = signal.signal(signal.SIGALRM, fire)
+    signal.alarm(seconds)
+    try:
+        yield
     finally:
-        out.unlink(missing_ok=True)
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old)
+
+
+def probe_mars(cost=None, timeout: int = PROBE_TIMEOUT_S) -> dict:
+    """Prove MARS rights with a cost-only list request (server_cost: the job is deleted if the
+    probe is cut short). mars_rights: confirmed | none (with a barrier) | unknown (with why)."""
+    cost = cost or server_cost
+    t0 = time.monotonic()
+    try:
+        with _deadline(timeout):
+            cost(dict(PROBE_REQUEST))
+    except ImportError:
+        return {
+            "mars_rights": "unknown",
+            "reason": f"the probe needs ecmwf-api-client — run: {PROBE_RUN}",
+        }
+    except ProbeTimeout as e:
+        return {
+            "mars_rights": "unknown",
+            "reason": f"{e} (the Web API queue may be busy); retry later — the job was deleted",
+        }
+    except Exception as e:  # ecmwf-api-client / MARS errors
+        msg = str(e) or repr(e)
+        b = barrier_for_error(msg)
+        if b and ecmwf_status.NETWORK_ERROR.search(msg):  # the probe could not ask
+            return {"mars_rights": "unknown", "reason": msg.splitlines()[-1][:300], "blocked": b}
+        if b:
+            return {"mars_rights": "none", "blocked": b}
+        return {"mars_rights": "unknown", "reason": msg.splitlines()[-1][:300]}
+    return {"mars_rights": "confirmed", "probe_seconds": round(time.monotonic() - t0, 1)}
 
 
 def absolute_dates(req: dict, today: date | None = None) -> dict:
@@ -675,6 +862,47 @@ def _load(arg: str) -> dict:
     return parse_request(p.read_text() if p.exists() else arg)
 
 
+def check(as_json: bool, probe: bool = False) -> int:
+    """Credentials (names only), the Web API key (who-am-i, seconds) and, with probe, MARS
+    rights (a cost-only list request). Exit 0 usable, 4 blocked, 2 rights unknown, 3 no uv."""
+    c = credentials()
+    try:
+        _webapi_settings(os.environ, Path.home())
+    except MalformedCredentials as e:
+        return blocked(malformed_barrier(e), as_json)
+    if c["webapi"]:
+        c.update(verify_webapi())
+    c["how"] = (
+        "Web API key: https://api.ecmwf.int/v1/key/ -> ~/.ecmwfapirc. A verified key means "
+        "the Web API accepts you; MARS rights per dataset depend on the account "
+        "(Member/Co-operating State or licensed users) — prove them before promising MARS "
+        f"data: {PROBE_RUN} (a cost-only request, seconds when the queue is free)."
+    )
+    if not (c["webapi"] or c["mars_client"]) or c.get("verified") is False:
+        c["offer"] = (
+            "Say once what MARS access would add and offer step-by-step setup "
+            "instructions (python3 mars.py setup); give them only if accepted."
+        )
+    code = 0 if (c["webapi"] or c["mars_client"]) and c.get("verified") is not False else 4
+    if probe and code == 0:
+        if c.get("verified"):
+            c.update(probe_mars())
+        else:
+            c["mars_rights"] = "unknown"
+            c["reason"] = "the probe uses the Web API, and no verified Web API key was found"
+        if c.get("blocked"):
+            blocked(c["blocked"])  # the report on stderr; stdout keeps one document
+        if c["mars_rights"] == "none":
+            code = 4
+        elif c["mars_rights"] == "unknown":
+            code = 3 if "needs ecmwf-api-client" in c.get("reason", "") else 2
+    if as_json:
+        print(json.dumps(c, indent=2))
+    else:
+        print("\n".join(f"{k}: {v}" for k, v in c.items() if k != "blocked"))
+    return code
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -683,6 +911,11 @@ def main(argv=None) -> int:
     sub.add_parser("setup", help="how to obtain the Web API key and MARS access")
     sp = sub.add_parser("check")
     sp.add_argument("--json", action="store_true")
+    sp.add_argument(
+        "--probe",
+        action="store_true",
+        help="also prove MARS rights with a cost-only list request (needs uv; up to 2 min)",
+    )
     for name in ("lint", "estimate", "plan", "cost", "retrieve"):
         sp = sub.add_parser(name)
         sp.add_argument("request", help="JSON or MARS-text file, or an inline MARS request string")
@@ -696,24 +929,7 @@ def main(argv=None) -> int:
         return 0
 
     if a.cmd == "check":
-        c = credentials()
-        if c["webapi"]:
-            c.update(verify_webapi())
-        c["how"] = (
-            "Web API key: https://api.ecmwf.int/v1/key/ -> ~/.ecmwfapirc. A verified key means "
-            "the Web API accepts you; MARS rights per dataset depend on the account "
-            "(Member/Co-operating State or licensed users) — `uv run mars.py cost` on a tiny "
-            "request proves them, but queues for minutes."
-        )
-        if not (c["webapi"] or c["mars_client"]) or c.get("verified") is False:
-            c["offer"] = (
-                "Say once what MARS access would add and offer step-by-step setup "
-                "instructions (python3 mars.py setup); give them only if accepted."
-            )
-        print(json.dumps(c, indent=2) if a.json else "\n".join(f"{k}: {v}" for k, v in c.items()))
-        if c.get("verified") is False:
-            return 4
-        return 0 if (c["webapi"] or c["mars_client"]) else 4
+        return check(a.json, a.probe)
 
     try:
         req = _load(a.request)
@@ -761,6 +977,11 @@ def main(argv=None) -> int:
                 },
                 a.json,
             )
+        if not credentials()["mars_client"]:
+            try:  # ecmwf-api-client would fail on a broken key source with a bare KeyError
+                _webapi_settings(os.environ, Path.home())
+            except MalformedCredentials as e:
+                return blocked(malformed_barrier(e), a.json)
         errs = lint(req)["errors"]
         if errs:
             print("error: fix the request first:\n  " + "\n  ".join(errs), file=sys.stderr)
@@ -779,10 +1000,14 @@ def main(argv=None) -> int:
     except ImportError as e:
         print(f"error: {e}. Run with `uv run mars.py …`.", file=sys.stderr)
         return 3
+    except EOFError:  # earthkit-data prompted for a missing key; there is no terminal
+        return blocked(key_prompt_barrier(), a.json)
     except (OSError, ValueError, json.JSONDecodeError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
     except Exception as e:  # ecmwf-api-client / MARS errors
+        if "EOF when reading a line" in str(e):  # a wrapped key prompt
+            return blocked(key_prompt_barrier(), a.json)
         b = barrier_for_error(str(e))
         if b:
             return blocked(b, a.json)

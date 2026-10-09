@@ -532,3 +532,273 @@ def test_sigterm_becomes_an_interrupt():
 
     with pytest.raises(KeyboardInterrupt):
         mars._interrupt(signal.SIGTERM, None)
+
+
+# --- malformed credentials, key prompt, MARS rights probe -----------------------------------------
+
+FAKE_KEY, FAKE_EMAIL = "zz-fake-key-zz", "fake@example.invalid"
+MALFORMED_RC = {
+    "polytope-layout": json.dumps({"user_key": FAKE_KEY, "user_email": FAKE_EMAIL}),
+    "no-url": json.dumps({"key": FAKE_KEY, "email": FAKE_EMAIL}),
+    "invalid-json": '{"url": "https://api.ecmwf.int/v1", "key": "' + FAKE_KEY + '",',
+    "empty": "",
+    "cds-yaml": f"url: https://cds.climate.copernicus.eu/api\nkey: {FAKE_KEY}\n",
+    "json-list": "[1, 2]",
+}
+
+
+@pytest.mark.parametrize("name", sorted(MALFORMED_RC))
+def test_malformed_ecmwfapirc_is_reported_not_raised(tmp_path, name):
+    (tmp_path / ".ecmwfapirc").write_text(MALFORMED_RC[name])
+    with pytest.raises(mars.MalformedCredentials) as e:
+        mars._webapi_settings({}, tmp_path)
+    b = mars.malformed_barrier(e.value)
+    text = json.dumps(b)
+    assert "~/.ecmwfapirc is malformed" in b["blocked"]
+    assert FAKE_KEY not in text and FAKE_EMAIL not in text
+    assert '"url": "https://api.ecmwf.int/v1"' in "\n".join(b["user_steps"])
+
+
+def test_malformed_rc_names_the_keys_found_and_the_polytope_layout(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text(MALFORMED_RC["polytope-layout"])
+    with pytest.raises(mars.MalformedCredentials) as e:
+        mars._webapi_settings({}, tmp_path)
+    b = mars.malformed_barrier(e.value)
+    assert "user_email, user_key" in b["why"]
+    steps = "\n".join(b["user_steps"])
+    assert "~/.polytopeapirc" in steps and "both" in steps
+
+
+def test_rc_that_is_not_utf8(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_bytes(b"\xff\xfe\x00\x81bad")
+    with pytest.raises(mars.MalformedCredentials, match="UTF-8"):
+        mars._webapi_settings({}, tmp_path)
+
+
+def test_yaml_rc_lists_key_names_only(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text(MALFORMED_RC["cds-yaml"])
+    with pytest.raises(mars.MalformedCredentials) as e:
+        mars._webapi_settings({}, tmp_path)
+    assert e.value.keys == ["key", "url"] and "not JSON" in e.value.problem
+
+
+def test_user_key_is_not_accepted_as_an_alias(tmp_path):
+    both = {"user_key": FAKE_KEY, "user_email": FAKE_EMAIL, "url": "https://api.ecmwf.int/v1"}
+    (tmp_path / ".ecmwfapirc").write_text(json.dumps(both))
+    with pytest.raises(mars.MalformedCredentials, match="email, key"):
+        mars._webapi_settings({}, tmp_path)
+
+
+def test_rc_with_both_layouts_is_fine(tmp_path):
+    both = {
+        "url": "https://api.ecmwf.int/v1",
+        "key": FAKE_KEY,
+        "email": FAKE_EMAIL,
+        "user_key": FAKE_KEY,
+        "user_email": FAKE_EMAIL,
+    }
+    (tmp_path / ".ecmwfapirc").write_text(json.dumps(both))
+    assert mars._webapi_settings({}, tmp_path)["url"] == "https://api.ecmwf.int/v1"
+
+
+def test_partial_environment_is_reported(tmp_path):
+    with pytest.raises(mars.MalformedCredentials) as e:
+        mars._webapi_settings({"ECMWF_API_KEY": FAKE_KEY}, tmp_path)
+    assert e.value.source == "ECMWF_API_* environment"
+    assert "ECMWF_API_URL" in e.value.problem and "ECMWF_API_EMAIL" in e.value.problem
+    assert FAKE_KEY not in json.dumps(mars.malformed_barrier(e.value))
+
+
+def test_partial_environment_wins_over_a_valid_rc(tmp_path):
+    # ecmwf-api-client raises "Incomplete API key found in the environment" instead of
+    # falling back to the file, so the file does not rescue it.
+    good = {"url": "https://api.ecmwf.int/v1", "key": FAKE_KEY, "email": FAKE_EMAIL}
+    (tmp_path / ".ecmwfapirc").write_text(json.dumps(good))
+    with pytest.raises(mars.MalformedCredentials, match="ECMWF_API_EMAIL"):
+        mars._webapi_settings({"ECMWF_API_KEY": "x", "ECMWF_API_URL": "u"}, tmp_path)
+
+
+def _cli(home, *args, env=None):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args],
+        capture_output=True,
+        text=True,
+        # a dead proxy: any accidental network call fails fast instead of going online
+        env={"HOME": str(home), "PATH": "/usr/bin:/bin", "https_proxy": "http://127.0.0.1:9"}
+        | (env or {}),
+    )
+
+
+def test_cli_check_malformed_rc_is_blocked_without_traceback(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text(MALFORMED_RC["polytope-layout"])
+    out = _cli(tmp_path, "check")
+    assert out.returncode == 4, out.stderr
+    assert "Traceback" not in out.stderr and "BLOCKED: ~/.ecmwfapirc is malformed" in out.stderr
+    assert FAKE_KEY not in out.stderr + out.stdout
+
+
+def test_cli_check_json_malformed_rc_stdout_is_one_json_document(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text("[1, 2]")
+    out = _cli(tmp_path, "check", "--json")
+    assert out.returncode == 4 and "malformed" in json.loads(out.stdout)["blocked"]["blocked"]
+
+
+def test_cli_cost_with_malformed_rc_is_blocked_before_the_client(tmp_path):
+    (tmp_path / ".ecmwfapirc").write_text(MALFORMED_RC["no-url"])
+    req = "retrieve,class=od,stream=oper,type=an,levtype=sfc,param=2t,date=-1,time=00"
+    out = _cli(tmp_path, "cost", req)
+    assert out.returncode == 4 and "malformed" in out.stderr and "Traceback" not in out.stderr
+
+
+def test_key_prompt_without_a_terminal_is_a_key_barrier(monkeypatch, capsys, tmp_path):
+    # earthkit-data asks for the key interactively when it finds none; without a terminal
+    # input() raises EOFError.
+    monkeypatch.setattr(mars, "credentials", lambda: {"webapi": None, "mars_client": "mars"})
+
+    def prompt(req, output):
+        raise EOFError("EOF when reading a line")
+
+    monkeypatch.setattr(mars, "retrieve", prompt)
+    req = "retrieve,class=od,stream=oper,type=an,levtype=sfc,param=2t,date=-1,time=00,expver=1"
+    assert mars.main(["retrieve", req, "-o", str(tmp_path / "x.grib")]) == 4
+    err = capsys.readouterr().err
+    assert "BLOCKED:" in err and "api.ecmwf.int/v1/key" in err
+
+
+def test_probe_confirms_mars_rights():
+    seen = {}
+
+    def cost(req):
+        seen.update(req)
+        return {"size": 1, "number_of_fields": 1}
+
+    r = mars.probe_mars(cost=cost)
+    assert r["mars_rights"] == "confirmed" and r["probe_seconds"] >= 0
+    assert seen["class"] == "od" and seen["param"] == "2t" and seen["date"] == "-1"
+
+
+def test_probe_without_rights_is_a_barrier():
+    def cost(req):
+        raise RuntimeError("ecmwf.API error 1: User 'x' has no access to services/mars")
+
+    r = mars.probe_mars(cost=cost)
+    assert r["mars_rights"] == "none"
+    assert "Computing Representative" in "\n".join(r["blocked"]["user_steps"])
+
+
+def test_probe_timeout_is_unknown():
+    def cost(req):
+        raise mars.ProbeTimeout("no answer within 120 s")
+
+    r = mars.probe_mars(cost=cost)
+    assert r["mars_rights"] == "unknown" and "120 s" in r["reason"]
+
+
+def test_probe_without_the_client_names_the_uv_command():
+    def cost(req):
+        raise ImportError("No module named 'ecmwfapi'")
+
+    r = mars.probe_mars(cost=cost)
+    assert r["mars_rights"] == "unknown" and "uv run" in r["reason"] and "--probe" in r["reason"]
+
+
+def test_probe_timeout_cancels_the_server_job(monkeypatch):
+    import types
+
+    deleted = []
+
+    class Connection:
+        def __init__(self, *a, **k):
+            self.location = "https://api.ecmwf.int/v1/services/mars/requests/p1"
+
+        def cleanup(self):
+            deleted.append(self.location)
+
+    class ECMWFService:
+        def __init__(self, *a, **k):
+            pass
+
+        def execute(self, text, target):
+            Connection()
+            raise mars.ProbeTimeout("no answer within 120 s")
+
+    api = types.ModuleType("ecmwfapi.api")
+    api.Connection = Connection
+    pkg = types.ModuleType("ecmwfapi")
+    pkg.api, pkg.ECMWFService = api, ECMWFService
+    monkeypatch.setitem(sys.modules, "ecmwfapi", pkg)
+    monkeypatch.setitem(sys.modules, "ecmwfapi.api", api)
+    r = mars.probe_mars()
+    assert r["mars_rights"] == "unknown"
+    assert deleted == ["https://api.ecmwf.int/v1/services/mars/requests/p1"]
+
+
+def test_check_probe_runs_after_a_verified_key(monkeypatch, capsys):
+    monkeypatch.setattr(
+        mars, "credentials", lambda: {"webapi": "~/.ecmwfapirc", "mars_client": None}
+    )
+    monkeypatch.setattr(mars, "_webapi_settings", lambda env, home: {"url": "u"})
+    monkeypatch.setattr(mars, "verify_webapi", lambda: {"verified": True, "account": "abc"})
+    monkeypatch.setattr(
+        mars, "probe_mars", lambda: {"mars_rights": "confirmed", "probe_seconds": 3}
+    )
+    assert mars.main(["check", "--probe", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["mars_rights"] == "confirmed"
+
+
+def test_check_probe_blocked_exits_4(monkeypatch, capsys):
+    monkeypatch.setattr(
+        mars, "credentials", lambda: {"webapi": "~/.ecmwfapirc", "mars_client": None}
+    )
+    monkeypatch.setattr(mars, "_webapi_settings", lambda env, home: {"url": "u"})
+    monkeypatch.setattr(mars, "verify_webapi", lambda: {"verified": True, "account": "abc"})
+    b = mars.barrier_for_error("has no access to services/mars")
+    monkeypatch.setattr(mars, "probe_mars", lambda: {"mars_rights": "none", "blocked": b})
+    assert mars.main(["check", "--probe"]) == 4
+    assert "BLOCKED:" in capsys.readouterr().err
+
+
+def test_plain_check_does_not_probe(monkeypatch, capsys):
+    monkeypatch.setattr(
+        mars, "credentials", lambda: {"webapi": "~/.ecmwfapirc", "mars_client": None}
+    )
+    monkeypatch.setattr(mars, "_webapi_settings", lambda env, home: {"url": "u"})
+    monkeypatch.setattr(mars, "verify_webapi", lambda: {"verified": True, "account": "abc"})
+
+    def never():
+        raise AssertionError("plain check must stay fast")
+
+    monkeypatch.setattr(mars, "probe_mars", never)
+    assert mars.main(["check"]) == 0
+    assert "--probe" in capsys.readouterr().out
+
+
+def test_wrapped_key_prompt_failure_is_a_key_barrier(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(mars, "credentials", lambda: {"webapi": None, "mars_client": "mars"})
+
+    def prompt(req, output):
+        raise RuntimeError("source failed: EOF when reading a line")
+
+    monkeypatch.setattr(mars, "retrieve", prompt)
+    req = "retrieve,class=od,stream=oper,type=an,levtype=sfc,param=2t,date=-1,time=00,expver=1"
+    assert mars.main(["retrieve", req, "-o", str(tmp_path / "x.grib")]) == 4
+    assert "no usable ECMWF Web API key" in capsys.readouterr().err
+
+
+def test_rc_file_env_pointing_nowhere_is_reported(tmp_path):
+    with pytest.raises(mars.MalformedCredentials, match="does not exist"):
+        mars._webapi_settings({"ECMWF_API_RC_FILE": str(tmp_path / "nope")}, tmp_path)
+
+
+def test_probe_unreachable_is_unknown_with_a_network_report(monkeypatch):
+    monkeypatch.setattr(
+        mars.ecmwf_status,
+        "network_barrier",
+        lambda svc, err: {"blocked": "cannot reach", "why": err, "user_steps": [], "agent": ""},
+    )
+
+    def cost(req):
+        raise OSError("Connection refused")
+
+    r = mars.probe_mars(cost=cost)
+    assert r["mars_rights"] == "unknown" and r["blocked"]["blocked"] == "cannot reach"
