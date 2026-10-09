@@ -664,6 +664,8 @@ def test_requests_never_carry_a_list_grid():
     for ens in (False, True):
         assert "grid" not in pt.build_request(1, 2, "20261001", "0000", 24, ens)
 # --- feels-like indices (thermofeel) -------------------------------------------------------------
+
+
 def _with_dewpoint(d: dict, ensemble: bool = False) -> dict:
     """Parsed covjson plus a 2 m dewpoint (and wind for ENS members) 5 K below 2t."""
     p = pt.parse_covjson(d)
@@ -673,14 +675,19 @@ def _with_dewpoint(d: dict, ensemble: bool = False) -> dict:
             m["10u"] = [3.0] * len(m["2t"])
             m["10v"] = [-1.0] * len(m["2t"])
     return p
+
+
 def test_build_request_indices_add_dewpoint_and_wind():
     r = pt.build_request(38.72, -9.14, "20261001", "0000", 48, indices=True)
     assert r["param"] == "167/228/165/166/151/164/168"
     e = pt.build_request(38.72, -9.14, "20261001", "0000", 48, ensemble=True, indices=True)
     assert e["param"] == "167/228/168/165/166"
+
+
 @pytest.mark.earthkit
 def test_feels_like_is_the_same_as_open_data():
     import numpy as np
+
     odp = load_script("ecmwf-open-data", "odpoint")
     args = (np.array([310.0, 263.15]), np.array([280.0, 258.15]), np.array([2.0, 5.0]))
     a = pt.feels_like(*args, np.zeros(2))
@@ -688,6 +695,8 @@ def test_feels_like_is_the_same_as_open_data():
     assert a.keys() == b.keys()
     for k in a:
         np.testing.assert_array_equal(a[k], b[k])
+
+
 @pytest.mark.earthkit
 def test_series_deterministic_indices():
     rows = pt.series(_with_dewpoint(OPER))
@@ -695,6 +704,8 @@ def test_series_deterministic_indices():
     for k in ("heat_index_C", "humidex_C", "apparent_temperature_C", "wind_chill_C"):
         assert k in r
     assert -40 < r["apparent_temperature_C"] < 50
+
+
 @pytest.mark.earthkit
 def test_series_ensemble_index_percentiles():
     rows = pt.series(_with_dewpoint(ENFO, ensemble=True))
