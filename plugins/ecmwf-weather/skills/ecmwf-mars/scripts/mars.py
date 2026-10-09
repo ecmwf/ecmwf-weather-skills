@@ -10,7 +10,10 @@
 # ///
 """MARS archive helper — lint, estimate, plan, cost and retrieve MARS requests.
 
-lint/estimate/plan are standard library and offline. cost/retrieve go through the ECMWF Web API
+lint/estimate/plan are standard library and offline. With ECMWF's pymetkit installed, lint also
+checks every keyword and value against the MARS language (offline):
+  uv run --no-project --with 'pymetkit>=1.19,<2' python3 mars.py lint request.json
+cost/retrieve go through the ECMWF Web API
 (api.ecmwf.int, credentials in ~/.ecmwfapirc or ECMWF_API_*) or a local `mars` client on ECMWF
 systems; `uv run` installs earthkit-data[mars] (ecmwf-api-client). Requests can be JSON or MARS
 text ("retrieve, class=od, ...").
@@ -32,7 +35,9 @@ import json
 import os
 import re
 import shutil
+import signal
 import sys
+import tempfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -125,6 +130,13 @@ REGIONAL = {
     "no-ar-cw": ("CARRA-West", 1069 * 1269, "Lambert conformal 2.5 km", "10.24381/cds.713858f6"),
     "no-ar-pa": ("pan-CARRA", 2869 * 2869, "polar stereographic 2.5 km", "10.24381/f5effe24"),
     "se-al-ec": ("CERRA", 1069 * 1069, "Lambert conformal 5.5 km", "10.24381/cds.622a565a"),
+    # CERRA-EDA, the 10-member ensemble: stream=enda, its own coarser grid, 6-hourly.
+    "se-al-ec/enda": (
+        "CERRA ensemble",
+        565 * 565,
+        "Lambert conformal 11 km",
+        "10.24381/cds.622a565a",
+    ),
     "fr-ms-ec": ("CERRA-Land", 1069 * 1069, "Lambert conformal 5.5 km", "10.24381/cds.a7f3cd0b"),
 }
 # Archives most requests target; other classes exist (reanalyses, projects) but a mistaken
@@ -203,7 +215,23 @@ def _two_numbers(v: str) -> list[float] | None:
     return nums
 
 
+# Values MARS treats case-insensitively; lint compares them lower-cased.
+CASELESS = ("class", "stream", "type", "levtype", "origin", "domain")
+
+
+def _norm(req: dict) -> dict:
+    return {k: (v.lower() if k in CASELESS and isinstance(v, str) else v) for k, v in req.items()}
+
+
+def _regional(req: dict):
+    if req.get("class") != "rr":
+        return None
+    origin = req.get("origin", "")
+    return REGIONAL.get(f"{origin}/{req.get('stream')}") or REGIONAL.get(origin)
+
+
 def estimate(req: dict) -> dict:
+    req = _norm(req)
     fields = 1
     for k in ("param", "date", "time", "levelist", "number"):
         fields *= _count(req, k)
@@ -220,7 +248,7 @@ def estimate(req: dict) -> dict:
         else:
             pts = (round(180 / grid[1]) + 1) * round(360 / grid[0])
     else:
-        regional = REGIONAL.get(req.get("origin", "")) if req.get("class") == "rr" else None
+        regional = _regional(req)
         pts = regional[1] if regional else NATIVE_POINTS.get(req.get("class"), NATIVE_POINTS["od"])
     b = fields * pts * BYTES_PER_POINT
     return {
@@ -246,6 +274,7 @@ def _months(req: dict) -> int:
 
 
 def lint(req: dict) -> dict:
+    req = _norm(req)
     errs, warns = [], []
     for k in REQUIRED:
         if k not in req:
@@ -273,9 +302,14 @@ def lint(req: dict) -> dict:
         elif a[0] < a[2]:
             errs.append(f"area north {a[0]} is below south {a[2]} — order is north/west/south/east")
     if req.get("class") == "rr":
-        reg = REGIONAL.get(req.get("origin", ""))
+        reg = _regional(req)
+        if req.get("stream") == "enda" and "number" not in req:
+            errs.append(
+                "stream=enda (ensemble) needs 'number' (CERRA: number=0/to/9) — without it MARS "
+                "finds every member and fails ('Expected 1, got 10')"
+            )
         if reg is None:
-            names = ", ".join(f"{o} ({v[0]})" for o, v in REGIONAL.items())
+            names = ", ".join(f"{o} ({v[0]})" for o, v in REGIONAL.items() if "/" not in o)
             errs.append(f"class=rr (regional reanalyses) needs origin: {names}")
         elif "area" in req and "grid" not in req:
             errs.append(
@@ -335,6 +369,59 @@ def lint(req: dict) -> dict:
             "add grid=0.25/0.25 and an area if possible"
         )
     return {"errors": errs, "warnings": warns, "estimate": e}
+
+
+# --- optional: ECMWF metkit (pymetkit) checks values against the MARS language ------------------
+
+METKIT_RUN = "uv run --no-project --with 'pymetkit>=1.19,<2' python3 mars.py lint REQUEST"
+METKIT_MAX = 200  # metkit lists every candidate keyword/param; keep the gist
+
+
+def _short(msg: str) -> str:
+    msg = re.sub(r"^(Error in function '\w+': )?(UserError: )+|Bad value: ", "", msg)
+    msg = re.sub(r" request=.*$", "", msg, flags=re.S).strip()
+    return msg if len(msg) <= METKIT_MAX else msg[: METKIT_MAX - 1] + "…"
+
+
+def metkit_check(text: str) -> list[str] | None:
+    """Errors from pymetkit's strict MARS-language check; None when pymetkit isn't installed."""
+    try:
+        from pymetkit import MetKitException, parse_mars_request
+    except ImportError:
+        return None
+    sys.stdout.flush()
+    sys.stderr.flush()
+    saved = os.dup(1), os.dup(2)
+    with tempfile.TemporaryFile() as sink:
+        # libeckit prints diagnostics (every candidate match) to the C-level stdout and stderr;
+        # the error itself comes back as the exception, so both are silenced (keeps --json clean)
+        os.dup2(sink.fileno(), 1)
+        os.dup2(sink.fileno(), 2)
+        try:
+            parse_mars_request(text, strict=True)  # strict: raise instead of dropping keys
+            return []
+        except MetKitException as e:
+            return [f"metkit: {_short(str(e))}"]
+        finally:
+            for fd, orig in zip((1, 2), saved, strict=True):
+                os.dup2(orig, fd)
+                os.close(orig)
+
+
+def lint_with_metkit(req: dict) -> dict:
+    """lint() plus, when pymetkit is installed, its keyword/value validation."""
+    r = lint(req)
+    m = metkit_check(format_request(_norm(req)))
+    if m is None:
+        r["metkit"] = "not installed"
+        r["metkit_hint"] = (
+            "keyword values not checked against the MARS language — for a full check run: "
+            + METKIT_RUN
+        )
+        return r
+    r["errors"] += m
+    r["metkit"] = "checked"
+    return r
 
 
 def plan(req: dict) -> list[dict]:
@@ -486,8 +573,9 @@ def setup_steps() -> list[str]:
 
 
 def licence_note(req: dict) -> str:
-    if req.get("class") == "rr" and req.get("origin") in REGIONAL:
-        name, _, _, doi = REGIONAL[req["origin"]]
+    req = _norm(req)
+    if _regional(req):
+        name, _, _, doi = _regional(req)
         return (
             f"{name} (Copernicus Climate Change Service regional reanalysis) — CC BY 4.0. "
             "Credit: 'Generated using Copernicus Climate Change Service information <year>' "
@@ -537,11 +625,44 @@ def absolute_dates(req: dict, today: date | None = None) -> dict:
     return {**req, "date": "/".join(conv(p) for p in str(req["date"]).split("/"))}
 
 
+def _interrupt(signum, frame):
+    raise KeyboardInterrupt(f"signal {signum}")
+
+
+@contextlib.contextmanager
+def _webapi_jobs_cancelled_on_interrupt():
+    """ecmwf-api-client deletes its server-side job only after a normal finish. Interrupted
+    (Ctrl-C, or SIGTERM from a timeout), the job stays queued or active on the server and the
+    user's next requests wait behind it. Track the client's connections and delete their jobs."""
+    try:
+        from ecmwfapi import api
+    except ImportError:  # local mars client: nothing queued on the Web API
+        yield
+        return
+    conns, init = [], api.Connection.__init__
+
+    def tracking_init(self, *a, **k):
+        init(self, *a, **k)
+        conns.append(self)
+
+    api.Connection.__init__ = tracking_init
+    old = signal.signal(signal.SIGTERM, _interrupt)
+    try:
+        yield
+    except BaseException:
+        for c in conns:
+            c.cleanup()  # DELETE the job; the client swallows errors here
+        raise
+    finally:
+        api.Connection.__init__ = init
+        signal.signal(signal.SIGTERM, old)
+
+
 def retrieve(req: dict, output: str) -> None:
     import earthkit.data as ekd
 
     req = absolute_dates({k: v for k, v in req.items() if k != "target"})
-    with contextlib.redirect_stdout(sys.stderr):
+    with _webapi_jobs_cancelled_on_interrupt(), contextlib.redirect_stdout(sys.stderr):
         src = ekd.from_source("mars", req)
     shutil.copy(src.path, output)
 
@@ -597,7 +718,7 @@ def main(argv=None) -> int:
     try:
         req = _load(a.request)
         if a.cmd in ("lint", "estimate"):
-            r = lint(req)
+            r = lint_with_metkit(req)
             r["mars"] = format_request(req)
             r["licence"] = licence_note(req)
             r["chunks"] = len(plan(req))
@@ -609,6 +730,8 @@ def main(argv=None) -> int:
                     print(f"ERROR: {e}")
                 for w in r["warnings"]:
                     print(f"warning: {w}")
+                if r.get("metkit_hint"):
+                    print(f"note: {r['metkit_hint']}")
                 e = r["estimate"]
                 print(
                     f"estimate: {e['fields']} fields x {e['points_per_field']} points "

@@ -18,11 +18,11 @@ SPDX-License-Identifier: Apache-2.0
 ## Contents
 - Is MARS the right route? (line 30)
 - Request workflow (line 47)
-- Templates (lint-clean — start from these) (line 72)
-- Efficiency rules (line 102)
-- Processing and plots (line 114)
-- Licence and attribution (line 122)
-- When blocked (line 132)
+- Templates (lint-clean — start from these) (line 76)
+- Efficiency rules (line 106)
+- Processing and plots (line 118)
+- Licence and attribution (line 126)
+- When blocked (line 136)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -54,7 +54,9 @@ IFS (HRES and ENS) is always `class=od`.
 
 ```
 - [ ] 1. Write the request (keywords: references/keywords.md)
-- [ ] 2. python3 scripts/mars.py lint req.mars        # errors, warnings, size estimate, MARS text
+- [ ] 2. uv run --no-project --with 'pymetkit>=1.19,<2' python3 scripts/mars.py lint req.mars
+         # errors, warnings, size estimate, MARS text; pymetkit (ECMWF metkit) also checks every
+         # keyword and value against the MARS language. Without uv: python3 scripts/mars.py lint
          fix every ERROR and re-run until clean; act on warnings (grid/area, splitting)
 - [ ] 3. python3 scripts/mars.py plan req.mars        # >1 month → one request per month
 - [ ] 4. Optional: uv run scripts/mars.py cost req.mars   # exact size, tape vs disk (queues for minutes)
@@ -62,6 +64,8 @@ IFS (HRES and ENS) is always `class=od`.
 - [ ] 6. Decode with the ecmwf-earthkit skill; give the licence line from lint
 ```
 
+- `lint` says `metkit: checked` when values were validated; if it prints "values not checked",
+  say so (pymetkit has no Windows wheels — the stdlib checks still apply).
 - If asked not to submit, stop after step 3. **Paste the MARS request text (from `lint`) in your
   answer** — not just a file link — with the estimate and the plan.
 - Web API requests queue: expect minutes before a request starts, longer for tape. Use a long
@@ -93,7 +97,7 @@ retrieve, class=rr, origin=no-ar-ce, stream=oper, type=an, expver=prod, levtype=
 ```
 
 `origin`: `no-ar-cw` CARRA-West, `no-ar-ce` CARRA-East, `no-ar-pa` pan-CARRA, `se-al-ec` CERRA,
-`fr-ms-ec` CERRA-Land. Their Lambert grids cannot be cropped: `area` needs `grid` (lint
+`fr-ms-ec` CERRA-Land; the CERRA ensemble is `stream=enda, number=0/to/9`. Their Lambert grids cannot be cropped: `area` needs `grid` (lint
 enforces it). Without a MARS licence, the same data is free on the CDS (`ecmwf-cds-ads`).
 
 Ranges need `/to/` (`a/b` means just those two values). Even from a template, run `lint` on the

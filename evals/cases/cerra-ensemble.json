@@ -1,0 +1,33 @@
+{
+  "id": "cerra-ensemble",
+  "prompt": "Download all CERRA ensemble members of 2 m temperature for 1 January 2010 at 00 UTC over France (about 42\u201351 N, 5 W\u20138 E) as GRIB, saved as cerra_ens.grib, and tell me how many members there are and the ensemble spread.",
+  "timeout": 2400,
+  "max_budget_usd": 4,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-cds-ads"
+    },
+    {
+      "kind": "command",
+      "pattern": "ensemble_members|stream=enda"
+    },
+    {
+      "kind": "command",
+      "pattern": "grid"
+    },
+    {
+      "kind": "file",
+      "pattern": "cerra_ens.grib"
+    },
+    {
+      "kind": "final",
+      "pattern": "\\b10\\b"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|meteostat"
+    }
+  ],
+  "note": "CDS queue time dominates; run this case on its own (parallel identical requests queue one after another)."
+}

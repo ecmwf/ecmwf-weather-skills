@@ -29,14 +29,20 @@ Common to the gridded datasets: `product_type` `analysis` (3-hourly `time` 00:00
 ```
 
 That is `reanalysis-carra-single-levels` over Iceland. CERRA single levels: no `domain`; add
-`"data_type": ["reanalysis"]` (or `ensemble_members`). Run `cds.py describe ID` for the variable
+`"data_type": ["reanalysis"]`.
+
+**CERRA ensemble** (`"data_type": ["ensemble_members"]`, single, pressure and height levels):
+10 members (`number` 0–9) on their own 565×565 Lambert grid at 11 km, analyses 6-hourly only
+(00, 06, 12, 18 UTC), forecasts `leadtime_hour` 1–6, no precipitation. Mixing `reanalysis` and
+`ensemble_members` in one request works but gives two grids that can't be stacked. A request for
+all 10 members costs the same as one field. Run `cds.py describe ID` for the variable
 names and levels of each dataset.
 
 ## Subsetting
 
 | Request | Result |
 |---|---|
-| no `area`, no `grid` | whole Lambert domain: CARRA-West 1069×1269, CARRA-East 789×989, CERRA 1069×1069 points |
+| no `area`, no `grid` | whole Lambert domain: CARRA-West 1069×1269, CARRA-East 789×989, CERRA 1069×1069 (ensemble 565×565) points |
 | `area` only | **job fails** ("croppedRepresentation() not implemented") — MARS cannot crop Lambert grids |
 | `grid` only | regular lat/lon covering the domain's bounding box; points outside the domain are missing |
 | `area` + `grid` | regular lat/lon, cropped to the area — use this for a region |

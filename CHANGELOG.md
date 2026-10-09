@@ -22,11 +22,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
   flags `area` without `grid` when the form has no area input; `mars.py lint` does the same for
   `class=rr` and requires `origin`.
 - Eval cases `cerra-area`, `carra-subset-question`, `cerra-land-point`, `mars-carra`.
+- CERRA ensemble (CERRA-EDA): 10 members on a 565×565, 11 km grid, 6-hourly — CDS
+  `data_type: ensemble_members`, MARS `stream=enda, number=0/to/9`; verified on both, with
+  `area` + `grid` subsetting. `mars.py lint` sizes it on its own grid and requires `number`
+  (without it MARS fails with "Expected 1, got 10").
+- `mars.py lint` validates every keyword and value against the MARS language with ECMWF's
+  pymetkit when it is installed (`uv run --no-project --with 'pymetkit>=1.19,<2' python3
+  mars.py lint …`): invalid values, unknown parameters, impossible dates. Without it, lint
+  says values were not checked; the stdlib checks are unchanged.
 
 ### Fixed
 
 - Eval harness: skills are copied, not symlinked, into the agent's skill directory — agents
   searching with `find` missed symlinked skills and fell back to web search.
+- An interrupted `mars.py retrieve` (Ctrl-C, or SIGTERM from a timeout) left its job queued
+  or active on the ECMWF Web API — ecmwf-api-client deletes jobs only after a normal finish —
+  and the user's next requests waited behind it. The job is now deleted on interruption.
+- `mars.py lint` compared values case-sensitively: `class=OD` drew a false warning and
+  `type=FC` skipped the forecast checks.
 - `mars.py lint` gave the ERA5 licence and DOI for `class=rr` and sized its fields as O1280;
   it now names the CARRA/CERRA product, its DOI and native grid size.
 
