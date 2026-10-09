@@ -17,13 +17,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Before you write code (line 37)
-- Components (line 57)
-- Bundled scripts (line 77)
-- Writing your own code (line 103)
-- Bugs and missing features — upstream, with approval only (line 117)
-- Fallback without earthkit (line 134)
-- Attribution (line 140)
-- When blocked (line 148)
+- Components (line 58)
+- Bundled scripts (line 78)
+- Writing your own code (line 104)
+- Bugs and missing features — upstream, with approval only (line 118)
+- Fallback without earthkit (line 135)
+- Attribution (line 141)
+- When blocked (line 149)
 - References — `references/recipes.md` (verified code for every job), `references/pitfalls.md` (1.x breakages and known bugs), `references/upstream.md` (reporting bugs, contributing features), `references/versions.md` (generated: latest versions)
 
 **earthkit first.** For weather and climate data, the code an agent would write by hand already
@@ -46,6 +46,7 @@ say so.
 | mask or average over a box, country or polygon | earthkit-transforms `spatial.reduce / mask` with earthkit-geo `gisco` shapes |
 | code a formula (Magnus, wind from u/v, θ, θe, wet bulb, EFI, CRPS) | earthkit-meteo `thermo`, `wind`, `solar`, `extreme`, `score`, `stats` |
 | code a thermal-comfort index (heat index, humidex, wind chill, UTCI, MRT, WBGT) | thermofeel — or `ekplot.py indices`; points: `odpoint.py`/`ptpoint.py --indices` |
+| print or tabulate K in °C (`- 273.15`) | `thermofeel.kelvin_to_celsius`, earthkit-utils `convert_array(v, "degC", "K")` |
 | divide accumulated radiation by `step * 3600` | mean flux between consecutive steps: earthkit-transforms `accumulation_to_rate` |
 | interpolate, regrid, find the nearest gridpoint, haversine | earthkit-geo `regrid`, `distance.GeoKDTree`, `haversine_distance` |
 | open GRIB with cfgrib/pygrib/eccodes, `grib_ls` | earthkit-data `from_source(...).to_fieldlist()` |

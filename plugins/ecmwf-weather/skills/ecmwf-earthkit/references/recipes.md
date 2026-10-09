@@ -487,11 +487,12 @@ interval means stand in for its instantaneous inputs — use hourly steps where 
 ```python
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2", "earthkit-transforms[all]>=1.0",
-#                 "earthkit-utils>=1.0", "thermofeel>=2.3", "numpy"]
+#                 "earthkit-utils>=1.0", "earthkit-geo>=1.1", "thermofeel>=2.3", "numpy"]
 # ///
 import earthkit.data as ekd
 import numpy as np
 import thermofeel as tf
+from earthkit.geo.distance import GeoKDTree
 from earthkit.meteo import solar, wind
 from earthkit.transforms import temporal
 from earthkit.utils.units import convert_array
@@ -513,7 +514,11 @@ wbgt = tf.calculate_wbgt_liljegren(
     convert_array(x["sp"], "hPa", "Pa"), wind.speed(x["10u"], x["10v"]), flux["ssrd"],
     direct, cossza)                                         # K; NaN where it does not converge
 force = tf.calculate_heat_force(wbgt)                      # 0-10, 2 °C WBGT bands from 14 °C
-print(float(np.nanmax(wbgt)), int(np.nanmax(force)))
+# At a point: nearest gridpoint (earthkit-geo), values in °C (thermofeel's converter)
+idx, _ = GeoKDTree(lat.ravel(), lon.ravel()).nearest_point((37.39, -5.98))  # Seville
+i = int(np.atleast_1d(idx)[0])                             # arrays, one per query point
+print("WBGT", float(tf.kelvin_to_celsius(wbgt.ravel()[i])), "°C, heat force",
+      int(force.ravel()[i]))
 ```
 
 Write derived fields: GRIB2 by cloning a source field — edition 2 **first** (MARS surface
