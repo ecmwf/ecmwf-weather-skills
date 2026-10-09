@@ -20,6 +20,12 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/134) | `ecmwf/earthkit-transforms` | spatial.reduce(..., return_as='pandas') crashes (return_as passed on to nanmean) | [`transforms-spatial-reduce-return-as-pandas.py`](transforms-spatial-reduce-return-as-pandas.py) |
 | [filed](https://github.com/ecmwf/earthkit-utils/issues/88) | `ecmwf/earthkit-utils` | units.convert_units on a FieldList silently returns the data unconverted | [`utils-convert-units-fieldlist-noop.py`](utils-convert-units-fieldlist-noop.py) |
 
+## Pull requests
+
+| Status | Repository | Title |
+|---|---|---|
+| [merged](https://github.com/ecmwf/earthkit-data/pull/1181) | `ecmwf/earthkit-data` | Format the shape in the XArrayGeography error message |
+
 ## thermo.wet_bulb_temperature_from_dewpoint: default t_method='bisect' fails on 2-D input
 
 Repository: `ecmwf/earthkit-meteo` · bug · [filed](https://github.com/ecmwf/earthkit-meteo/issues/212)

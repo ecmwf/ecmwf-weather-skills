@@ -16,6 +16,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 - The nine earthkit issues found while writing the recipes are filed upstream
   (earthkit-meteo #212–#214, earthkit-plots #260–#262, earthkit-transforms #133–#134,
   earthkit-utils #88); `docs/upstream/` records their URLs and the filing guide.
+- Contributed the fix for an unformatted earthkit-data error message (ecmwf/earthkit-data#1181,
+  merged); recorded in `docs/upstream/`.
 
 ## [0.4.0] - 2026-10-08
 

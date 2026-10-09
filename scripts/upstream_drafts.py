@@ -55,7 +55,7 @@ def _status(i: dict) -> str:
     return f"[{i['status']}]({i['url']})" if i.get("url") else i["status"]
 
 
-def render(issues: list[dict]) -> str:
+def render(issues: list[dict], prs: list[dict] = ()) -> str:
     rows = [
         f"| {_status(i)} | `{i['repo']}` | {i['title']} | [`{i['script']}`]({i['script']}) |"
         for i in issues
@@ -73,6 +73,10 @@ def render(issues: list[dict]) -> str:
         *rows,
         "",
     ]
+    if prs:
+        parts += ["## Pull requests", "", "| Status | Repository | Title |", "|---|---|---|"]
+        parts += [f"| [{p['status']}]({p['url']}) | `{p['repo']}` | {p['title']} |" for p in prs]
+        parts.append("")
     for i in issues:
         parts += [
             f"## {i['title']}",
@@ -86,12 +90,13 @@ def render(issues: list[dict]) -> str:
 
 
 def main(argv: list[str]) -> int:
-    issues = tomllib.loads((UP / "issues.toml").read_text())["issue"]
+    data = tomllib.loads((UP / "issues.toml").read_text())
+    issues, prs = data["issue"], data.get("pr", [])
     if "--body" in argv:
         name = argv[argv.index("--body") + 1]
         print(body(next(i for i in issues if i["script"] == name)))
         return 0
-    text = render(issues)
+    text = render(issues, prs)
     if "--check" in argv:
         stale = (UP / "README.md").read_text() != text if (UP / "README.md").exists() else True
         print(

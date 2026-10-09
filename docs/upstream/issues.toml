@@ -113,3 +113,11 @@ expected = "Converted values (or a clear error that FieldLists are unsupported).
 actual = "Values unchanged; only a log warning."
 suggestion = "Support FieldList (convert values, update units metadata) or raise TypeError."
 workaround = "Convert xarray, or convert at plot time with earthkit-plots units=."
+
+# Pull requests contributed upstream (no reproducer script: the fix carries its own test).
+[[pr]]
+repo = "ecmwf/earthkit-data"
+title = "Format the shape in the XArrayGeography error message"
+url = "https://github.com/ecmwf/earthkit-data/pull/1181"
+status = "merged"
+related = "https://github.com/ecmwf/earthkit-plots/issues/260"
