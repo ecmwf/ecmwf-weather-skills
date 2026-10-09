@@ -11,6 +11,52 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- `ecmwf-observations` skill: station observations (SYNOP, METAR) from MARS — ODB feedback
+  with first-guess/analysis departures and quality flags (default, ~10 h behind real time) or
+  BUFR reports (`--raw`, ~2 days); station lookup by WMO id, ICAO id or name (bundled WMO OSCAR
+  index, NOAA station metadata for ICAO ids); thermal-comfort indices from observations;
+  `verify` pairs point forecasts with observations (bias, MAE, RMSE per step) and draws them on
+  the meteogram (`ekplot.py meteogram`) and on maps (`ekplot.py map --obs`).
+- Latest METARs from NOAA Aviation Weather on request (`--latest-metar`), always labelled
+  non-ECMWF — a narrow, documented exception to "ECMWF sources only".
+- Thermal comfort with ECMWF's thermofeel: `ekplot.py indices` maps heat index, humidex,
+  apparent temperature, wind chill, UTCI, WBGT and MRT from GRIB fields (radiation averaged
+  between consecutive steps; BLOCKED report when fdir is missing, `--approximate-fdir
+  erbs|disc` for a labelled demonstration from Open Data); `odpoint.py`/`ptpoint.py --indices`
+  add feels-like columns (ensemble p10/p50/p90) and a meteogram panel.
+- earthkit recipes: thermal-comfort indices, writing derived fields to GRIB2 and NetCDF (2-D
+  lat/lon), earthkit-plots on numpy arrays; the MARS keyword reference lists the radiation
+  parameters including fdir (228021).
+- `mars.py check --probe` proves MARS rights with a cost-only request; `ptpoint.py --check`
+  makes one tiny real request — the only proof of access to operational point data
+  (`--check --offline` keeps the listing-only check); `cds.py check` verifies CDS/ADS keys.
+- Eval cases for observations (`obs-*`) and thermal comfort (`tc-*`).
+
+### Changed
+
+- Scripts run with uv need Python ≥ 3.12, and those using SciPy need SciPy ≥ 1.16: SciPy 1.15
+  (the last for Python 3.10) fails to load on macOS 27. Standard-library scripts still run on
+  Python 3.9.
+- `mars.py lint` accepts observation requests (`type=ob/ofb/mfb`, `obsgroup`, `filter`,
+  `format=odb`) with their own rules.
+- `ptpoint.py` reads credentials like polytope-client (`POLYTOPE_USER_KEY`/`_EMAIL`,
+  `~/.polytope-client/config.yaml`, `POLYTOPE_KEY_PATH` or `~/.polytopeapirc`, then
+  `~/.ecmwfapirc`); `cds.py` reads JSON key files too.
+
+### Fixed
+
+- Malformed credential files (wrong layout such as Polytope's `user_key`/`user_email` in
+  `~/.ecmwfapirc`, not JSON, empty, a list, not UTF-8) and partly set `ECMWF_API_*` variables
+  give a BLOCKED report naming the keys found, instead of a crash (MARS, Polytope, CDS/ADS,
+  DestinE).
+- Polytope "insufficient permissions" is reported as no entitlement to operational data, with
+  access steps, and older runs are no longer tried; `ptpoint.py --check` no longer reports
+  access because a collection is listed.
+- `destine.py check` exits 4 when every data bridge rejects the token.
+- MARS retrieve/cost without a terminal no longer fail at an interactive key prompt.
+
 ## [0.5.0] - 2026-10-09
 
 ### Added

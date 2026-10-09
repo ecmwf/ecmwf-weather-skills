@@ -12,6 +12,7 @@
 #   "pdbufr>=0.15",
 #   "earthkit-utils>=1.0",
 #   "earthkit-geo>=1.1",
+#   "scipy>=1.16",
 #   "earthkit-meteo[scores]>=1.2",
 #   "thermofeel>=2.3",
 # ]
