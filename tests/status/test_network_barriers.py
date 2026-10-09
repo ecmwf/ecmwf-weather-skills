@@ -39,7 +39,12 @@ def test_unreachable_service_is_blocked_with_status(tmp_path, skill, script, arg
 
 @pytest.mark.parametrize(
     "skill, script",
-    [("ecmwf-mars", "mars"), ("ecmwf-polytope", "ptpoint"), ("ecmwf-destine", "destine")],
+    [
+        ("ecmwf-mars", "mars"),
+        ("ecmwf-polytope", "ptpoint"),
+        ("ecmwf-destine", "destine"),
+        ("ecmwf-observations", "obs"),
+    ],
 )
 def test_connection_errors_map_to_network_barrier(monkeypatch, skill, script):
     import json

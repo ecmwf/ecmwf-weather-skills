@@ -1,0 +1,33 @@
+{
+  "id": "obs-metar-icao",
+  "prompt": "What were the observed temperature, dew point and wind at Lisbon airport (LPPT) the day before yesterday? Use ECMWF's observation archive.",
+  "timeout": 1500,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-observations"
+    },
+    {
+      "kind": "command",
+      "pattern": "obs\\.py\\s+(series|stations)\\b.*(LPPT|08536)"
+    },
+    {
+      "kind": "final",
+      "pattern": "08536"
+    },
+    {
+      "kind": "final",
+      "pattern": "°C|degC|deg C"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "--latest-metar|api/data/metar"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|meteostat|ogimet|wunderground"
+    }
+  ],
+  "note": "The ICAO id resolves to WMO 08536 (station metadata may come from NOAA stationinfo); the observations themselves come from MARS."
+}

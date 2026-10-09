@@ -5,9 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # ECMWF Weather Data
 
-Seven skills that let an AI agent find, fetch, decode, map and cite data from the European Centre
+Eight skills that let an AI agent find, fetch, decode, map and cite data from the European Centre
 for Medium-Range Weather Forecasts (ECMWF): real-time IFS and AIFS forecasts (Open Data), ERA5
-reanalysis and CAMS air quality (Copernicus data stores), the MARS archive, Polytope point and
+reanalysis and CAMS air quality (Copernicus data stores), the MARS archive and its station
+observations, Polytope point and
 area extraction, Destination Earth Digital Twins, ecCharts WMS / OpenCharts maps, and decoding and
 plotting with ECMWF's earthkit. Source, documentation and issues:
 https://github.com/ecmwf/ecmwf-weather-skills
@@ -23,6 +24,7 @@ https://github.com/ecmwf/ecmwf-weather-skills
 | `ecmwf-cds-ads` | Find, validate, cost and download ERA5, CAMS and ECMWF Data Store datasets |
 | `ecmwf-mars` | Check, size, plan and retrieve requests from the ECMWF MARS archive |
 | `ecmwf-destine` | Destination Earth Digital Twin data via DestinE Polytope (upgraded access on request) |
+| `ecmwf-observations` | Station observations from MARS, forecast verification, observed thermal indices |
 
 ## What runs, and what it sends
 
@@ -42,12 +44,14 @@ The scripts contact only these services, and only to fetch data, catalogues and 
 | `api.ecmwf.int` | ECMWF Web API / MARS | request; your ECMWF key (header) |
 | `cds.climate.copernicus.eu`, `ads.atmosphere.copernicus.eu`, `ecds.ecmwf.int` | Copernicus and ECMWF data stores | dataset requests, licence check; your data-store token (header) |
 | `polytope.lumi.apps.dte.destination-earth.eu`, `polytope.mn5.apps.dte.destination-earth.eu`, `polytope.leonardo.apps.dte.destination-earth.eu`, `auth.destine.eu`, `platform.destine.eu` | Destination Earth data and authentication | request; your DestinE token (header) |
+| `aviationweather.gov` (NOAA Aviation Weather, the one non-ECMWF source) | ICAO station metadata; the latest METARs only when you ask for them — labelled non-ECMWF | station ids |
+| `oscar.wmo.int` (WMO OSCAR/Surface) | station metadata for WMO ids missing from the bundled index | WMO station id |
 | `apps.ecmwf.int`, `status.ecmwf.int` | ECMWF service status, only after a connection failure | nothing beyond the request |
 | `pypi.org`, `files.pythonhosted.org` (via `uv`), `astral.sh` | Python packages; uv install instructions | package names |
 | `unpkg.com` (in the generated web map page, loaded by your browser) | Leaflet map library | — |
 
 Links shown to users only (not contacted by the scripts): `www.ecmwf.int`, `support.ecmwf.int`,
-`creativecommons.org`, `doi.org`, `github.com`, `docs.astral.sh`.
+`creativecommons.org`, `doi.org`, `github.com`, `docs.astral.sh`, `codes.ecmwf.int`.
 
 No personal data is collected. Credentials stay in the user's own files (`~/.ecmwfapirc`,
 `~/.cdsapirc`, `~/.adsapirc`, `~/.polytopeapirc`, `~/.polytopeapirc-destine`); scripts check them

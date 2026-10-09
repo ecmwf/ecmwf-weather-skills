@@ -1,0 +1,33 @@
+{
+  "id": "obs-verify",
+  "prompt": "How good was yesterday's 00 UTC ECMWF HRES 2 m temperature forecast for Lisbon (WMO station 08535) over its first 24 hours? Compare it with the station observations and give me the bias and the mean absolute error.",
+  "timeout": 1800,
+  "max_budget_usd": 4,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-observations"
+    },
+    {
+      "kind": "command",
+      "pattern": "odpoint\\.py|ptpoint\\.py"
+    },
+    {
+      "kind": "command",
+      "pattern": "obs\\.py\\s+verify\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)bias"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\\bMAE\\b|mean absolute error"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|meteostat|ogimet|wunderground"
+    }
+  ],
+  "note": "Forecast from open-data (yesterday's 00 UTC run is still published) or polytope; observations from MARS; obs.py verify pairs by valid time."
+}

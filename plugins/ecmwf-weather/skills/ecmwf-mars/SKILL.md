@@ -17,12 +17,12 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Is MARS the right route? (line 30)
-- Request workflow (line 47)
-- Templates (lint-clean — start from these) (line 76)
-- Efficiency rules (line 106)
-- Processing and plots (line 118)
-- Licence and attribution (line 126)
-- When blocked (line 136)
+- Request workflow (line 48)
+- Templates (lint-clean — start from these) (line 77)
+- Efficiency rules (line 107)
+- Processing and plots (line 119)
+- Licence and attribution (line 127)
+- When blocked (line 137)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -34,6 +34,7 @@ Use ECMWF sources only — never substitute a third-party weather API.
 | Latest forecast, last ~2–3 days, 0.25° | `ecmwf-open-data` skill (free, no queue) |
 | Point/area extraction from recent operational runs | `ecmwf-polytope` skill (seconds) |
 | ERA5 without an ECMWF licence | `ecmwf-cds-ads` skill (CDS, free key) |
+| Station observations (SYNOP, METAR, ODB feedback), forecast verification | `ecmwf-observations` skill (builds and decodes the MARS requests) |
 | Older operational runs, all ENS members, model levels, full resolution, research/experimental data | **MARS** |
 
 Check access first: `python3 scripts/mars.py check` — finds credentials (names only), verifies

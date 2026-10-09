@@ -49,6 +49,12 @@ ecmwf_status = importlib.import_module(
 )  # sibling script: what ECMWF says about service status
 
 REQUIRED = ("class", "stream", "type", "levtype", "param", "date", "time")
+# Observations: BUFR reports (ob), ODB feedback (ofb: observations with first-guess and
+# analysis departures; mfb: the same as used by the model). No levtype/param; they take
+# obsgroup/obstype/reportype/ident instead, and feedback comes as format=odb with an SQL filter.
+OBS_TYPES = {"ob", "ofb", "mfb"}
+OBS_REQUIRED = ("class", "stream", "type", "date", "time")
+OBS_KNOWN = {"obsgroup", "filter", "format", "duplicates"}
 FORECAST_TYPES = {"fc", "pf", "cf", "em", "es", "ep", "fcmean", "fcmax", "fcmin"}
 # MARS retrieve keywords accepted by lint. Anything else is almost always a mistake carried
 # over from CDS or another API (dataset=, format=, level=, variable=, product_type=).
@@ -147,6 +153,11 @@ COMMON_CLASSES = {"od", "ea", "ai", "rd", "e5", "ep", "rr", "ei", "mc", "ce", "s
 # --- parse / format -------------------------------------------------------------------------------
 
 
+def _split_outside_quotes(text: str) -> list[str]:
+    """Split MARS text on commas, except inside quoted values (an ODB `filter` SQL has commas)."""
+    return [p.strip() for p in re.findall(r'(?:"[^"]*"|\'[^\']*\'|[^,"\'])+', text) if p.strip()]
+
+
 def parse_request(text: str) -> dict:
     t = text.strip()
     if t.startswith("{"):
@@ -154,7 +165,7 @@ def parse_request(text: str) -> dict:
             k.lower(): str(v) if not isinstance(v, list) else "/".join(map(str, v))
             for k, v in json.loads(t).items()
         }
-    parts = [p.strip() for p in t.replace("\n", " ").split(",") if p.strip()]
+    parts = _split_outside_quotes(t.replace("\n", " "))
     if parts and "=" not in parts[0]:
         parts = parts[1:]  # verb
     out = {}
@@ -230,8 +241,21 @@ def _regional(req: dict):
     return REGIONAL.get(f"{origin}/{req.get('stream')}") or REGIONAL.get(origin)
 
 
+def _is_obs(req: dict) -> bool:
+    return str(req.get("type", "")).lower() in OBS_TYPES
+
+
 def estimate(req: dict) -> dict:
     req = _norm(req)
+    if _is_obs(req):
+        return {
+            "fields": 0,
+            "points_per_field": 0,
+            "bytes": 0,
+            "size": "n/a",
+            "note": "observation request: the size depends on the reports matched (a station "
+            "series is KB) while the server scans every report of each date — keep dates few",
+        }
     fields = 1
     for k in ("param", "date", "time", "levelist", "number"):
         fields *= _count(req, k)
@@ -273,13 +297,51 @@ def _months(req: dict) -> int:
     return len({(d.year, d.month) for d in days})
 
 
+def _lint_obs(req: dict) -> list[str]:
+    errs = []
+    if req.get("type") in ("ofb", "mfb"):
+        if str(req.get("format", "")).lower() != "odb":
+            errs.append(f"type={req['type']} (ODB feedback) needs format=odb")
+        if "reportype" not in req and "obsgroup" not in req:
+            errs.append(
+                f"type={req['type']} needs reportype (e.g. 16076 land SYNOP, 16004 METAR) "
+                "or obsgroup — without it MARS scans every observation type"
+            )
+        f = str(req.get("filter", ""))
+        if f and not (f[0] == f[-1] == '"' and len(f) > 1):
+            errs.append('filter must be quoted: filter="select … where …"')
+        cols = re.match(r'"select (.*?)(?: where |")', f, re.I)
+        if cols and any("@" not in c for c in cols.group(1).split(",")):
+            errs.append("filter columns need their table: statid@hdr, varno@body, obsvalue@body")
+    else:
+        if "obstype" not in req and "obsgroup" not in req:
+            errs.append("type=ob needs obstype (e.g. lsd land surface, metar) or obsgroup=conv")
+        ident = str(req.get("ident", ""))
+        if ident and not all(p.isdigit() for p in ident.split("/")):
+            errs.append(
+                f"ident={ident}: idents are numeric WMO station ids — select METARs (ICAO ids) "
+                "with an area around the airport instead"
+            )
+        if "format" in req:
+            errs.append("type=ob returns BUFR: drop 'format'")
+    for k in ("levtype", "levelist", "param", "step", "grid"):
+        if k in req:
+            errs.append(f"'{k}' does not apply to observations (type={req['type']})")
+    return errs
+
+
 def lint(req: dict) -> dict:
     req = _norm(req)
     errs, warns = [], []
-    for k in REQUIRED:
+    obs = _is_obs(req)
+    for k in OBS_REQUIRED if obs else REQUIRED:
         if k not in req:
             errs.append(f"missing required keyword '{k}'")
+    if obs:
+        errs += _lint_obs(req)
     for k in req:
+        if obs and k in OBS_KNOWN:
+            continue
         if k not in KNOWN:
             hint = f" — use {SUGGEST[k]}" if k in SUGGEST else ""
             errs.append(f"unknown MARS keyword '{k}'{hint}")
@@ -363,7 +425,7 @@ def lint(req: dict) -> dict:
             f"estimated {e['size']} — large but under the 75 GB cap; reduce with a coarser "
             "grid or an area if the full domain isn't needed"
         )
-    if not req.get("grid") and req.get("class") == "od":
+    if not req.get("grid") and req.get("class") == "od" and not obs:
         warns.append(
             "no 'grid' — native O1280 (~9 km) fields are large; "
             "add grid=0.25/0.25 and an area if possible"

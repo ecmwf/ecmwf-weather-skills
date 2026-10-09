@@ -1,0 +1,158 @@
+{
+ "totalCount": 5,
+ "stationSearchResults": [
+  {
+   "id": 2852,
+   "name": "BERLIN-TEMPELHOF",
+   "region": "Europe",
+   "territory": "Germany",
+   "declaredStatus": "Operational",
+   "latitude": 52.467551,
+   "longitude": 13.401981,
+   "elevation": 47.74,
+   "stationTypeName": "Land (fixed)",
+   "wigosStationIdentifiers": [
+    {
+     "wigosStationIdentifier": "0-20000-0-10384",
+     "primary": true
+    }
+   ],
+   "wigosId": "0-20000-0-10384",
+   "stationTypeId": 1,
+   "dateEstablished": "1928-01-01T00:00:00.000+00:00",
+   "stationStatusCode": "operational",
+   "stationTypeCode": "landOceanSurface",
+   "stationProgramsDeclaredStatuses": "CLIMAT(C) - deprecated:Closed, GBON:Operational, GCW Contributing station:Operational, GOS General:Operational, RBCN - deprecated:Closed, RBON:Operational, WRO:Operational",
+   "stationDeclaredStatusCode": "operational",
+   "assessedStatus": "Operational",
+   "stationAssessedStatusCode": "operational",
+   "stationProgramsAssessedStatuses": "CLIMAT(C) - deprecated:Unknown, GBON:Unknown, GCW Contributing station:Unknown, GOS General:Unknown, RBCN - deprecated:Unknown, RBON:Operational, WRO:Unknown",
+   "programApprovalStatus": "CLIMAT(C) - deprecated:Approved,GBON:Approved,GCW Contributing station:Approved,GOS General:Approved,RBCN - deprecated:Approved,RBON:Approved,WRO:Approved"
+  },
+  {
+   "id": 2742,
+   "name": "LISBOA/GAGO COUTINHO",
+   "region": "Europe",
+   "territory": "Portugal",
+   "declaredStatus": "Closed",
+   "latitude": 38.76617424,
+   "longitude": -9.12750152,
+   "elevation": 103.88,
+   "hp": 104.8,
+   "stationTypeName": "Land (fixed)",
+   "wigosStationIdentifiers": [
+    {
+     "wigosStationIdentifier": "0-620-2001-08579",
+     "primary": true
+    },
+    {
+     "wigosStationIdentifier": "0-20000-0-08579",
+     "primary": false
+    }
+   ],
+   "wigosId": "0-620-2001-08579",
+   "stationTypeId": 1,
+   "dateEstablished": "1967-01-01T00:00:00.000+00:00",
+   "dateClosed": "2025-06-16T00:00:00.000+00:00",
+   "stationStatusCode": "closed",
+   "stationTypeCode": "landOceanSurface",
+   "stationProgramsDeclaredStatuses": "GBON:Closed, GOS General:Closed, RBON:Closed, RBSN(ST) - deprecated:Closed",
+   "stationDeclaredStatusCode": "closed",
+   "assessedStatus": "Unknown",
+   "stationAssessedStatusCode": "unknown",
+   "stationProgramsAssessedStatuses": "GBON:Unknown, GOS General:Unknown, RBON:Unknown, RBSN(ST) - deprecated:Unknown",
+   "programApprovalStatus": "GBON:Approved,GOS General:Approved,RBON:Approved,RBSN(ST) - deprecated:Approved"
+  },
+  {
+   "id": 2714,
+   "name": "LISBOA/GEOFISICO",
+   "region": "Europe",
+   "territory": "Portugal",
+   "declaredStatus": "Operational",
+   "latitude": 38.719078,
+   "longitude": -9.149722,
+   "elevation": 77,
+   "hp": 77.8,
+   "stationTypeName": "Land (fixed)",
+   "wigosStationIdentifiers": [
+    {
+     "wigosStationIdentifier": "0-620-2001-08535",
+     "primary": true
+    },
+    {
+     "wigosStationIdentifier": "0-20000-0-08535",
+     "primary": false
+    }
+   ],
+   "wigosId": "0-620-2001-08535",
+   "stationTypeId": 1,
+   "dateEstablished": "1836-01-01T00:00:00.000+00:00",
+   "stationStatusCode": "operational",
+   "stationTypeCode": "landOceanSurface",
+   "stationProgramsDeclaredStatuses": "CLIMAT(C) - deprecated:Closed, GBON:Operational, GOS General:Operational, GSN:Operational, RBCN - deprecated:Closed, RBON:Operational",
+   "stationDeclaredStatusCode": "operational",
+   "assessedStatus": "Operational",
+   "stationAssessedStatusCode": "operational",
+   "stationProgramsAssessedStatuses": "CLIMAT(C) - deprecated:Unknown, GBON:Unknown, GOS General:Unknown, GSN:Unknown, RBCN - deprecated:Unknown, RBON:Operational",
+   "programApprovalStatus": "CLIMAT(C) - deprecated:Approved,GBON:Approved,GOS General:Approved,GSN:Approved,RBCN - deprecated:Approved,RBON:Approved"
+  },
+  {
+   "id": 8231,
+   "name": "IN ZIZA",
+   "region": "Africa",
+   "territory": "Algeria",
+   "declaredStatus": "Closed",
+   "latitude": 23.2166666667,
+   "longitude": 2.5833333333,
+   "elevation": 443,
+   "hp": 443,
+   "stationTypeName": "Land (fixed)",
+   "wigosStationIdentifiers": [
+    {
+     "wigosStationIdentifier": "0-20000-0-60633",
+     "primary": true
+    }
+   ],
+   "wigosId": "0-20000-0-60633",
+   "stationTypeId": 1,
+   "dateEstablished": "2008-06-04T00:00:00.000+00:00",
+   "dateClosed": "2016-04-28T00:00:00.000+00:00",
+   "stationStatusCode": "closed",
+   "stationTypeCode": "landOceanSurface",
+   "stationProgramsDeclaredStatuses": "GOS General:Closed",
+   "stationDeclaredStatusCode": "closed",
+   "assessedStatus": "Unknown",
+   "stationAssessedStatusCode": "unknown",
+   "stationProgramsAssessedStatuses": "GOS General:Unknown",
+   "programApprovalStatus": "GOS General:Approved"
+  },
+  {
+   "id": 132687,
+   "name": "Visviri Inia",
+   "region": "(unknown)",
+   "territory": "Chile",
+   "declaredStatus": "Operational",
+   "latitude": -17.594721,
+   "longitude": -69.475277,
+   "elevation": 4122,
+   "stationTypeName": "Land (fixed)",
+   "wigosStationIdentifiers": [
+    {
+     "wigosStationIdentifier": "0-152-2-170007",
+     "primary": true
+    }
+   ],
+   "wigosId": "0-152-2-170007",
+   "stationTypeId": 1,
+   "dateEstablished": "2017-05-24T00:00:00.000+00:00",
+   "stationStatusCode": "operational",
+   "stationTypeCode": "landOceanSurface",
+   "stationProgramsDeclaredStatuses": "RBON:Operational",
+   "stationDeclaredStatusCode": "operational",
+   "assessedStatus": "Unknown",
+   "stationAssessedStatusCode": "unknown",
+   "stationProgramsAssessedStatuses": "RBON:Unknown",
+   "programApprovalStatus": "RBON:Pending"
+  }
+ ]
+}
