@@ -13,6 +13,7 @@ earthkit-geo 1.1.2, earthkit-transforms 1.0.0, earthkit-utils 1.0.2.
 - Plotting
 - Statistics and transforms
 - Meteorology
+- Regional grids (CARRA, CERRA)
 - Environment
 
 ## 0.x habits that break on 1.x
@@ -63,6 +64,14 @@ earthkit-geo 1.1.2, earthkit-transforms 1.0.0, earthkit-utils 1.0.2.
 - Scores need `earthkit-meteo[scores]`; the library's error message says `[score]`, which does
   not exist.
 - EFI/SOT on xarray need `clim_dim=` and `ens_dim=`.
+
+## Regional grids (CARRA, CERRA)
+
+- Lambert conformal fields: `to_xarray()` gives `y`/`x` dimensions with 2-D `latitude` and
+  `longitude`; `.sel(latitude=slice(...))` does not work. Crop with a mask on the 2-D
+  coordinates, or `earthkit.geo.regrid(fl, out_grid={"grid": [0.05, 0.05]})` first (points
+  outside the domain become missing), then select.
+- Wind components on the native grid follow the grid axes, not true north.
 
 ## Environment
 

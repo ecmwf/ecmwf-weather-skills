@@ -53,6 +53,11 @@ Lists `a/b/c`, ranges `a/to/b`, steps `a/to/b/by/n`. Dates `YYYY-MM-DD`, `YYYYMM
 - ERA5: `class=ea, stream=oper, type=an, expver=1`, hourly `time=00/to/23/by/1`, 37 pressure
   levels, native N320 (~0.28°); ERA5 ensemble: `stream=enda`.
 
+- CARRA/CERRA: `class=rr, stream=oper, expver=prod`, `type=an|fc`, `levtype=sfc|pl|hl|ml`,
+  `origin` per product (`no-ar-cw`, `no-ar-ce`, `no-ar-pa`, `se-al-ec`, `fr-ms-ec`); 3-hourly
+  analyses, forecasts to `step=30` from 00/12 UTC. Native Lambert grids (CARRA-West 1069×1269,
+  CARRA-East 789×989, CERRA 1069×1069) — `area` only with `grid`.
+
 ## Example requests
 
 IFS ENS 2 m temperature, all members, yesterday's 00 UTC run, 1° global:

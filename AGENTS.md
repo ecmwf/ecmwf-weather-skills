@@ -278,7 +278,7 @@ How it isolates the agent:
   bypassPermissions --max-budget-usd <cap>`. `--setting-sources project` keeps user settings and
   plugins out; the temp dir has no project settings. (`--bare` would be stricter but needs
   `ANTHROPIC_API_KEY`; use it in CI.)
-- **Codex**: skills symlinked into `<tmp>/.agents/skills/`, then `codex exec --skip-git-repo-check
+- **Codex**: skills copied into `<tmp>/.agents/skills/` (not symlinked: `find` does not descend into symlinked directories), then `codex exec --skip-git-repo-check
   -C <tmp> --json "<prompt>"`.
 - **opencode**: skills copied into `<tmp>/.agents/skills/`, then `opencode run --format json
   --auto --dir <tmp> -m provider/model "<prompt>"` (`make evals AGENT=opencode MODEL=…`).
@@ -286,7 +286,7 @@ How it isolates the agent:
   competition). Bash commands are recorded with their `workdir`.
 - **pi**: `pi --mode json --no-session --skill <plugin>/skills --model … "<prompt>"`; needs a pi
   login or provider API key (`pi auth`); without one the run is reported as ERROR.
-- **Gemini CLI**: skills symlinked into `<tmp>/.gemini/skills/` (verify path at agentskills.io/clients),
+- **Gemini CLI**: skills copied into `<tmp>/.gemini/skills/` (verify path at agentskills.io/clients),
   `gemini -p "<prompt>" -o json --approval-mode yolo`.
 
 Cases are JSON in `evals/cases/*.json`:

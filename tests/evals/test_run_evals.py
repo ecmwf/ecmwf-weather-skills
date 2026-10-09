@@ -493,3 +493,14 @@ def test_case_cleanup_removes_skill_copies_but_keeps_outputs(tmp_path):
     (wd / "out.png").write_bytes(b"x")
     re_.cleanup_case(plugin, wd)
     assert not plugin.exists() and not (wd / ".agents").exists() and (wd / "out.png").exists()
+
+
+def test_skills_are_real_directories_that_find_can_walk(tmp_path):
+    # `find .agents/skills -type f -name SKILL.md` does not descend into symlinked directories;
+    # an agent that searches this way must still find the skills.
+    plugin = re_.plugin_copy(tmp_path / "plugin")
+    wd = re_.prepare_workdir("codex", {"id": "c"}, plugin)
+    skills = wd / ".agents" / "skills"
+    assert not any(p.is_symlink() for p in skills.iterdir())
+    found = [p for p in skills.rglob("SKILL.md")]
+    assert len(found) == len(list((plugin / "skills").glob("*/SKILL.md")))

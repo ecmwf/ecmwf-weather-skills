@@ -117,7 +117,16 @@ BYTES_PER_POINT = 2
 # One retrieval is capped at 75 GB server-side (MARS client log); flag large ones early.
 WARN_BYTES = 20 * 1024**3
 CAP_BYTES = 75 * 1024**3
-ERA5_CLASSES = {"ea", "e5", "ep", "rr"}
+ERA5_CLASSES = {"ea", "e5", "ep"}
+# Copernicus regional reanalyses, class=rr, told apart by `origin`: name, native points
+# (decoded from the archived GRIB) and grid type, dataset DOI.
+REGIONAL = {
+    "no-ar-ce": ("CARRA-East", 789 * 989, "Lambert conformal 2.5 km", "10.24381/cds.713858f6"),
+    "no-ar-cw": ("CARRA-West", 1069 * 1269, "Lambert conformal 2.5 km", "10.24381/cds.713858f6"),
+    "no-ar-pa": ("pan-CARRA", 2869 * 2869, "polar stereographic 2.5 km", "10.24381/f5effe24"),
+    "se-al-ec": ("CERRA", 1069 * 1069, "Lambert conformal 5.5 km", "10.24381/cds.622a565a"),
+    "fr-ms-ec": ("CERRA-Land", 1069 * 1069, "Lambert conformal 5.5 km", "10.24381/cds.a7f3cd0b"),
+}
 # Archives most requests target; other classes exist (reanalyses, projects) but a mistaken
 # class silently retrieves the wrong dataset, so lint asks the user to confirm them.
 COMMON_CLASSES = {"od", "ea", "ai", "rd", "e5", "ep", "rr", "ei", "mc", "ce", "s2", "ti"}
@@ -211,7 +220,8 @@ def estimate(req: dict) -> dict:
         else:
             pts = (round(180 / grid[1]) + 1) * round(360 / grid[0])
     else:
-        pts = NATIVE_POINTS.get(req.get("class"), NATIVE_POINTS["od"])
+        regional = REGIONAL.get(req.get("origin", "")) if req.get("class") == "rr" else None
+        pts = regional[1] if regional else NATIVE_POINTS.get(req.get("class"), NATIVE_POINTS["od"])
     b = fields * pts * BYTES_PER_POINT
     return {
         "fields": fields,
@@ -262,6 +272,17 @@ def lint(req: dict) -> dict:
             errs.append("area must be north/west/south/east, e.g. 72/-25/30/45")
         elif a[0] < a[2]:
             errs.append(f"area north {a[0]} is below south {a[2]} — order is north/west/south/east")
+    if req.get("class") == "rr":
+        reg = REGIONAL.get(req.get("origin", ""))
+        if reg is None:
+            names = ", ".join(f"{o} ({v[0]})" for o, v in REGIONAL.items())
+            errs.append(f"class=rr (regional reanalyses) needs origin: {names}")
+        elif "area" in req and "grid" not in req:
+            errs.append(
+                f"{reg[0]} is on a {reg[2]} grid, which MARS cannot crop: area alone fails "
+                "('croppedRepresentation() not implemented') — add grid, e.g. grid=0.05/0.05, "
+                "to regrid to regular lat/lon and crop"
+            )
     dates = str(req.get("date", "")).split("/")
     if len(dates) == 2 and all(_parse_day(d) for d in dates) and dates[0] != dates[1]:
         warns.append(
@@ -465,6 +486,13 @@ def setup_steps() -> list[str]:
 
 
 def licence_note(req: dict) -> str:
+    if req.get("class") == "rr" and req.get("origin") in REGIONAL:
+        name, _, _, doi = REGIONAL[req["origin"]]
+        return (
+            f"{name} (Copernicus Climate Change Service regional reanalysis) — CC BY 4.0. "
+            "Credit: 'Generated using Copernicus Climate Change Service information <year>' "
+            f"and cite the dataset DOI {doi}."
+        )
     if req.get("class") in ERA5_CLASSES:
         return (
             "ERA5 (Copernicus Climate Change Service) — CC BY 4.0. "

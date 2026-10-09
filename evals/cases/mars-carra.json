@@ -1,0 +1,28 @@
+{
+  "id": "mars-carra",
+  "prompt": "Using MARS, retrieve CARRA-East 2 m temperature analysis for 2020-01-01 12 UTC, only over Svalbard (about 76.5\u201381 N, 10\u201334 E), and save it as svalbard.grib.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-mars"
+    },
+    {
+      "kind": "command",
+      "pattern": "class[\"':= ]+rr"
+    },
+    {
+      "kind": "command",
+      "pattern": "no-ar-ce"
+    },
+    {
+      "kind": "command",
+      "pattern": "grid"
+    },
+    {
+      "kind": "file",
+      "pattern": "svalbard.grib"
+    }
+  ]
+}

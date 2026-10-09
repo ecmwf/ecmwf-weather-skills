@@ -1,0 +1,33 @@
+{
+  "id": "cerra-area",
+  "prompt": "I need CERRA 2 m temperature (analysis) over Portugal only \u2014 roughly 36 to 43 N, 10 to 6 W \u2014 for 18 July 2023 at 12 UTC, as GRIB. Save it as cerra_pt.grib in this folder. I don't want the whole European domain.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "note": "CERRA's form has no area: area alone fails in MARS (Lambert grid); area + grid regrids and crops. The final check also accepts 'on a 0.05\u00b0 grid': a correct answer said that instead of 'regridded'.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-cds-ads"
+    },
+    {
+      "kind": "command",
+      "pattern": "reanalysis-cerra-single-levels"
+    },
+    {
+      "kind": "command",
+      "pattern": "grid"
+    },
+    {
+      "kind": "file",
+      "pattern": "cerra_pt.grib"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)regrid|regular|lat/?lon|interpolat|0\\.0\\d+\\s*\u00b0?\\s*grid"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|meteostat"
+    }
+  ]
+}

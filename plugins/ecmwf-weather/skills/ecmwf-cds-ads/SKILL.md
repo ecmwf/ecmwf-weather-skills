@@ -1,6 +1,6 @@
 ---
 name: ecmwf-cds-ads
-description: Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (historical weather since 1940, hourly point time series, climate normals), seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates requests and costs them without an account; tells the user exactly how to get a key when one is missing.
+description: Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (historical weather since 1940, hourly point time series, climate normals), the CARRA (Arctic, 2.5 km) and CERRA / CERRA-Land (Europe, 5.5 km) regional reanalyses, seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, CARRA, CERRA, regional or Arctic reanalysis, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates requests and costs them without an account; tells the user exactly how to get a key when one is missing.
 compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe, validate and era5-point --dry-run (public CDS/ADS APIs). Downloads use uv (PEP 723 inline dependency earthkit-data[cds]) and a CDS/ADS key. Network access to cds.climate.copernicus.eu / ads.atmosphere.copernicus.eu.
 license: Apache-2.0
 metadata:
@@ -16,13 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # Copernicus CDS and ADS
 
 ## Contents
-- Workflow (line 29)
-- ERA5 at a point (line 67)
-- CAMS air quality without a key (line 80)
-- Processing and plots (line 87)
-- Attribution and citation (line 97)
-- When blocked (line 108)
-- References — `references/datasets.md` (common dataset ids, request examples, limits, errors)
+- Workflow (line 30)
+- ERA5 at a point (line 68)
+- Regional reanalyses — CARRA and CERRA (line 81)
+- CAMS air quality without a key (line 96)
+- Processing and plots (line 103)
+- Attribution and citation (line 113)
+- When blocked (line 124)
+- References — `references/datasets.md` (common dataset ids, request examples, limits, errors), `references/regional-reanalyses.md` (CARRA, CERRA: requests, subsetting, point series, limits)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
 
@@ -76,6 +77,21 @@ uv run  scripts/cds.py era5-point --lat 38.72 --lon -9.14 --start 1991-01-01 --e
 Uses `reanalysis-era5-single-levels-timeseries` (hourly, 1940 → ~5 days ago, CSV or NetCDF,
 fast). Climate normals = 1991–2020 monthly means of that series (recipe in
 `references/datasets.md`).
+
+## Regional reanalyses — CARRA and CERRA
+
+| Dataset | ids | Grid | Period |
+|---|---|---|---|
+| CARRA (Arctic) | `reanalysis-carra-{single,pressure,height,model}-levels`, `-means`; `domain`: `west_domain` (Greenland, Iceland, Svalbard west) or `east_domain` (Svalbard, Scandinavia, Siberian Arctic) | Lambert 2.5 km | 1990-09 → |
+| CERRA (Europe) | `reanalysis-cerra-{single,pressure,height,model}-levels` | Lambert 5.5 km | 1984-09 → |
+| CERRA-Land | `reanalysis-cerra-land`; point series `reanalysis-cerra-land-timeseries` | Lambert 5.5 km | 1984-09 → |
+| pan-CARRA (CARRA2) | `reanalysis-pan-carra`, `-means` | polar stereographic 2.5 km | 1985-09 → |
+
+**Subsetting.** The CARRA/CERRA forms have no `area`, but the server accepts `area` together
+with `grid`: it regrids to regular lat/lon and crops (Portugal at 0.05°: 11 kB instead of the
+2.3 MB European field). `area` alone fails — MARS cannot crop a Lambert grid. Say that the data
+was regridded (it is modified data). Copy-ready requests, the point series and limits:
+`references/regional-reanalyses.md`. The same data is in MARS (`class=rr`, `ecmwf-mars` skill).
 
 ## CAMS air quality without a key
 

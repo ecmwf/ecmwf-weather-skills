@@ -413,11 +413,43 @@ def _as_list(v):
     return v if isinstance(v, list) else [v]
 
 
+# Keys the CDS passes to MARS post-processing even when the dataset form doesn't offer them.
+# On MARS-backed gridded datasets `grid` regrids to regular lat/lon. `area` alone only works
+# where the form offers it: CARRA/CERRA are on Lambert conformal grids that MARS cannot crop
+# (the job fails server-side), so there `area` needs `grid` too.
+POST_PROCESSING = ("area", "grid")
+
+
+def _check_post_processing(key: str, val, request: dict, opts: dict) -> list[str]:
+    if key == "grid":
+        ok = (
+            isinstance(val, list)
+            and len(val) == 2
+            and all(isinstance(v, int | float) and v > 0 for v in val)
+        )
+        return [] if ok else ["grid must be [dlon, dlat] in degrees, e.g. [0.05, 0.05]"]
+    errs = []
+    if not (isinstance(val, list) and len(val) == 4):
+        errs.append("area must be [north, west, south, east]")
+    elif val[0] < val[2]:
+        errs.append(f"area north {val[0]} is south of south {val[2]} — order is [N, W, S, E]")
+    if "grid" not in request:
+        errs.append(
+            "this dataset's form has no area input: on Lambert grids (CARRA, CERRA) MARS cannot "
+            'crop, and the job fails — add grid, e.g. "grid": [0.05, 0.05], to regrid to '
+            "regular lat/lon and crop"
+        )
+    return errs
+
+
 def validate(request: dict, form: list) -> list[str]:
     """Local checks against the dataset form. (Value *combinations* are checked by the server.)"""
     opts, errs = form_options(form), []
     for key, val in request.items():
         o = opts.get(key)
+        if o is None and key in POST_PROCESSING:
+            errs += _check_post_processing(key, val, request, opts)
+            continue
         if o is None:
             errs.append(f"unknown key {key!r}; valid keys: {', '.join(opts)}")
             continue

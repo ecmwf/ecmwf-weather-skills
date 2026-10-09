@@ -21,7 +21,7 @@ Agents read `SKILL.md` first; this page is for humans browsing the repository.
 
 ## `ecmwf-cds-ads`
 
-Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (historical weather since 1940, hourly point time series, climate normals), seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates requests and costs them without an account; tells the user exactly how to get a key when one is missing.
+Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (historical weather since 1940, hourly point time series, climate normals), the CARRA (Arctic, 2.5 km) and CERRA / CERRA-Land (Europe, 5.5 km) regional reanalyses, seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, CARRA, CERRA, regional or Arctic reanalysis, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates requests and costs them without an account; tells the user exactly how to get a key when one is missing.
 
 **Requirements:** scripts/cds.py runs on plain Python 3 for check, search, describe, validate and era5-point --dry-run (public CDS/ADS APIs). Downloads use uv (PEP 723 inline dependency earthkit-data[cds]) and a CDS/ADS key. Network access to cds.climate.copernicus.eu / ads.atmosphere.copernicus.eu.
 
@@ -35,6 +35,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-cds-ads/SKILL.md`](../plugins/ec
 | Reference | Purpose |
 |---|---|
 | `references/datasets.md` | CDS / ADS datasets and requests |
+| `references/regional-reanalyses.md` | CARRA and CERRA on the CDS |
 
 ## `ecmwf-destine`
 
@@ -75,7 +76,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-earthkit/SKILL.md`](../plugins/e
 
 ## `ecmwf-mars`
 
-Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) and ERA5 via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
+Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) ERA5 and the CARRA/CERRA regional reanalyses (class=rr) via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 
 **Requirements:** scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 
