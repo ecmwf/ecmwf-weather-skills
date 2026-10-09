@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-09
+
 ### Added
 
 - CARRA (Arctic, 2.5 km), CERRA and CERRA-Land (Europe, 5.5 km) and pan-CARRA regional
@@ -447,7 +449,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.4.0...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.5.0...HEAD
+[0.5.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.2...0.4.0
 [0.3.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.0...0.3.1
