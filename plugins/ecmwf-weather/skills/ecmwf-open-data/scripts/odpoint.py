@@ -12,6 +12,7 @@
 #   "earthkit-meteo>=1.2",
 #   "earthkit-utils>=1.0",
 #   "earthkit-transforms[all]>=1.0",
+#   "thermofeel>=2.3",
 # ]
 # ///
 """Point forecast from ECMWF Open Data — nearest gridpoint time series.
@@ -21,12 +22,15 @@ earthkit components, each for its job:
   earthkit-geo    nearest gridpoint (KD-tree on the sphere)
   earthkit-meteo  wind speed / direction from 10u/10v
   earthkit-utils  unit conversion (K -> degC, Pa -> hPa)
+  thermofeel      feels-like indices (--indices: heat index, humidex, apparent temperature,
+                  wind chill; ECMWF's thermal-comfort library)
 
 Run with uv (dependencies install on first run, ~150 MB, cached):
   uv run odpoint.py --lat 38.72 --lon -9.14                 # Lisbon, latest IFS, 0-240 h
   uv run odpoint.py --lat 51.5 --lon -0.12 --steps 0-48 --csv
   uv run odpoint.py --lat 40 --lon -10 --file local.grib2    # decode an existing file
   uv run odpoint.py --lat 38.72 --lon -9.14 --estimate-only  # size only, no decoding
+  uv run odpoint.py --lat 37.39 --lon -5.98 --next-hours 48 --indices   # feels-like columns
 
 Open Data has no point API: whole global fields are downloaded and one point is extracted.
 With ECMWF Polytope access the same request is a few KB (see the ecmwf-polytope skill).
@@ -66,7 +70,20 @@ UNITS = {
     "wind_dir_deg": "degrees (from, meteorological)",
     "msl_hPa": "hPa",
     "tcc_pct": "%",
+    "heat_index_C": "degC",
+    "humidex_C": "degC",
+    "apparent_temperature_C": "degC",
+    "wind_chill_C": "degC",
 }
+# Wind chill validity (thermofeel.calculate_wind_chill docstring): air temperature -50..5 °C and
+# 10 m wind 5..80 km/h; outside it the formula is not a wind chill, so the value is left empty.
+WIND_CHILL_T_C = (-50.0, 5.0)
+WIND_CHILL_WIND_KMH = (5.0, 80.0)
+INDICES_NOTE = (
+    "Feels-like indices from thermofeel (ECMWF), no radiation: heat index (NOAA, adjusted; "
+    "meaningful above ~27 °C), humidex (Environment Canada; above ~20 °C), apparent temperature "
+    "(Steadman, shade), wind chill (only for -50..5 °C and 5..80 km/h 10 m wind, else empty)."
+)
 
 
 # --- pure helpers -------------------------------------------------------------------------------
@@ -138,6 +155,48 @@ def daily_from_rows(rows: list[dict], zone) -> list[dict]:
     return out
 
 
+def request_params(params: str, indices: bool = False) -> list[str]:
+    """Parameters to fetch; feels-like indices also need 2 m dewpoint and 10 m wind."""
+    out = params.split(",")
+    if indices:
+        out += [p for p in ("2d", "10u", "10v") if p not in out]
+    return out
+
+
+def feels_like(t2_k, td_k, u, v) -> dict:
+    """Feels-like indices in °C from 2 m temperature and dewpoint (K) and 10 m wind (m/s).
+
+    thermofeel computes every index (SI in, K out); earthkit-meteo the wind speed and
+    earthkit-utils the K -> °C conversion. Wind chill is NaN outside its validity range."""
+    import numpy as np
+    import thermofeel as tf
+    from earthkit.meteo import wind
+    from earthkit.utils.units import convert_units
+
+    t2_k, td_k = np.asarray(t2_k, float), np.asarray(td_k, float)
+    va = wind.speed(np.asarray(u, float), np.asarray(v, float))
+    rh = tf.calculate_relative_humidity_percent(t2_k, td_k)
+    kelvin = {
+        "heat_index_C": tf.calculate_heat_index_adjusted(t2_k, td_k),
+        "humidex_C": tf.calculate_humidex(t2_k, td_k),
+        "apparent_temperature_C": tf.calculate_apparent_temperature(t2_k, va, rh),
+        "wind_chill_C": tf.calculate_wind_chill(t2_k, va),
+    }
+    out = {
+        k: convert_units(np.asarray(x, float), "degC", source_units="K") for k, x in kelvin.items()
+    }
+    t_c = convert_units(t2_k, "degC", source_units="K")
+    kmh = convert_units(va, "km/h", source_units="m/s")
+    valid = (
+        (t_c >= WIND_CHILL_T_C[0])
+        & (t_c <= WIND_CHILL_T_C[1])
+        & (kmh >= WIND_CHILL_WIND_KMH[0])
+        & (kmh <= WIND_CHILL_WIND_KMH[1])
+    )
+    out["wind_chill_C"] = np.where(valid, out["wind_chill_C"], np.nan)
+    return out
+
+
 def normalise_lon(lon: float) -> float:
     return ((lon + 180.0) % 360.0) - 180.0
 
@@ -151,7 +210,8 @@ def earthkit_barrier(message: str) -> dict:
             "(curl -LsSf https://astral.sh/uv/install.sh | sh), then re-run with "
             "`uv run odpoint.py …` — it installs exactly what is needed.",
             "2. Without uv: pip install 'earthkit-data[ecmwf-opendata]>=1.2' "
-            "'earthkit-geo>=1.1' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0'",
+            "'earthkit-geo>=1.1' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0' "
+            "'earthkit-transforms[all]>=1.0' 'thermofeel>=2.3'",
             "3. On Windows use WSL (earthkit has no Windows wheels).",
         ],
         "agent": "Run the script with `uv run`; if uv cannot be installed, give these "
@@ -229,8 +289,10 @@ def shape_output(
 # --- earthkit-backed ------------------------------------------------------------------------------
 
 
-def point_series(fl, lat: float, lon: float) -> dict:
-    """Nearest-gridpoint series from a FieldList with any of DEFAULT_PARAMS."""
+def point_series(fl, lat: float, lon: float, indices: bool = False) -> dict:
+    """Nearest-gridpoint series from a FieldList with any of DEFAULT_PARAMS.
+
+    indices: add feels-like columns (needs 2t, 2d, 10u and 10v)."""
     import numpy as np
     from earthkit.geo import distance
     from earthkit.meteo import wind
@@ -269,15 +331,23 @@ def point_series(fl, lat: float, lon: float) -> dict:
         derived["msl_hPa"] = convert_units(msl, "hPa", source_units="Pa")
     if tcc is not None:
         derived["tcc_pct"] = tcc * 100.0
+    if indices:
+        missing = [p for p in ("2t", "2d", "10u", "10v") if p not in raw]
+        if missing:
+            raise ValueError(
+                f"--indices needs {', '.join(missing)} (fields present: {', '.join(sorted(raw))})"
+            )
+        derived.update(feels_like(t2m, col("2d"), u, v))
 
     rows = []
     for k, s in enumerate(steps):
         row = {"step": s, "valid_time": valid[s].strftime("%Y-%m-%dT%H:%MZ")}
         for key, vals in derived.items():
-            row[key] = None if vals[k] is None else round(float(vals[k]), 1)
+            missing = vals[k] is None or vals[k] != vals[k]  # None or NaN
+            row[key] = None if missing else round(float(vals[k]), 1)
         rows.append(row)
 
-    return {
+    out = {
         "location": {"lat": lat, "lon": lon},
         "gridpoint": {
             "lat": glat,
@@ -288,6 +358,9 @@ def point_series(fl, lat: float, lon: float) -> dict:
         "units": {k: UNITS[k] for k in derived},
         "series": rows,
     }
+    if indices:
+        out["indices_note"] = INDICES_NOTE
+    return out
 
 
 def fetch(model: str, params: list[str], steps: list[int], run: datetime, source: str):
@@ -338,6 +411,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--next-hours", type=int, help="exactly the next N hours from now (overrides --steps)"
     )
     p.add_argument("--daily", action="store_true", help="add per-day high/low/precipitation")
+    p.add_argument(
+        "--indices",
+        action="store_true",
+        help="add feels-like columns (heat index, humidex, apparent temperature, wind chill; "
+        "thermofeel); fetches 2 m dewpoint too",
+    )
     fmt = p.add_mutually_exclusive_group()
     fmt.add_argument("--json", action="store_true")
     fmt.add_argument("--csv", action="store_true")
@@ -347,7 +426,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     p = build_parser()
     a = p.parse_args(argv)
-    params = a.params.split(",")
+    params = request_params(a.params, a.indices)
     if a.next_hours:  # newest run can be ~13 h old: fetch enough lead time, trim afterwards
         a.steps = f"0-{-(-(a.next_hours + MAX_RUN_AGE_H) // 6) * 6}"
 
@@ -416,7 +495,13 @@ def main(argv=None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
 
-    res = point_series(fl, a.lat, a.lon)
+    try:
+        res = point_series(fl, a.lat, a.lon, a.indices)
+    except ImportError as e:
+        return oc.blocked(earthkit_barrier(str(e)), a.json, code=3)
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     res.update(shape_output(res["series"], a.tz, a.from_now, a.daily, next_hours=a.next_hours))
     res["model"] = a.model
     res["note"] = access_note(nbytes)
@@ -443,7 +528,10 @@ def main(argv=None) -> int:
         cols = list(res["units"])
         print("valid_time         " + "  ".join(f"{c:>13}" for c in cols))
         for r in res["series"]:
-            print(f"{r['valid_time']:<18} " + "  ".join(f"{r.get(c, ''):>13}" for c in cols))
+            cells = ("" if r.get(c) is None else r[c] for c in cols)
+            print(f"{r['valid_time']:<18} " + "  ".join(f"{v:>13}" for v in cells))
+        if res.get("indices_note"):
+            print(f"Indices: {res['indices_note']}")
         print(f"Note: {res['note']}")
         print(f"Attribution: {res['attribution']['short']}")
     return 0

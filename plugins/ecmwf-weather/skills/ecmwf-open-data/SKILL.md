@@ -1,7 +1,7 @@
 ---
 name: ecmwf-open-data
-description: Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
-compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
+description: Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, how hot or cold it will feel (heat index, wind chill, feels-like) at a place, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
+compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, thermofeel, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
 license: Apache-2.0
 metadata:
   author: ECMWF
@@ -18,13 +18,13 @@ SPDX-License-Identifier: Apache-2.0
 ## Contents
 - Scripts (line 34)
 - Point forecast workflow (line 54)
-- Facts to get right (line 75)
-- Dependencies — earthkit first (line 91)
-- Credentials and better routes (line 105)
-- Processing and plots (line 120)
-- Attribution (line 128)
-- When blocked (line 137)
-- Old patterns (line 157)
+- Facts to get right (line 79)
+- Dependencies — earthkit first (line 95)
+- Credentials and better routes (line 109)
+- Processing and plots (line 124)
+- Attribution (line 132)
+- When blocked (line 141)
+- Old patterns (line 161)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -67,6 +67,10 @@ say so.
   instead of converting or aggregating yourself.
 - Output per valid time (UTC): `t2m_C`, `precip_mm` (since the previous step; `null` if unknown),
   `wind_speed_ms`, `wind_dir_deg` (direction the wind blows from), `msl_hPa`, `tcc_pct`.
+- "Feels like", heat index, wind chill: add `--indices` — `heat_index_C`, `humidex_C`,
+  `apparent_temperature_C`, `wind_chill_C` (thermofeel; wind chill `null` outside its validity)
+  and an `indices_note` to relay. Never code the formulas yourself. UTCI and WBGT need direct
+  solar radiation, which Open Data lacks: the `ecmwf-earthkit` skill's `ekplot.py indices`.
 - Size: 0–240 h ≈ 200 MB, 0–48 h ≈ 40 MB; ~10–20 s per 100 MB. Give the command a timeout of
   several minutes. Don't thin steps to go faster — it ruins meteograms.
 - On download errors retry once with `--source google`. The AWS mirror may answer `503 Slow Down`.

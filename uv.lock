@@ -1235,6 +1235,7 @@ earthkit = [
     { name = "earthkit-plots" },
     { name = "earthkit-transforms", extra = ["all"] },
     { name = "earthkit-utils" },
+    { name = "thermofeel" },
 ]
 
 [package.metadata]
@@ -1248,6 +1249,7 @@ earthkit = [
     { name = "earthkit-plots", specifier = ">=1.0" },
     { name = "earthkit-transforms", extras = ["all"], specifier = ">=1.0" },
     { name = "earthkit-utils", specifier = ">=1.0" },
+    { name = "thermofeel", specifier = ">=2.3" },
 ]
 
 [[package]]
@@ -3993,6 +3995,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "thermofeel"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fa/a5/aeec22f9a35735f62061d133206960b67e72a0ea3ac3ff1ce8bfb5b3e338/thermofeel-2.3.0.tar.gz", hash = "sha256:3546db63e93737e91692973d642c016c1ae832626258e2d8d31aca82fc0fb254", size = 50725, upload-time = "2026-07-16T10:50:30.858Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/e2/eac387d67ccf3df506e858af16d5a20201cbcf21dae53e923be2e70efbee/thermofeel-2.3.0-py3-none-any.whl", hash = "sha256:32b9b1db96edaebbff84c82d78f8850400c84e7b5c0e5c2304a39942a67972ad", size = 35296, upload-time = "2026-07-16T10:50:29.864Z" },
 ]
 
 [[package]]

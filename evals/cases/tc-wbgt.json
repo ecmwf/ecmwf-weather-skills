@@ -1,0 +1,42 @@
+{
+  "id": "tc-wbgt",
+  "prompt": "forecast.grib2 has ECMWF HRES surface fields (2 m temperature and dewpoint, 10 m wind, surface pressure, and accumulated radiation including direct solar radiation) at two steps. What wet bulb globe temperature (WBGT) does it give for Madrid at the last step, and what heat-stress level is that?",
+  "setup": {
+    "copy": {
+      "tests/fixtures/ifs-rad-5deg.grib2": "forecast.grib2"
+    }
+  },
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-earthkit"
+    },
+    {
+      "kind": "command",
+      "pattern": "thermofeel|ekplot\\.py.*indices.*wbgt"
+    },
+    {
+      "kind": "command",
+      "pattern": "accumulation_to_rate|deaccumulate|ekplot\\.py.*indices"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "273\\.15|-42\\.379|2\\.04901523|10\\.14333127|0\\.5\\s*\\*\\s*\\(.{0,20}61|17\\.27|243\\.04|17\\.62|243\\.12|6\\.112|6\\.1078|5417\\.753|0\\.5555|13\\.12|0\\.6215|11\\.37|0\\.3965|0\\.33\\s*\\*|0\\.7\\s*\\*\\s*\\w+.{0,40}0\\.2\\s*\\*"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "/\\s*\\(?\\s*(12|step)\\s*\\*\\s*3600"
+    },
+    {
+      "kind": "final",
+      "pattern": "\u00b0C|degC"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)WBGT|wet[ -]bulb globe"
+    }
+  ],
+  "note": "Radiation is accumulated from the run start: the mean flux comes from the interval between consecutive steps, not step*3600."
+}

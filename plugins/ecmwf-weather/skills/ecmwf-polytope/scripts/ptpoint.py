@@ -11,6 +11,7 @@
 #   "earthkit-meteo>=1.2",
 #   "earthkit-utils>=1.0",
 #   "earthkit-transforms[all]>=1.0",
+#   "thermofeel>=2.3",
 # ]
 # ///
 """Point forecast via ECMWF Polytope — server-side extraction, a few KB instead of global fields.
@@ -20,11 +21,13 @@ earthkit components, each for its job:
   earthkit-meteo           wind speed / direction
   earthkit-utils           unit conversion
   earthkit-transforms      de-accumulation, ensemble percentiles, daily statistics
+  thermofeel               feels-like indices (--indices; ECMWF's thermal-comfort library)
 
   uv run ptpoint.py --check                                  # credentials + test request
   uv run ptpoint.py --lat 38.72 --lon -9.14                  # IFS HRES, hourly, 0-240 h
   uv run ptpoint.py --lat 38.72 --lon -9.14 --steps 0-24 --json
   uv run ptpoint.py --lat 51.45 --lon -0.97 --ensemble --steps 0-120   # 50-member percentiles
+  uv run ptpoint.py --lat 37.39 --lon -5.98 --next-hours 48 --indices   # feels-like columns
 
 Output JSON matches the ecmwf-open-data skill's odpoint.py (plus *_p10/_p50/_p90 for --ensemble), so
 the ecmwf-earthkit skill's `ekplot.py meteogram` plots it. Exit code 4 = no Polytope credentials:
@@ -63,6 +66,9 @@ COLLECTIONS_TIMEOUT_S = 30
 # paramIds: 2t, tp, 10u, 10v, msl, tcc (ensemble: 2t, tp — enough for uncertainty, keeps it small)
 PARAMS = "167/228/165/166/151/164"
 ENS_PARAMS = "167/228"
+# --indices adds 2 m dewpoint (168); ensemble requests also need 10 m wind (165/166).
+INDEX_PARAMS = "168"
+ENS_INDEX_PARAMS = "168/165/166"
 # Operational runs are usable ~7 h after base time; Polytope keeps roughly the last 2 days.
 AVAILABLE_AFTER = timedelta(hours=7)
 MAX_CANDIDATES = 4
@@ -76,7 +82,21 @@ UNITS = {
     "wind_dir_deg": "degrees (from, meteorological)",
     "msl_hPa": "hPa",
     "tcc_pct": "%",
+    "heat_index_C": "degC",
+    "humidex_C": "degC",
+    "apparent_temperature_C": "degC",
+    "wind_chill_C": "degC",
 }
+INDEX_KEYS = ("heat_index_C", "humidex_C", "apparent_temperature_C", "wind_chill_C")
+# Wind chill validity (thermofeel.calculate_wind_chill docstring): air temperature -50..5 °C and
+# 10 m wind 5..80 km/h; outside it the formula is not a wind chill, so the value is left empty.
+WIND_CHILL_T_C = (-50.0, 5.0)
+WIND_CHILL_WIND_KMH = (5.0, 80.0)
+INDICES_NOTE = (
+    "Feels-like indices from thermofeel (ECMWF), no radiation: heat index (NOAA, adjusted; "
+    "meaningful above ~27 °C), humidex (Environment Canada; above ~20 °C), apparent temperature "
+    "(Steadman, shade), wind chill (only for -50..5 °C and 5..80 km/h 10 m wind, else empty)."
+)
 
 
 # --- credentials ------------------------------------------------------------------------------
@@ -105,7 +125,11 @@ def build_request(
     end_step: int = 240,
     ensemble: bool = False,
     members: str = "1/to/50",
+    indices: bool = False,
 ) -> dict:
+    param = ENS_PARAMS if ensemble else PARAMS
+    if indices:
+        param += "/" + (ENS_INDEX_PARAMS if ensemble else INDEX_PARAMS)
     r = {
         "class": "od",
         "stream": "enfo" if ensemble else "oper",
@@ -115,7 +139,7 @@ def build_request(
         "levtype": "sfc",
         "expver": "0001",
         "domain": "g",
-        "param": ENS_PARAMS if ensemble else PARAMS,
+        "param": param,
         "feature": {
             "type": "timeseries",
             "points": [[lat, lon]],
@@ -220,6 +244,45 @@ def quantiles(member_series: list[list[float]], qs=QUANTILES) -> list[list[float
 
 def _deaccumulate_mm(vals: list[float], steps: list[int] | None = None) -> list[float]:
     return [0.0 if v is None else v for v in deaccumulate_mm(vals, steps)]
+
+
+def feels_like(t2_k, td_k, u, v) -> dict:
+    """Feels-like indices in °C from 2 m temperature and dewpoint (K) and 10 m wind (m/s).
+
+    thermofeel computes every index (SI in, K out); earthkit-meteo the wind speed and
+    earthkit-utils the K -> °C conversion. Wind chill is NaN outside its validity range."""
+    import numpy as np
+    import thermofeel as tf
+    from earthkit.meteo import wind
+    from earthkit.utils.units import convert_units
+
+    t2_k, td_k = np.asarray(t2_k, float), np.asarray(td_k, float)
+    va = wind.speed(np.asarray(u, float), np.asarray(v, float))
+    rh = tf.calculate_relative_humidity_percent(t2_k, td_k)
+    kelvin = {
+        "heat_index_C": tf.calculate_heat_index_adjusted(t2_k, td_k),
+        "humidex_C": tf.calculate_humidex(t2_k, td_k),
+        "apparent_temperature_C": tf.calculate_apparent_temperature(t2_k, va, rh),
+        "wind_chill_C": tf.calculate_wind_chill(t2_k, va),
+    }
+    out = {
+        k: convert_units(np.asarray(x, float), "degC", source_units="K") for k, x in kelvin.items()
+    }
+    t_c = convert_units(t2_k, "degC", source_units="K")
+    kmh = convert_units(va, "km/h", source_units="m/s")
+    valid = (
+        (t_c >= WIND_CHILL_T_C[0])
+        & (t_c <= WIND_CHILL_T_C[1])
+        & (kmh >= WIND_CHILL_WIND_KMH[0])
+        & (kmh <= WIND_CHILL_WIND_KMH[1])
+    )
+    out["wind_chill_C"] = np.where(valid, out["wind_chill_C"], np.nan)
+    return out
+
+
+def _cell(v, ndigits: int = 1):
+    """Rounded value for the JSON rows; NaN (no valid index) becomes None."""
+    return None if v != v else round(float(v), ndigits)
 
 
 def size_note(nbytes: int) -> str:
@@ -413,6 +476,10 @@ def series(p: dict) -> list[dict]:
         if "tcc" in m:
             for r, v in zip(rows, m["tcc"], strict=True):
                 r["tcc_pct"] = round(float(v) * 100.0, 1)
+        if all(k in m for k in ("2t", "2d", "10u", "10v")):
+            for key, vals in feels_like(m["2t"], m["2d"], m["10u"], m["10v"]).items():
+                for r, v in zip(rows, vals, strict=True):
+                    r[key] = _cell(v)
         return rows
 
     names = sorted(mem)
@@ -430,6 +497,23 @@ def series(p: dict) -> list[dict]:
         for r, q in zip(rows, quantiles(tp), strict=True):
             r.update({f"precip_mm_p{k}": round(v, 2) for k, v in zip(QUANTILES, q, strict=True)})
             r["precip_mm"] = r["precip_mm_p50"]
+    if all(k in mem[names[0]] for k in ("2d", "10u", "10v")):
+        per_member = [
+            feels_like(mem[n]["2t"], mem[n]["2d"], mem[n]["10u"], mem[n]["10v"]) for n in names
+        ]
+        for key in INDEX_KEYS:
+            stack = np.array([m[key] for m in per_member])
+            # A percentile over only the members inside the validity range would misstate the
+            # spread: give wind chill percentiles only where every member has a value.
+            undefined = np.isnan(stack).any(axis=0)
+            for r, q, skip in zip(rows, quantiles(np.nan_to_num(stack)), undefined, strict=True):
+                r.update(
+                    {
+                        f"{key}_p{k}": None if skip else round(v, 1)
+                        for k, v in zip(QUANTILES, q, strict=True)
+                    }
+                )
+                r[key] = r[f"{key}_p50"]
     return rows
 
 
@@ -442,12 +526,14 @@ def fetch(req: dict) -> tuple[dict, int]:
     return json.loads(raw), len(raw)
 
 
-def fetch_latest(lat, lon, end_step, ensemble, date=None, time=None) -> tuple[dict, int]:
+def fetch_latest(
+    lat, lon, end_step, ensemble, date=None, time=None, indices=False
+) -> tuple[dict, int]:
     runs = [(date, time)] if date else candidate_runs(end_step=end_step)
     last = None
     for d, t in runs:
         try:
-            return fetch(build_request(lat, lon, d, t, end_step, ensemble))
+            return fetch(build_request(lat, lon, d, t, end_step, ensemble, indices=indices))
         except (
             Exception
         ) as e:  # polytope-client raises generic errors; retry older runs on "no data"
@@ -634,6 +720,12 @@ def main(argv=None) -> int:
         action="store_true",
         help="add per-day high/low/precipitation (ensemble: p10/p50/p90)",
     )
+    ap.add_argument(
+        "--indices",
+        action="store_true",
+        help="add feels-like columns (heat index, humidex, apparent temperature, wind chill; "
+        "thermofeel; ensemble: p10/p50/p90); requests 2 m dewpoint too",
+    )
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
 
@@ -672,7 +764,7 @@ def main(argv=None) -> int:
         end = int(a.steps.split("-")[-1])
         if a.next_hours:
             end = steps_for_next_hours(a.next_hours)
-        d, nbytes = fetch_latest(a.lat, a.lon, end, a.ensemble, a.date, a.time)
+        d, nbytes = fetch_latest(a.lat, a.lon, end, a.ensemble, a.date, a.time, a.indices)
         p = parse_covjson(d)
         rows = series(p)
     except ImportError as e:
@@ -697,6 +789,8 @@ def main(argv=None) -> int:
         "note": size_note(nbytes),
         "attribution": attribution(d),
     }
+    if a.indices:
+        res["indices_note"] = INDICES_NOTE
     if a.json:
         print(json.dumps(res, indent=2))
         return 0
@@ -707,8 +801,11 @@ def main(argv=None) -> int:
     cols = [c for c in rows[0] if c not in ("step", "valid_time", "members")]
     print("valid_time         " + "  ".join(f"{c:>12}" for c in cols))
     for r in rows:
-        print(f"{r['valid_time']:<18} " + "  ".join(f"{r.get(c, ''):>12}" for c in cols))
+        cells = ("" if r.get(c) is None else r[c] for c in cols)
+        print(f"{r['valid_time']:<18} " + "  ".join(f"{v:>12}" for v in cells))
     attr = res["attribution"]
+    if a.indices:
+        print(f"Indices: {INDICES_NOTE}")
     print(f"Note: {res['note']}\nAttribution: {attr['short']} — {attr['note']}")
     return 0
 

@@ -1,0 +1,32 @@
+{
+  "id": "tc-heat-index-map",
+  "prompt": "Using the free ECMWF open data, make a heat index map over Europe for tomorrow at 12 UTC and save it as heat_index.png.",
+  "timeout": 1200,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-earthkit"
+    },
+    {
+      "kind": "command",
+      "pattern": "ekplot\\.py.*indices.*heat-index|calculate_heat_index"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "273\\.15|-42\\.379|2\\.04901523|10\\.14333127|0\\.5\\s*\\*\\s*\\(.{0,20}61|17\\.27|243\\.04|17\\.62|243\\.12|6\\.112|6\\.1078|5417\\.753|0\\.5555|13\\.12|0\\.6215|11\\.37|0\\.3965|0\\.33\\s*\\*|0\\.7\\s*\\*\\s*\\w+.{0,40}0\\.2\\s*\\*"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io"
+    },
+    {
+      "kind": "file",
+      "pattern": "heat_index.png"
+    },
+    {
+      "kind": "final",
+      "pattern": "CC[ -]BY"
+    }
+  ]
+}

@@ -48,6 +48,8 @@ Lists `a/b/c`, ranges `a/to/b`, steps `a/to/b/by/n`. Dates `YYYY-MM-DD`, `YYYYMM
 
 - Surface parameters: `2t` 167, `2d` 168, `tp` 228, `10u` 165, `10v` 166, `10fg` 49, `msl` 151,
   `sp` 134, `tcc` 164, `ssrd` 169, `cape` 59, `skt` 235.
+- Radiation (accumulated J m-2 from the run start): `ssrd` 169, `ssr` 176, `strd` 175, `str` 177,
+  `fdir` 228021 (direct solar radiation — not in Open Data; needed for UTCI, MRT, WBGT).
 - Upper air: `t` 130, `u` 131, `v` 132, `z` 129 (geopotential, m² s⁻²), `q` 133, `r` 157, `w` 135.
 - Operational HRES: 00/06/12/18 UTC runs; ENS: 50 perturbed members.
 - ERA5: `class=ea, stream=oper, type=an, expver=1`, hourly `time=00/to/23/by/1`, 37 pressure
