@@ -5,11 +5,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = [
 #   "earthkit-plots>=1.0",
 #   "earthkit-data>=1.2",
 #   "earthkit-transforms[all]>=1.0",
+#   "scipy>=1.16",
+#   "earthkit-meteo>=1.2",
+#   "earthkit-utils>=1.0",
+#   "thermofeel>=2.3",
 # ]
 # ///
 """Plot ECMWF data with earthkit-plots.
@@ -18,13 +22,20 @@
   ens-stats  ensemble mean / standard deviation / percentile maps from ensemble members
              (statistics with earthkit-transforms, maps with earthkit-plots)
   meteogram  multi-panel time series from point-forecast JSON
-             (odpoint.py / ptpoint.py --json)
+             (odpoint.py / ptpoint.py --json; feels-like panel with --indices; an optional
+             "observations" block from ecmwf-observations obs.py verify is drawn as dots)
+  indices    thermal-comfort index map from GRIB fields (thermofeel): heat index, humidex,
+             apparent temperature, wind chill (2t, 2d, 10u, 10v); UTCI, WBGT, MRT (also sp,
+             ssrd, ssr, strd, str and fdir — fdir is not in Open Data)
 
   uv run ekplot.py map forecast.grib2 --param 2t --step 24 --units celsius \\
       --domain Europe -o t2m.png
   uv run ekplot.py ens-stats ens.grib2 --param 2t --units celsius --domain Europe -o ens.png
       # -> ens_mean.png, ens_std.png (add --stats mean,std,p10,p90 and --panel for one figure)
   uv run ekplot.py meteogram lisbon.json -o lisbon.png
+  uv run ekplot.py indices fc.grib2 --index utci --step 12 --domain Europe -o utci.png
+  uv run ekplot.py map forecast.grib2 --param 2t --step 12 --units celsius \\
+      --obs stations.json -o t2m_obs.png   # station values (obs.py points) as dots
 
 Every figure carries the ECMWF CC-BY-4.0 attribution line.
 """
@@ -36,7 +47,7 @@ import contextlib
 import itertools
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 PANELS = [  # key in point JSON, title, kind, colour
     ("t2m_C", "2 m temperature", "line", "#d95c37"),
@@ -44,6 +55,14 @@ PANELS = [  # key in point JSON, title, kind, colour
     ("wind_speed_ms", "10 m wind speed", "line", "#247c68"),
     ("msl_hPa", "Mean sea level pressure", "line", "#7552a0"),
     ("tcc_pct", "Total cloud cover", "line", "#64748b"),
+]
+# Feels-like panel (odpoint.py / ptpoint.py --indices): drawn below 2 m temperature.
+FEELS_LIKE_LINES = [  # key in point JSON, legend label, colour
+    ("t2m_C", "2 m temperature", "#d95c37"),
+    ("heat_index_C", "Heat index", "#9b1d20"),
+    ("humidex_C", "Humidex", "#e0a106"),
+    ("apparent_temperature_C", "Apparent temperature", "#5b3a87"),
+    ("wind_chill_C", "Wind chill", "#2166ac"),
 ]
 
 
@@ -124,7 +143,41 @@ def meteogram_panels(point: dict) -> list[dict]:
             if all(lo in r and hi in r for r in rows):
                 panel["band"] = ([r[lo] for r in rows], [r[hi] for r in rows])
             out.append(panel)
+    feels = feels_like_panel(point)
+    if feels:
+        at = next((i + 1 for i, p in enumerate(out) if p["key"] == "t2m_C"), 0)
+        out.insert(at, feels)
     return out
+
+
+def feels_like_panel(point: dict) -> dict | None:
+    """Feels-like indices next to 2 m temperature, when the point JSON carries them."""
+    rows, units = point["series"], point.get("units", {})
+    present = [  # an index with no value anywhere (wind chill in summer) gets no line
+        line
+        for line in FEELS_LIKE_LINES
+        if line[0] in units and any(r.get(line[0]) is not None for r in rows)
+    ]
+    if not any(key != "t2m_C" for key, _, _ in present):
+        return None
+    ensemble = all("t2m_C_p50" in r for r in rows)  # ptpoint.py --ensemble: values are medians
+    return {
+        "key": "feels_like",
+        "title": "Feels like vs 2 m temperature" + (" — ensemble medians" if ensemble else ""),
+        "kind": "lines",
+        "units": "degC",
+        "lines": [
+            {"key": k, "label": label, "colour": c, "values": [_nan(r.get(k)) for r in rows]}
+            for k, label, c in present
+        ],
+    }
+
+
+def observation_points(point: dict, key: str) -> tuple[list[str], list[float]]:
+    """Observed (times, values) for a panel from the point JSON's optional `observations`."""
+    rows = (point.get("observations") or {}).get("series", [])
+    pts = [(r["valid_time"].rstrip("Z"), r[key]) for r in rows if r.get(key) is not None]
+    return [t for t, _ in pts], [v for _, v in pts]
 
 
 def _times(point):
@@ -158,7 +211,18 @@ def plot_meteogram(point: dict, output: str):
         ts = fig.add_timeseries()
         ax = ts.ax
         title = p["title"]
-        if p["key"] == "precip_mm":
+        if p["kind"] == "lines":
+            for line in p["lines"]:
+                da = xr.DataArray(
+                    line["values"],
+                    dims=["valid_time"],
+                    coords={"valid_time": t},
+                    name=line["key"],
+                    attrs={"units": p["units"], "long_name": line["label"]},
+                )
+                ts.line(da, color=line["colour"], linewidth=1.6, label=line["label"])
+            ax.legend(loc="upper left", fontsize=8, ncols=len(p["lines"]))
+        elif p["key"] == "precip_mm":
             bars = precip_bars(point)
             starts = np.array(bars["starts"], dtype="datetime64[m]")
             widths = np.array(bars["widths_h"]) / 24.0  # matplotlib date units are days
@@ -205,6 +269,17 @@ def plot_meteogram(point: dict, output: str):
                 ts.fill_between(lo, hi, alpha=0.3, color=p["colour"])
                 title += " — median and 10-90 % range"
             ts.line(da, color=p["colour"], linewidth=1.8)
+            ot, ov = observation_points(point, p["key"])
+            if ot:
+                ax.plot(
+                    np.array(ot, dtype="datetime64[m]"),
+                    ov,
+                    "o",
+                    color="black",
+                    markersize=3,
+                    label=point["observations"].get("label", "observed"),
+                )
+                ax.legend(loc="upper left", fontsize=8)
             if p["key"] == "tcc_pct":
                 ax.set_ylim(0, 100)
         ax.set_title(f"{title} ({p['units']})", loc="left", fontsize=10)
@@ -250,14 +325,37 @@ def plot_map(
     units=None,
     domain=None,
     level=None,
+    obs=None,
 ) -> None:
     import earthkit.plots as ekp
 
     sel = _select(path, param, step, level)
     kw = {k: v for k, v in {"units": units, "domain": domain}.items() if v}
     fig = ekp.quickplot(sel[0], **kw)  # style="auto": ECMWF style from the GRIB metadata
-    fig.attribution(attribution_text())
+    attribution = attribution_text()
+    if obs:
+        with open(obs) as fh:
+            attribution += f"; stations: {overlay_stations(fig, json.load(fh))}"
+    fig.attribution(attribution)
     fig.save(output)
+
+
+def overlay_stations(fig, obs: dict) -> str:
+    """Station values (ecmwf-observations `obs.py points` JSON) as dots coloured with the
+    field's own style, so a dot matches the shading when forecast and observation agree."""
+    import numpy as np
+    from earthkit.utils.units import convert_units
+
+    pts = obs.get("points", [])
+    if not pts:
+        raise ValueError("no station points in the observations JSON (obs.py points)")
+    style = fig.layers[0].style
+    values = np.array([p["value"] for p in pts], float)
+    if obs.get("units") and getattr(style, "units", None):
+        values = convert_units(values, style.units, source_units=obs["units"])
+    lons, lats = (np.array([p[k] for p in pts], float) for k in ("lon", "lat"))
+    fig.scatter(x=lons, y=lats, z=values, style=style, edgecolors="black", s=40, zorder=5)
+    return obs.get("source", "observations")
 
 
 # --- ensemble statistics -------------------------------------------------------------------------
@@ -370,6 +468,286 @@ def plot_ens_stats(
     return files
 
 
+# --- thermal-comfort indices (thermofeel) --------------------------------------------------------
+
+RADIATION = ("ssrd", "ssr", "strd", "str")  # plus fdir; accumulated J m-2 since the run start
+WIND_CHILL_T_C = (-50.0, 5.0)  # thermofeel.calculate_wind_chill validity: air temperature,
+WIND_CHILL_WIND_KMH = (5.0, 80.0)  # and 10 m wind speed; outside it the map is left blank
+# Levels in °C. Where an index has an official scale its category boundaries are the levels.
+INDICES = {
+    "heat-index": {
+        "long_name": "Heat index",
+        "needs": ("2t", "2d"),
+        "radiation": False,
+        # NOAA categories: caution 27, extreme caution 32, danger 41, extreme danger 54 °C
+        "levels": [0, 10, 20, 27, 32, 41, 54],
+        "colors": "YlOrRd",
+    },
+    "humidex": {
+        "long_name": "Humidex",
+        "needs": ("2t", "2d"),
+        "radiation": False,
+        # Environment Canada: some discomfort 30, great 40, dangerous 46, heat stroke 54 °C
+        "levels": [0, 10, 20, 30, 40, 46, 54],
+        "colors": "YlOrRd",
+    },
+    "apparent-temperature": {
+        "long_name": "Apparent temperature",
+        "needs": ("2t", "2d", "10u", "10v"),
+        "radiation": False,
+        "levels": list(range(-30, 50, 5)),  # no official scale: temperature-like, every 5 °C
+        "colors": "RdYlBu_r",
+    },
+    "wind-chill": {
+        "long_name": "Wind chill",
+        "needs": ("2t", "10u", "10v"),
+        "radiation": False,
+        # Environment Canada frostbite risk: -10, -28, -40, -48, -55 °C; 5 °C validity limit
+        "levels": [-55, -48, -40, -28, -10, 0, 5],
+        "colors": "Blues_r",
+    },
+    "utci": {
+        "long_name": "Universal Thermal Climate Index",
+        "needs": ("2t", "2d", "10u", "10v", *RADIATION),
+        "radiation": True,
+        # UTCI assessment scale (Bröde et al. 2012): extreme cold stress below -40 °C ...
+        # moderate heat stress 26, strong 32, very strong 38, extreme above 46 °C
+        "levels": [-40, -27, -13, 0, 9, 26, 32, 38, 46],
+        "colors": "RdYlBu_r",
+    },
+    "wbgt": {
+        "long_name": "Wet bulb globe temperature",
+        "needs": ("2t", "2d", "10u", "10v", *RADIATION),
+        "radiation": True,
+        "levels": list(range(14, 34, 2)),  # KNMI heat-force bands: 2 °C steps from 14 to 32 °C
+        "colors": "YlOrRd",
+    },
+    "mrt": {
+        "long_name": "Mean radiant temperature",
+        "needs": RADIATION,
+        "radiation": True,
+        "levels": list(range(-20, 80, 10)),  # no official scale: every 10 °C
+        "colors": "inferno",
+    },
+}
+FDIR_NAMES = {"erbs": "Erbs", "disc": "DISC"}
+
+
+class FdirMissing(ValueError):
+    """A radiation index was asked for, the file has no fdir and no estimate was requested."""
+
+
+def fdir_barrier(path: str, index: str) -> dict:
+    return {
+        "blocked": f"{index} needs fdir (direct solar radiation, paramId 228021) and {path} "
+        "has none",
+        "why": "ECMWF Open Data does not publish fdir; UTCI, WBGT and MRT need it. It is in "
+        "MARS and Polytope (operational data under an ECMWF licence).",
+        "user_steps": [
+            "1. With ECMWF MARS or Polytope access: retrieve 2t 2d 10u 10v sp ssrd ssr strd str "
+            "fdir (param=167/168/165/166/134/169/176/175/177/228021) at two consecutive steps "
+            "(ecmwf-mars skill: mars.py retrieve; ecmwf-polytope: grid as a 'dx/dy' string).",
+            "2. Without access: an ECMWF account and key — https://api.ecmwf.int/v1/key/ ; "
+            "operational data needs an ECMWF licence (https://www.ecmwf.int/en/forecasts/"
+            "datasets).",
+            "3. For a demonstration only: re-run with --approximate-fdir erbs (or disc) — fdir is "
+            "then estimated from ssrd and the map is labelled as such.",
+        ],
+        "agent": "Check access (mars.py check, ptpoint.py --check) and fetch fdir if it works; "
+        "otherwise say Open Data lacks fdir and offer --approximate-fdir, labelling the result a "
+        "demonstration. Non-radiation indices (heat-index, humidex, apparent-temperature, "
+        "wind-chill) need no radiation.",
+    }
+
+
+def comfort_fields(path: str, step: int | None = None) -> dict:
+    """Fields at one step (default: the last) as numpy arrays, with the grid and times."""
+    import earthkit.data as ekd
+
+    fl = ekd.from_source("file", path).to_fieldlist()
+    steps = sorted({int(f.time.step().total_seconds() // 3600) for f in fl})
+    step = steps[-1] if step is None else step
+    at = fl.sel({"time.step": step})
+    if len(at) == 0:
+        raise ValueError(f"no fields at step {step}; steps in file: {steps}")
+    lat, lon = at[0].geography.latlons()
+    return {
+        "fieldlist": fl,
+        "fields": {f.get("parameter.variable"): f.to_numpy() for f in at},
+        "lat": lat,
+        "lon": lon,
+        "step": step,
+        "steps": steps,
+        "base": at[0].time.base_datetime(),
+        "valid": at[0].time.valid_datetime(),
+    }
+
+
+def radiation_fluxes(path: str, step: int) -> tuple[dict, tuple[datetime, datetime]]:
+    """Mean radiation fluxes (W m-2) over the interval ending at `step`, and the interval.
+
+    IFS radiation is accumulated from the run start (J m-2). The interval runs from the
+    previous step in the file (the run start for the first step) to `step`; earthkit-transforms
+    turns the accumulations into a rate over it. Averaging since the run start instead would
+    smear the day's radiation over the night."""
+    if step == 0:
+        raise ValueError(
+            "radiation indices need a step after step 0: accumulations are zero at step 0, "
+            "so there is no interval to average over"
+        )
+    from earthkit.transforms import temporal
+
+    f = comfort_fields(path, step)
+    present = [p for p in (*RADIATION, "fdir") if p in f["fields"]]
+    prev = max((s for s in f["steps"] if s < step), default=0)
+    begin, end = f["base"] + timedelta(hours=prev), f["valid"]
+    if prev not in f["steps"]:  # first interval: the accumulation since the run start is its sum
+        seconds = (end - begin).total_seconds()
+        return {p: f["fields"][p] / seconds for p in present}, (begin, end)
+    pair = f["fieldlist"].sel({"parameter.variable": present, "time.step": [prev, step]})
+    ds = pair.to_xarray(time_dims=["valid_time"])
+    out = {}
+    for p in present:
+        rate = temporal.accumulation_to_rate(
+            ds[p], accumulation_type="start_of_forecast", rate_units="seconds"
+        )
+        out[p] = rate.isel(valid_time=-1).values.reshape(f["lat"].shape)
+    return out, (begin, end)
+
+
+def compute_index(
+    path: str, index: str, step: int | None = None, approximate_fdir: str | None = None
+) -> dict:
+    """One thermal-comfort index (K) from the fields in a GRIB file, with thermofeel.
+
+    Instantaneous fields at `step`; radiation as mean fluxes over the interval ending there,
+    with the cosine of the solar zenith angle averaged over the same interval (earthkit-meteo).
+    """
+    import numpy as np
+    import thermofeel as tf
+    from earthkit.meteo import solar, wind
+    from earthkit.utils.units import convert_array
+
+    spec = INDICES[index]
+    if spec["radiation"] and step == 0:
+        radiation_fluxes(path, 0)  # raises: no interval at step 0
+    f = comfort_fields(path, step)
+    x = f["fields"]
+    missing = [p for p in spec["needs"] if p not in x]
+    if missing:
+        raise ValueError(
+            f"{index} needs {', '.join(missing)}; parameters at step {f['step']}: "
+            f"{', '.join(sorted(x))}"
+        )
+    if spec["radiation"] and "fdir" not in x and not approximate_fdir:
+        raise FdirMissing(f"{index} needs fdir (paramId 228021), which {path} does not have")
+    note = f"thermofeel {tf.__version__}"
+    va = wind.speed(x["10u"], x["10v"]) if "10u" in x and "10v" in x else None
+    if index == "heat-index":
+        k = tf.calculate_heat_index_adjusted(x["2t"], x["2d"])
+    elif index == "humidex":
+        k = tf.calculate_humidex(x["2t"], x["2d"])
+    elif index == "apparent-temperature":
+        rh = tf.calculate_relative_humidity_percent(x["2t"], x["2d"])
+        k = tf.calculate_apparent_temperature(x["2t"], va, rh)
+    elif index == "wind-chill":
+        k = tf.calculate_wind_chill(x["2t"], va)
+        t_c = convert_array(x["2t"], "degC", "K")
+        kmh = convert_array(va, "km/h", "m/s")
+        valid = (t_c >= WIND_CHILL_T_C[0]) & (t_c <= WIND_CHILL_T_C[1])
+        valid &= (kmh >= WIND_CHILL_WIND_KMH[0]) & (kmh <= WIND_CHILL_WIND_KMH[1])
+        k = np.where(valid, k, np.nan)
+        note += "; wind chill only where -50..5 °C and 5..80 km/h"
+    else:
+        from thermofeel.approximations import approximate_fdir_disc, approximate_fdir_erbs
+
+        flux, (begin, end) = radiation_fluxes(path, f["step"])
+        cossza = solar.cos_solar_zenith_angle_integrated(begin, end, f["lat"], f["lon"])
+        if "fdir" in flux:
+            fdir = flux["fdir"]
+        else:
+            doy = end.timetuple().tm_yday
+            if approximate_fdir == "disc":
+                hpa = convert_array(x["sp"], "hPa", "Pa") if "sp" in x else 1013.25
+                fdir = approximate_fdir_disc(flux["ssrd"], cossza, doy, pressure_hpa=hpa)
+            else:
+                fdir = approximate_fdir_erbs(flux["ssrd"], cossza, doy=doy)
+            note += (
+                f"; fdir estimated ({FDIR_NAMES[approximate_fdir]}) from ssrd — demonstration, "
+                "not validation-grade"
+            )
+        mrt = tf.calculate_mean_radiant_temperature(
+            flux["ssrd"],
+            flux["ssr"],
+            tf.approximate_dsrp(fdir, cossza),
+            flux["strd"],
+            fdir,
+            flux["str"],
+            cossza,
+        )
+        if index == "mrt":
+            k = mrt
+        elif index == "utci":
+            k = tf.calculate_utci(t2_k=x["2t"], va=va, mrt=mrt, td_k=x["2d"])
+        else:
+            k = tf.calculate_wbgt(x["2t"], mrt, va, x["2d"])
+        note += f"; radiation averaged over {begin:%d %b %H}-{end:%H} UTC"
+    return {
+        "index": index,
+        "long_name": spec["long_name"],
+        "values": np.asarray(k, float),
+        "units": "K",
+        "lat": f["lat"],
+        "lon": f["lon"],
+        "step": f["step"],
+        "valid_time": f["valid"],
+        "has_fdir": "fdir" in x,
+        "note": note,
+    }
+
+
+def plot_index(
+    path: str,
+    index: str,
+    output: str,
+    step: int | None = None,
+    domain=None,
+    approximate_fdir: str | None = None,
+) -> dict:
+    """Map of one index in °C with the index's own levels (earthkit-plots on numpy arrays)."""
+    import earthkit.plots as ekp
+
+    r = compute_index(path, index, step, approximate_fdir)
+    spec = INDICES[index]
+    style = ekp.styles.Style(
+        levels=spec["levels"], colors=spec["colors"], units="celsius", extend="both"
+    )
+    fig = ekp.Figure(rows=1, columns=1, size=(8, 6))
+    m = fig.add_map(0, 0, domain=domain)
+    m.contourf(
+        r["values"],
+        x=r["lon"],
+        y=r["lat"],
+        metadata={"units": r["units"], "long_name": spec["long_name"]},
+        units="celsius",
+        style=style,
+    )
+    m.coastlines()
+    m.borders()
+    m.gridlines()
+    m.legend(label=f"{spec['long_name']} (°C)")
+    title = f"{spec['long_name']} — {r['valid_time']:%a %d %b %Y %H UTC} (T+{r['step']}h)"
+    if approximate_fdir and not r["has_fdir"]:
+        title += f"\nfdir estimated ({FDIR_NAMES[approximate_fdir]}) — demonstration"
+    fig.title(title)
+    # fdir is only in licensed ECMWF data (MARS, Polytope), not in CC BY Open Data.
+    year = datetime.now(timezone.utc).year
+    r["attribution"] = f"Data: © {year} ECMWF" if r["has_fdir"] else attribution_text(year)
+    fig.attribution(f"{r['attribution']}; index: thermofeel")
+    fig.save(output)
+    return r
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -382,6 +760,7 @@ def main(argv=None) -> int:
     m.add_argument("--level", type=int, help="pressure level for pl fields")
     m.add_argument("--units", help="e.g. celsius, hPa, mm")
     m.add_argument("--domain", help="e.g. Europe, 'United Kingdom', [W, E, S, N]")
+    m.add_argument("--obs", help="station values to overlay (ecmwf-observations obs.py points)")
     m.add_argument("-o", "--output", required=True)
     e = sub.add_parser("ens-stats", help="ensemble mean/std/percentile maps (earthkit-transforms)")
     e.add_argument("path")
@@ -395,15 +774,29 @@ def main(argv=None) -> int:
     g = sub.add_parser("meteogram")
     g.add_argument("json_path", help="output of open-data odpoint.py --json")
     g.add_argument("-o", "--output", required=True)
+    t = sub.add_parser("indices", help="thermal-comfort index map (thermofeel)")
+    t.add_argument("path")
+    t.add_argument("--index", required=True, choices=list(INDICES))
+    t.add_argument("--step", type=int, help="default: the last step in the file")
+    t.add_argument("--domain", help="e.g. Europe")
+    t.add_argument(
+        "--approximate-fdir",
+        choices=list(FDIR_NAMES),
+        help="estimate the missing fdir from ssrd (Open Data) — demonstration only",
+    )
+    t.add_argument("-o", "--output", required=True)
     a = ap.parse_args(argv)
+    result = None
     try:
         with contextlib.redirect_stdout(sys.stderr):
             if a.cmd == "map":
-                plot_map(a.path, a.param, a.step, a.output, a.units, a.domain, a.level)
+                plot_map(a.path, a.param, a.step, a.output, a.units, a.domain, a.level, a.obs)
             elif a.cmd == "ens-stats":
                 files = plot_ens_stats(
                     a.path, a.param, a.output, a.stats, a.units, a.domain, a.step, a.panel
                 )
+            elif a.cmd == "indices":
+                result = plot_index(a.path, a.index, a.output, a.step, a.domain, a.approximate_fdir)
             else:
                 with open(a.json_path) as fh:
                     plot_meteogram(json.load(fh), a.output)
@@ -417,7 +810,8 @@ def main(argv=None) -> int:
                     "(curl -LsSf https://astral.sh/uv/install.sh | sh), then re-run with "
                     "`uv run ekplot.py …` — it installs exactly what is needed.",
                     "2. Without uv: pip install 'earthkit-plots>=1.0' 'earthkit-data>=1.2' "
-                    "'earthkit-transforms[all]>=1.0'",
+                    "'earthkit-transforms[all]>=1.0' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0' "
+                    "'thermofeel>=2.3'",
                     "3. On Windows use WSL (earthkit has no Windows wheels).",
                 ],
                 "agent": "Run the script with `uv run`; if uv cannot be installed, give these "
@@ -425,9 +819,17 @@ def main(argv=None) -> int:
             },
             code=3,
         )
+    except FdirMissing:
+        return blocked(fdir_barrier(a.path, a.index))
     except (ValueError, OSError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
+    if result is not None:
+        print(
+            f"saved {a.output} ({result['long_name']}, T+{result['step']}h, "
+            f"{result['note']}; {result['attribution']})"
+        )
+        return 0
     label = attribution_text()
     if a.cmd == "ens-stats":
         import earthkit.data as ekd

@@ -151,6 +151,7 @@ def test_copies_are_identical():
         "ecmwf-mars",
         "ecmwf-polytope",
         "ecmwf-destine",
+        "ecmwf-observations",
     ):
         assert (SKILLS / skill / "scripts" / "ecmwf_status.py").read_text() == canonical, skill
 

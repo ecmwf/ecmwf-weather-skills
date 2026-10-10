@@ -15,9 +15,9 @@ SPDX-License-Identifier: Apache-2.0
 > [!IMPORTANT]
 > This software is **Emerging** and subject to ECMWF's guidelines on [Software Maturity](https://github.com/ecmwf/codex/raw/refs/heads/main/Project%20Maturity).
 
-Seven [Agent Skills](https://agentskills.io) covering ECMWF's real-time IFS and AIFS forecasts,
-ERA5 reanalysis, CAMS air quality, the MARS archive, Polytope feature extraction, Destination
-Earth Digital Twins and the
+Eight [Agent Skills](https://agentskills.io) covering ECMWF's real-time IFS and AIFS forecasts,
+ERA5 reanalysis, CAMS air quality, the MARS archive, station observations, Polytope feature
+extraction, Destination Earth Digital Twins and the
 ecCharts/OpenCharts map services. Install them and your agent knows which service to use, how
 to build the request, how to decode GRIB with [earthkit](https://github.com/ecmwf/earthkit),
 and which attribution to show — without you reading the docs or hand-writing requests.
@@ -70,6 +70,7 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
 | [`ecmwf-cds-ads`](plugins/ecmwf-weather/skills/ecmwf-cds-ads/SKILL.md) | ERA5, ERA5-Land, seasonal and CAMS from the Copernicus Data Stores |
 | [`ecmwf-mars`](plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md) | The MARS archive via the ECMWF Web API |
 | [`ecmwf-destine`](plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md) | Destination Earth Digital Twins (Climate DT, Extremes DT) via DestinE Polytope |
+| [`ecmwf-observations`](plugins/ecmwf-weather/skills/ecmwf-observations/SKILL.md) | Station observations (SYNOP, METAR) from MARS, forecast verification, observed thermal indices |
 
 Scripts and references per skill: [`docs/skills.md`](docs/skills.md).
 
@@ -95,7 +96,7 @@ codex plugin add ecmwf-weather@ecmwf
 ```bash
 npx skills add ecmwf/ecmwf-weather-skills -g -a opencode --skill '*' -y   # all projects
 npx skills add ecmwf/ecmwf-weather-skills -a opencode --skill '*' -y      # this project only
-opencode debug skill        # lists the seven ecmwf-* skills
+opencode debug skill        # lists the eight ecmwf-* skills
 ```
 
 opencode also reads `~/.claude/skills`, `~/.agents/skills` and `~/.config/opencode/skills`, so
@@ -247,7 +248,7 @@ Agreement.
 
 ## Repository layout
 
-- **`plugins/ecmwf-weather/skills/`** — the seven skills (the portable payload): `SKILL.md`,
+- **`plugins/ecmwf-weather/skills/`** — the eight skills (the portable payload): `SKILL.md`,
   `references/`, `scripts/`, `assets/`.
 - **`plugins/ecmwf-weather/.claude-plugin/`, `.codex-plugin/`** — plugin manifests;
   **`.claude-plugin/marketplace.json`** — marketplace catalogue.

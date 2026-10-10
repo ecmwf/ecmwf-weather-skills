@@ -201,3 +201,93 @@ def test_earthkit_barrier(odp):
     b = odp.earthkit_barrier("No module named 'earthkit'")
     s = "\n".join(b["user_steps"])
     assert "https://docs.astral.sh/uv" in s and "WSL" in s and "odcatalog.py download" in b["agent"]
+
+
+# --- feels-like indices (thermofeel) -------------------------------------------------------------
+
+# thermofeel's own regression cases (tests/thermofeel_testcases.csv rows 1-3 and the expected
+# hia.csv, humidex.csv, at.csv values in K), plus a cold, windy case for wind chill.
+THERMOFEEL_CASES = {
+    "t2_k": [310.0, 300.0, 277.2389906, 263.15],
+    "td_k": [280.0, 290.0, 273.1714606, 258.15],
+    "va": [2.0, 0.02, 0.593496491, 5.0],
+}
+EXPECTED_K = {
+    "heat_index_C": [307.7372555883379732, 300.6820230127044624, 277.2389906],
+    "humidex_C": [309.9589063878618163, 305.1904702735971000, 275.0833884332144521],
+    "apparent_temperature_C": [307.8597961043828946, 302.3002187043325648, 274.8403862713729495],
+}
+COMFORT = FIXTURES / "ifs-od-comfort-5deg-20261009-00z.grib2"
+CLI = ["uv", "run", "--quiet", str(SCRIPT), "--lat", "37.39", "--lon", "-5.98"]  # Seville
+
+
+def test_indices_flag_adds_dewpoint(odp):
+    assert odp.request_params("2t,tp,10u,10v", indices=True) == ["2t", "tp", "10u", "10v", "2d"]
+    assert odp.request_params("2t,2d", indices=True) == ["2t", "2d", "10u", "10v"]
+    assert odp.request_params("2t,tp", indices=False) == ["2t", "tp"]
+
+
+@pytest.mark.earthkit
+def test_feels_like_reproduces_thermofeel_reference_values(odp):
+    import numpy as np
+
+    c = THERMOFEEL_CASES
+    out = odp.feels_like(np.array(c["t2_k"]), np.array(c["td_k"]), np.array(c["va"]), np.zeros(4))
+    for key, kelvin in EXPECTED_K.items():
+        np.testing.assert_allclose(out[key][:3], np.array(kelvin) - 273.15, atol=1e-6)
+    # Wind chill only inside its validity range (-50..5 °C, 5..80 km/h): the warm and calm
+    # rows have none; -10 °C at 5 m/s (18 km/h) feels like about -17.4 °C.
+    assert np.isnan(out["wind_chill_C"][:3]).all()
+    assert out["wind_chill_C"][3] == pytest.approx(-17.4, abs=0.1)
+
+
+@pytest.mark.earthkit
+def test_point_series_with_indices_from_open_data_fields(odp):
+    import earthkit.data as ekd
+
+    fl = ekd.from_source("file", str(COMFORT)).to_fieldlist()
+    res = odp.point_series(fl, lat=37.39, lon=-5.98, indices=True)  # Seville
+    keys = ("heat_index_C", "humidex_C", "apparent_temperature_C", "wind_chill_C")
+    assert all(res["units"][k] == "degC" for k in keys)
+    r = res["series"][-1]
+    assert all(k in r for k in keys)
+    assert abs(r["apparent_temperature_C"] - r["t2m_C"]) < 15
+    assert res["indices_note"].startswith("Feels-like indices from thermofeel")
+
+
+@pytest.mark.earthkit
+def test_point_series_indices_need_dewpoint(odp):
+    import earthkit.data as ekd
+
+    fl = ekd.from_source("file", str(GRIB)).to_fieldlist()
+    with pytest.raises(ValueError, match="2d"):
+        odp.point_series(fl, lat=38.72, lon=-9.14, indices=True)
+
+
+@pytest.mark.earthkit
+def test_cli_indices_csv_columns():
+    out = subprocess.run(
+        [*CLI, "--file", str(COMFORT), "--indices", "--csv"],
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    assert out.returncode == 0, out.stderr
+    header = out.stdout.splitlines()[0].split(",")
+    assert {"t2m_C", "heat_index_C", "humidex_C", "apparent_temperature_C"} <= set(header)
+
+
+@pytest.mark.earthkit
+def test_cli_table_shows_empty_cells_for_missing_values():
+    # Wind chill is empty in warm weather, precipitation at the first step when the series
+    # starts after step 0: the table prints blanks, not a crash.
+    out = subprocess.run(
+        [*CLI, "--file", str(COMFORT), "--indices"],
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    assert out.returncode == 0, out.stderr
+    lines = out.stdout.splitlines()
+    assert any(line.startswith("2026-10-09T12:00Z") for line in lines)
+    assert any(line.startswith("Indices: Feels-like indices") for line in lines)

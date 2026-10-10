@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = ["earthkit-data[cds]>=1.2"]
 # ///
 """Copernicus Climate (CDS) and Atmosphere (ADS) Data Stores — discover, validate, retrieve.
@@ -13,7 +13,7 @@
 Everything except `retrieve` is standard library and needs no account (public catalogue and
 costing APIs). `retrieve` uses earthkit-data's cds/ads source (`uv run` installs it).
 
-  python3 cds.py check                                     # which keys exist (never printed)
+  python3 cds.py check                                     # keys found and accepted (never printed)
   python3 cds.py search "era5 land"                         # dataset ids
   python3 cds.py describe reanalysis-era5-single-levels     # inputs, licence, DOI, citation
   python3 cds.py validate --dataset ID --request req.json   # local checks + server cost/limit
@@ -125,11 +125,15 @@ def barrier_for_error(store: str, dataset: str, message: str) -> dict | None:
         b = licence_barrier(store, dataset, {"licences": {"missing": ["the dataset licence"]}})
         return b
     if re.search(r"(?i)\b401\b|unauthori[sz]ed|invalid (token|key)|authentication", message):
-        b = key_barrier(store)
-        b["blocked"] = f"{store.upper()} rejected the API key"
-        b["why"] = "the token is missing, mistyped or for another account."
-        return b
+        return key_rejected_barrier(store)
     return None
+
+
+def key_rejected_barrier(store: str) -> dict:
+    b = key_barrier(store)
+    b["blocked"] = f"{store.upper()} rejected the API key"
+    b["why"] = "the token is missing, mistyped or for another account."
+    return b
 
 
 def setup_steps(store: str = "cds") -> list[str]:
@@ -175,6 +179,28 @@ TIMEOUT_S = 60  # catalogue documents are < 100 KB
 # --- credentials ----------------------------------------------------------------------------------
 
 
+# Names reported from a broken key file: identifier-like only, so a value that happens to sit
+# on a line of its own (a pasted token) is never echoed as a "name".
+KEY_NAME = re.compile(r"[A-Za-z_]{1,24}")
+
+
+class MalformedCredentials(ValueError):
+    """A key file exists but holds no usable key. Carries key names, never values."""
+
+    def __init__(self, source: str, problem: str, keys=()):
+        self.source, self.problem = source, problem
+        self.keys = sorted({str(k) for k in keys if KEY_NAME.fullmatch(str(k))})
+        super().__init__(f"{source} is malformed: {problem}")
+
+
+def _peek(rc: Path) -> str:
+    """The file's text for presence checks (undecodable bytes replaced; never raises)."""
+    try:
+        return rc.read_bytes().decode("utf-8", "replace")
+    except OSError:
+        return ""
+
+
 def credentials(store: str, env=os.environ, home: Path | None = None) -> str | None:
     """Where the key would come from — never its value. earthkit reads ADS only from ~/.adsapirc."""
     home = home or Path.home()
@@ -182,7 +208,7 @@ def credentials(store: str, env=os.environ, home: Path | None = None) -> str | N
         if env.get("CDSAPI_KEY"):
             return "CDSAPI_URL/CDSAPI_KEY"
         rc = Path(env.get("CDSAPI_RC", home / ".cdsapirc"))
-        if rc.exists() and "ads." not in rc.read_text():
+        if rc.exists() and "ads." not in _peek(rc):
             return "~/.cdsapirc"
         return None
     if store == "ecds":  # same ECMWF token as CDS/ADS; only the url differs
@@ -192,7 +218,7 @@ def credentials(store: str, env=os.environ, home: Path | None = None) -> str | N
     if (home / ".adsapirc").exists():
         return "~/.adsapirc"
     rc = home / ".cdsapirc"  # ADS's own instructions put its url/key here
-    if rc.exists() and "ads.atmosphere" in rc.read_text():
+    if rc.exists() and "ads.atmosphere" in _peek(rc):
         return "~/.cdsapirc (ADS url; earthkit downloads need it copied to ~/.adsapirc)"
     return None
 
@@ -231,22 +257,97 @@ def required_licences(form: list) -> list[dict]:
     return out
 
 
+def _rc_key(rc: Path, label: str, text: str | None = None) -> str:
+    """The key from a 'url:/key:' rc file or a JSON one ({"url": ..., "key": ...})."""
+    if text is None:
+        try:
+            text = rc.read_bytes().decode("utf-8")
+        except OSError as e:
+            problem = f"cannot be read ({e.strerror or type(e).__name__})"
+            raise MalformedCredentials(label, problem) from None
+        except UnicodeDecodeError:
+            raise MalformedCredentials(label, "is not UTF-8 text") from None
+    if not text.strip():
+        raise MalformedCredentials(label, "is empty")
+    m = re.search(r"^key:\s*(\S+)", text, re.M)
+    if m:
+        return m.group(1)
+    try:
+        d = json.loads(text)
+    except json.JSONDecodeError:
+        names = re.findall(r"(?m)^\s*([A-Za-z_]{1,24})\s*[:=]", text)
+        raise MalformedCredentials(label, "has no 'key:' line (and is not JSON)", names) from None
+    if not isinstance(d, dict):
+        raise MalformedCredentials(label, f"holds a JSON {type(d).__name__}, not an object")
+    key = d.get("key")
+    if isinstance(key, str) and key.strip():
+        return key
+    raise MalformedCredentials(label, "has no key", d.keys())
+
+
 def _token(store: str, env, home: Path) -> str | None:
+    """The store's personal access token; None if no source exists, MalformedCredentials if
+    the file that would be used holds none."""
     if store in ("cds", "ecds") and env.get("CDSAPI_KEY"):
         return env["CDSAPI_KEY"]
-    for rc in (
-        (home / ".adsapirc", home / ".cdsapirc")
-        if store == "ads"
-        else (Path(env.get("CDSAPI_RC", home / ".cdsapirc")),)
-    ):
-        if rc.exists():
-            text = rc.read_text()
-            if store == "cds" and "ads." in text:
-                continue
-            m = re.search(r"^key:\s*(\S+)", text, re.M)
-            if m:
-                return m.group(1)
+    if store == "ads":
+        files = ((home / ".adsapirc", "~/.adsapirc"), (home / ".cdsapirc", "~/.cdsapirc"))
+    elif env.get("CDSAPI_RC"):
+        files = ((Path(env["CDSAPI_RC"]), "the file named by CDSAPI_RC"),)
+    else:
+        files = ((home / ".cdsapirc", "~/.cdsapirc"),)
+    for rc, label in files:
+        if not rc.exists():
+            continue
+        ads_url = "ads." in _peek(rc)
+        if store == "cds" and ads_url:
+            continue
+        if store == "ads" and rc.name == ".cdsapirc" and not ads_url:
+            continue  # a CDS key: not for ADS
+        return _rc_key(rc, label)
     return None
+
+
+def malformed_barrier(store: str, e: MalformedCredentials) -> dict:
+    """BLOCKED report for a key file that exists but holds no usable key (names only)."""
+    s = STORES[store]
+    host = s["api"].removesuffix("/api")
+    f = e.source if e.source.startswith("~/") else "that file"
+    return {
+        "blocked": f"{e.source} is malformed",
+        "why": f"it {e.problem}; keys found: {', '.join(e.keys) or 'none readable'}. The "
+        f"{store.upper()} client cannot read a key from it, so every download would fail.",
+        "user_steps": [
+            f"1. Log in at {host} and open {host}/how-to-api — it shows your personal access "
+            "token.",
+            f"2. Rewrite {f} as exactly these two lines, then run: chmod 600 {f}\n"
+            f"   url: {s['api']}\n   key: <your personal access token>",
+            "3. Re-run: python3 cds.py check",
+        ],
+        "agent": "Relay these steps; never open or print the file and never ask for the token "
+        "in chat. Meanwhile validate requests without a key (cds.py validate).",
+    }
+
+
+def _get_status(url: str, headers: dict) -> tuple[int, dict]:
+    """(HTTP status, JSON body); HTTP errors are answers, connection failures raise."""
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **headers})
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, {}
+
+
+def verify_key(store: str, token: str, fetch=_get_status) -> dict:
+    """The account's licences endpoint answers only a valid token (a fraction of a second).
+    Reports how many licences the account accepted — never the token."""
+    status, body = fetch(
+        f"{STORES[store]['api']}/profiles/v1/account/licences", {"PRIVATE-TOKEN": token}
+    )
+    if status == 200:
+        return {"verified": True, "accepted_licences": len(body.get("licences", []))}
+    return {"verified": False, "status": status}
 
 
 def _get_with_headers(url: str, headers: dict) -> dict:
@@ -604,6 +705,53 @@ def _validate_and_cost(store, dataset, request) -> dict:
     return res
 
 
+def check(as_json: bool, env=None, home: Path | None = None, fetch=_get_status) -> int:
+    """Which keys exist (names only) and whether each store accepts its key. Exit 0 a key
+    works, 4 none / malformed / rejected, 2 the store could not be reached."""
+    env = os.environ if env is None else env
+    home = home or Path.home()
+    res: dict = {
+        "cds": credentials("cds", env, home),
+        "ads": credentials("ads", env, home),
+        "ecds": credentials("ecds", env, home),
+        "how_to_get_a_key": KEY_HELP,
+        "offer": (
+            "If a key is missing, say once what it would unlock and offer step-by-step "
+            "setup instructions (python3 cds.py setup [--store ads|ecds]); "
+            "give them only if the user accepts."
+        ),
+        "keyless_alternatives": (
+            "CAMS forecasts: ecmwf-opencharts-wms skill (composition_* WMS layers, "
+            "`wms.py info` for point values)."
+        ),
+    }
+    code, barrier = (0 if res["cds"] or res["ads"] else 4), None
+    for store in ("cds", "ads"):
+        if not res[store]:
+            continue
+        try:
+            token = _token(store, env, home)
+        except MalformedCredentials as e:
+            return blocked(malformed_barrier(store, e), as_json)
+        if token is None:  # a source the downloads would not use (e.g. ADS url in ~/.cdsapirc)
+            continue
+        try:
+            res[f"{store}_key"] = verify_key(store, token, fetch)
+        except (urllib.error.URLError, OSError) as e:
+            import ecmwf_status  # sibling script
+
+            res[f"{store}_key"] = {"verified": None, "error": str(e)[:200]}
+            code, barrier = 2, barrier or ecmwf_status.network_barrier(store, str(e))
+            continue
+        if not res[f"{store}_key"]["verified"]:
+            code, barrier = 4, key_rejected_barrier(store)
+    if barrier:
+        res["blocked"] = barrier
+        blocked(barrier)  # the report on stderr; stdout keeps one document
+    _print(res, as_json, "\n".join(f"{k}: {v}" for k, v in res.items() if k != "blocked"))
+    return code
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -652,23 +800,7 @@ def main(argv=None) -> int:
             return 0
 
         if a.cmd == "check":
-            res = {
-                "cds": credentials("cds"),
-                "ads": credentials("ads"),
-                "ecds": credentials("ecds"),
-                "how_to_get_a_key": KEY_HELP,
-                "offer": (
-                    "If a key is missing, say once what it would unlock and offer step-by-step "
-                    "setup instructions (python3 cds.py setup [--store ads|ecds]); "
-                    "give them only if the user accepts."
-                ),
-                "keyless_alternatives": (
-                    "CAMS forecasts: ecmwf-opencharts-wms skill (composition_* WMS layers, "
-                    "`wms.py info` for point values)."
-                ),
-            }
-            _print(res, a.json, "\n".join(f"{k}: {v}" for k, v in res.items()))
-            return 0 if res["cds"] or res["ads"] else 4
+            return check(a.json)
 
         if a.cmd == "search":
             s = _http(

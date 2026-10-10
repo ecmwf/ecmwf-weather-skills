@@ -1,6 +1,6 @@
 ---
 name: ecmwf-earthkit
-description: Processes, computes and plots ECMWF weather and climate data with ECMWF's earthkit components — load it before writing ANY numpy, xarray, pandas, matplotlib or cartopy code for weather data, and for any local GRIB (.grib, .grib2) or NetCDF file. Covers reading and selecting fields (earthkit-data), ECMWF-styled maps, multi-panel figures, meteograms and plumes (earthkit-plots), ensemble mean/spread/percentiles, daily and monthly statistics, de-accumulation, climatologies, anomalies and area or country means (earthkit-transforms), wind, humidity, dewpoint, potential temperature, wet bulb, EFI and scores (earthkit-meteo), regridding, nearest gridpoint and country shapes (earthkit-geo), rivers and catchments (earthkit-hydro), unit conversion (earthkit-utils) and hindcast dates (earthkit-time). Also when earthkit code fails or lacks a feature — offers to report it upstream, only with approval.
+description: Processes, computes and plots ECMWF weather and climate data with ECMWF's earthkit components — load it before writing ANY numpy, xarray, pandas, matplotlib or cartopy code for weather data, and for any local GRIB (.grib, .grib2) or NetCDF file. Covers reading and selecting fields (earthkit-data), ECMWF-styled maps, multi-panel figures, meteograms and plumes (earthkit-plots), ensemble mean/spread/percentiles, daily and monthly statistics, de-accumulation, climatologies, anomalies and area or country means (earthkit-transforms), wind, humidity, dewpoint, potential temperature, wet bulb, EFI and scores (earthkit-meteo), thermal-comfort indices — heat index, humidex, wind chill, UTCI, WBGT (thermofeel), regridding, nearest gridpoint and country shapes (earthkit-geo), rivers and catchments (earthkit-hydro), unit conversion (earthkit-utils) and hindcast dates (earthkit-time). Also when earthkit code fails or lacks a feature — offers to report it upstream, only with approval.
 compatibility: Skill instructions are provider-neutral. Scripts use uv (PEP 723 inline dependencies) on Linux or macOS; earthkit ships eccodes as binary wheels, so no system install is needed. No Windows wheels — use WSL.
 license: Apache-2.0
 metadata:
@@ -17,13 +17,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Before you write code (line 37)
-- Components (line 55)
-- Bundled scripts (line 75)
-- Writing your own code (line 93)
-- Bugs and missing features — upstream, with approval only (line 107)
-- Fallback without earthkit (line 124)
-- Attribution (line 130)
-- When blocked (line 138)
+- Components (line 58)
+- Bundled scripts (line 78)
+- Writing your own code (line 104)
+- Bugs and missing features — upstream, with approval only (line 118)
+- Fallback without earthkit (line 135)
+- Attribution (line 141)
+- When blocked (line 149)
 - References — `references/recipes.md` (verified code for every job), `references/pitfalls.md` (1.x breakages and known bugs), `references/upstream.md` (reporting bugs, contributing features), `references/versions.md` (generated: latest versions)
 
 **earthkit first.** For weather and climate data, the code an agent would write by hand already
@@ -45,6 +45,9 @@ say so.
 | `resample("1D")`, groupby day/month, climatologies, anomalies | earthkit-transforms `temporal.daily_*`, `monthly_*`, `climatology.mean / anomaly / quantiles` |
 | mask or average over a box, country or polygon | earthkit-transforms `spatial.reduce / mask` with earthkit-geo `gisco` shapes |
 | code a formula (Magnus, wind from u/v, θ, θe, wet bulb, EFI, CRPS) | earthkit-meteo `thermo`, `wind`, `solar`, `extreme`, `score`, `stats` |
+| code a thermal-comfort index (heat index, humidex, wind chill, UTCI, MRT, WBGT) | thermofeel — or `ekplot.py indices`; points: `odpoint.py`/`ptpoint.py --indices` |
+| print or tabulate K in °C (`- 273.15`) | `thermofeel.kelvin_to_celsius`, earthkit-utils `convert_array(v, "degC", "K")` |
+| divide accumulated radiation by `step * 3600` | mean flux between consecutive steps: earthkit-transforms `accumulation_to_rate` |
 | interpolate, regrid, find the nearest gridpoint, haversine | earthkit-geo `regrid`, `distance.GeoKDTree`, `haversine_distance` |
 | open GRIB with cfgrib/pygrib/eccodes, `grib_ls` | earthkit-data `from_source(...).to_fieldlist()` |
 | upstream accumulation, catchments on a river network | earthkit-hydro |
@@ -64,7 +67,7 @@ Code for each: `references/recipes.md` — every block there runs in this reposi
 | earthkit-hydro | river networks, upstream/downstream, catchments | `earthkit-hydro>=1.4` |
 | earthkit-utils | unit conversion, array namespaces | `earthkit-utils>=1.0` |
 | earthkit-time | run and hindcast date sequences — **Emerging (0.1.x), the one allowed exception below 1.0** | `earthkit-time==0.1.8` |
-| thermofeel (not earthkit) | UTCI, heat index, wind chill, humidex | `thermofeel>=2.3` |
+| thermofeel (ECMWF, not earthkit) | heat index, humidex, apparent temperature, wind chill, UTCI, MRT, WBGT | `thermofeel>=2.3` |
 
 Install only what the job needs (PEP 723 in the script, run with `uv run`); never the
 `earthkit` meta-package or `earthkit-data[all]`. Never `earthkit-regrid` (deprecated →
@@ -84,11 +87,19 @@ uv run scripts/ekplot.py map file.grib2 --param 2t --step 24 --units celsius --d
 uv run scripts/ekplot.py ens-stats ens.grib2 --param 2t --units celsius --domain Europe -o ens.png
       # ens_mean.png + ens_std.png; --stats mean,std,p10,p90; --panel for one figure
 uv run scripts/ekplot.py meteogram point.json -o meteogram.png   # from odpoint.py/ptpoint.py --json
+uv run scripts/ekplot.py indices fc.grib2 --index utci --step 12 --domain Europe -o utci.png
+      # heat-index|humidex|apparent-temperature|wind-chill (2t 2d 10u 10v) or utci|wbgt|mrt
 ```
 
 Meteograms share one time axis (local time with `--tz` data), show precipitation as mm/h per
-interval and ensembles as median plus 10-90 % range. Point data: `ecmwf-open-data`'s
-`odpoint.py` or `ecmwf-polytope`'s `ptpoint.py`.
+interval and ensembles as median plus 10-90 % range; `--indices` point data adds a feels-like
+panel. Point data: `ecmwf-open-data`'s `odpoint.py` or `ecmwf-polytope`'s `ptpoint.py`.
+
+Thermal comfort: UTCI, WBGT and MRT also need sp, ssrd, ssr, strd, str and **fdir** (paramId
+228021) at two consecutive steps — MARS or Polytope (`ecmwf-mars`, `ecmwf-polytope`); Open Data
+has no fdir, so `indices` stops with a BLOCKED report. `--approximate-fdir erbs` estimates it
+from ssrd: say it is a demonstration, never a forecast of record. Radiation is averaged between
+consecutive steps (step 0 has none). Pitfalls: `references/pitfalls.md`.
 
 ## Writing your own code
 
@@ -153,3 +164,4 @@ problem is likely local (network, proxy).
 |---|---|
 | earthkit components not installed | `ekinspect.py`/`ekplot.py`: install uv or pip, WSL on Windows |
 | file not decodable | say so; check it is GRIB/NetCDF (`ekinspect.py`) |
+| no fdir for UTCI/WBGT/MRT (Open Data) | `ekplot.py indices`: how to get fdir; `--approximate-fdir` for a labelled demonstration |

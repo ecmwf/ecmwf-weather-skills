@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.12"
 # dependencies = ["earthkit-data>=1.2"]
 # ///
 """Summarise a GRIB or NetCDF file with earthkit-data (only component needed, ~64 MB).

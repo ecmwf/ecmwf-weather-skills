@@ -114,6 +114,17 @@ actual = "Values unchanged; only a log warning."
 suggestion = "Support FieldList (convert values, update units metadata) or raise TypeError."
 workaround = "Convert xarray, or convert at plot time with earthkit-plots units=."
 
+[[issue]]
+script = "data-mars-relative-date-string.py"
+repo = "ecmwf/earthkit-data"
+kind = "bug"
+status = "draft"
+title = "mars source: date=\"-1\" (MARS relative date as a string) raises ValueError: Invalid datetime '-1'"
+expected = "The request goes to MARS, which accepts relative dates such as \"-1\" (yesterday); the integer -1 already works."
+actual = "ValueError: Invalid datetime '-1' while normalising the request, before anything is sent."
+suggestion = "Accept negative integers given as strings in the date normaliser (as for int), or pass them through unchanged."
+workaround = "Give the integer -1 or an ISO date."
+
 # Pull requests contributed upstream (no reproducer script: the fix carries its own test).
 [[pr]]
 repo = "ecmwf/earthkit-data"

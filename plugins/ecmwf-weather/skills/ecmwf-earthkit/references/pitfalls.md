@@ -13,6 +13,7 @@ earthkit-geo 1.1.2, earthkit-transforms 1.0.0, earthkit-utils 1.0.2.
 - Plotting
 - Statistics and transforms
 - Meteorology
+- Thermal comfort (thermofeel)
 - Regional grids (CARRA, CERRA)
 - Environment
 
@@ -64,6 +65,30 @@ earthkit-geo 1.1.2, earthkit-transforms 1.0.0, earthkit-utils 1.0.2.
 - Scores need `earthkit-meteo[scores]`; the library's error message says `[score]`, which does
   not exist.
 - EFI/SOT on xarray need `clim_dim=` and `ens_dim=`.
+
+## Thermal comfort (thermofeel)
+
+- **fdir is not in Open Data.** UTCI, MRT and WBGT need direct solar radiation (fdir,
+  paramId 228021) from MARS or Polytope. Estimating it from ssrd
+  (`thermofeel.approximations.approximate_fdir_erbs` / `_disc`) is demonstration grade —
+  label every result that uses it.
+- **Radiation is accumulated from the run start** (J m-2). Mean flux = difference between
+  consecutive steps ÷ the interval (`accumulation_to_rate(..., "start_of_forecast",
+  rate_units="seconds")`), with `solar.cos_solar_zenith_angle_integrated(begin, end, ...)`
+  over the same interval — it returns the interval mean in earthkit-meteo 1.x. Dividing by
+  `step * 3600` averages since the run start (night included). Step 0 has no interval: skip it.
+- thermofeel is SI in, SI out (K, m/s at 10 m, %, W m-2, hPa only for Liljegren pressure);
+  indices come back in K — convert with `units="celsius"` when plotting.
+- `calculate_wbgt_liljegren` takes the direct **fraction** of ssrd (0–1), not the fdir flux.
+- Validity: UTCI fit −50…50 °C air temperature, 0.5–17 m/s wind, MRT up to 70 K above air
+  temperature (it extrapolates outside, e.g. over Antarctica); wind chill −50…5 °C and
+  5–80 km/h; heat index meaningful above ~27 °C, humidex above ~20 °C.
+- PMV/PPD want the air speed at the body: the 10 m wind is only a coarse proxy — say so.
+- Writing GRIB: set `metadata.edition: 2` **before** a GRIB2 paramId (GRIB1 templates from
+  MARS raise "Concept no match"); indices without a code go in local-use octets (192–254).
+- Requests: give `grid` as a `"dx/dy"` string (Polytope has rejected equal-valued lists:
+  "Duplicate values found in list for key 'grid'"); the mars source rejects `date="-1"` —
+  use the integer `-1` or an ISO date.
 
 ## Regional grids (CARRA, CERRA)
 

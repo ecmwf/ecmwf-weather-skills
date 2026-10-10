@@ -1,7 +1,7 @@
 ---
 name: ecmwf-mars
 description: Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) ERA5 and the CARRA/CERRA regional reanalyses (class=rr) via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
-compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
+compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. check --probe, cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 license: Apache-2.0
 metadata:
   author: ECMWF
@@ -17,12 +17,12 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Is MARS the right route? (line 30)
-- Request workflow (line 47)
-- Templates (lint-clean — start from these) (line 76)
-- Efficiency rules (line 106)
-- Processing and plots (line 118)
-- Licence and attribution (line 126)
-- When blocked (line 136)
+- Request workflow (line 51)
+- Templates (lint-clean — start from these) (line 80)
+- Efficiency rules (line 110)
+- Processing and plots (line 122)
+- Licence and attribution (line 130)
+- When blocked (line 140)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -34,11 +34,15 @@ Use ECMWF sources only — never substitute a third-party weather API.
 | Latest forecast, last ~2–3 days, 0.25° | `ecmwf-open-data` skill (free, no queue) |
 | Point/area extraction from recent operational runs | `ecmwf-polytope` skill (seconds) |
 | ERA5 without an ECMWF licence | `ecmwf-cds-ads` skill (CDS, free key) |
+| Station observations (SYNOP, METAR, ODB feedback), forecast verification | `ecmwf-observations` skill (builds and decodes the MARS requests) |
 | Older operational runs, all ENS members, model levels, full resolution, research/experimental data | **MARS** |
 
 Check access first: `python3 scripts/mars.py check` — finds credentials (names only), verifies
-the key with the Web API in seconds and reports the account id; exit 4 = nothing usable. A
-verified key doesn't guarantee MARS rights for every dataset — that depends on the account.
+the key with the Web API in seconds and reports the account id; exit 4 = nothing usable or a
+malformed `~/.ecmwfapirc` (the report names the keys found and the fix). A verified key doesn't
+prove MARS rights. **Before promising MARS data, run `uv run scripts/mars.py check --probe`**: a
+cost-only request that reports `mars_rights: confirmed`, a BLOCKED report (exit 4, no rights),
+or `unknown` (exit 2, no answer within 2 minutes — say access is unconfirmed).
 Don't read `~/.ecmwfapirc` yourself. If nothing usable is found, say once what MARS would add
 and ask whether they'd like step-by-step instructions; if yes, relay `python3 scripts/mars.py
 setup` as printed (key, file, and who grants MARS access). TIGGE and S2S are no longer in MARS
@@ -151,5 +155,7 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 |---|---|
 | no key / no client | `mars.py setup` steps; lint, estimate, plan still work offline |
 | key rejected or expired | renew at https://api.ecmwf.int/v1/key/ (keys last a year) |
+| `~/.ecmwfapirc` malformed (Polytope's `user_key` layout, YAML, not JSON) or `ECMWF_API_*` incomplete | rewrite as JSON `url`/`key`/`email`, as the report says |
+| no key at a retrieval prompt | the key report; never type a key into the session |
 | no MARS rights (403, "no access") | Computing Representative or service agreement; offer free alternatives |
 | TIGGE / S2S | moved to the ECMWF Data Store: accept the TIGGE/S2S licence there |

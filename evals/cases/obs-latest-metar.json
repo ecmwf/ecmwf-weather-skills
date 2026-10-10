@@ -1,0 +1,29 @@
+{
+  "id": "obs-latest-metar",
+  "prompt": "What does the latest METAR at London Heathrow (EGLL) say? Give me the time of the report, temperature, dew point and wind.",
+  "timeout": 900,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-observations"
+    },
+    {
+      "kind": "command",
+      "pattern": "obs\\.py\\b.*--latest-metar"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)NOAA|Aviation Weather"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)non-ECMWF|not (from )?ECMWF|third[- ]party|outside ECMWF"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|meteostat|ogimet|wunderground"
+    }
+  ],
+  "note": "The user explicitly asks for the latest METAR: the labelled NOAA Aviation Weather route is allowed and must be named as non-ECMWF."
+}

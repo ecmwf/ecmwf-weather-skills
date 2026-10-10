@@ -6,7 +6,7 @@
 [project]
 name = "ecmwf-weather-skills-dev"
 version = "0.0.0"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = []
 
 [dependency-groups]
@@ -19,6 +19,13 @@ earthkit = [
     "earthkit-utils>=1.0",
     "earthkit-transforms[all]>=1.0",
     "earthkit-plots>=1.0",
+    "scipy>=1.16",
+    "thermofeel>=2.3",
+    # ecmwf-observations obs.py: MARS observations (ODB feedback, BUFR) and thermal indices
+    "ecmwf-api-client>=1.6",
+    "pyodc>=1.6",
+    "pdbufr>=0.15",
+    "earthkit-meteo[scores]>=1.2",
 ]
 
 [tool.uv]

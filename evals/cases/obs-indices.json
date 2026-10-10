@@ -1,0 +1,33 @@
+{
+  "id": "obs-indices",
+  "prompt": "Compute the heat index and humidex from the observed temperature and dew point at Lisbon (WMO 08535) for the last 3 days and save them to indices.csv.",
+  "timeout": 1500,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-observations"
+    },
+    {
+      "kind": "command",
+      "pattern": "obs\\.py\\s+series\\b.*--indices"
+    },
+    {
+      "kind": "file",
+      "pattern": "indices.csv"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)humidex"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "17\\.27|237\\.7|243\\.04|6\\.11|5417|8\\.784695|0\\.5555"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|meteostat|ogimet|wunderground"
+    }
+  ],
+  "note": "Indices come from thermofeel inside obs.py --indices; hand-written formulas are a missing-feature signal."
+}

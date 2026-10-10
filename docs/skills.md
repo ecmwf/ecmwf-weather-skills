@@ -15,6 +15,7 @@ Agents read `SKILL.md` first; this page is for humans browsing the repository.
 - [`ecmwf-destine`](#ecmwf-destine)
 - [`ecmwf-earthkit`](#ecmwf-earthkit)
 - [`ecmwf-mars`](#ecmwf-mars)
+- [`ecmwf-observations`](#ecmwf-observations)
 - [`ecmwf-open-data`](#ecmwf-open-data)
 - [`ecmwf-opencharts-wms`](#ecmwf-opencharts-wms)
 - [`ecmwf-polytope`](#ecmwf-polytope)
@@ -56,7 +57,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md`](../plugins/ec
 
 ## `ecmwf-earthkit`
 
-Processes, computes and plots ECMWF weather and climate data with ECMWF's earthkit components — load it before writing ANY numpy, xarray, pandas, matplotlib or cartopy code for weather data, and for any local GRIB (.grib, .grib2) or NetCDF file. Covers reading and selecting fields (earthkit-data), ECMWF-styled maps, multi-panel figures, meteograms and plumes (earthkit-plots), ensemble mean/spread/percentiles, daily and monthly statistics, de-accumulation, climatologies, anomalies and area or country means (earthkit-transforms), wind, humidity, dewpoint, potential temperature, wet bulb, EFI and scores (earthkit-meteo), regridding, nearest gridpoint and country shapes (earthkit-geo), rivers and catchments (earthkit-hydro), unit conversion (earthkit-utils) and hindcast dates (earthkit-time). Also when earthkit code fails or lacks a feature — offers to report it upstream, only with approval.
+Processes, computes and plots ECMWF weather and climate data with ECMWF's earthkit components — load it before writing ANY numpy, xarray, pandas, matplotlib or cartopy code for weather data, and for any local GRIB (.grib, .grib2) or NetCDF file. Covers reading and selecting fields (earthkit-data), ECMWF-styled maps, multi-panel figures, meteograms and plumes (earthkit-plots), ensemble mean/spread/percentiles, daily and monthly statistics, de-accumulation, climatologies, anomalies and area or country means (earthkit-transforms), wind, humidity, dewpoint, potential temperature, wet bulb, EFI and scores (earthkit-meteo), thermal-comfort indices — heat index, humidex, wind chill, UTCI, WBGT (thermofeel), regridding, nearest gridpoint and country shapes (earthkit-geo), rivers and catchments (earthkit-hydro), unit conversion (earthkit-utils) and hindcast dates (earthkit-time). Also when earthkit code fails or lacks a feature — offers to report it upstream, only with approval.
 
 **Requirements:** Skill instructions are provider-neutral. Scripts use uv (PEP 723 inline dependencies) on Linux or macOS; earthkit ships eccodes as binary wheels, so no system install is needed. No Windows wheels — use WSL.
 
@@ -78,7 +79,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-earthkit/SKILL.md`](../plugins/e
 
 Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) ERA5 and the CARRA/CERRA regional reanalyses (class=rr) via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
 
-**Requirements:** scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
+**Requirements:** scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. check --probe, cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 
 Source: [`../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md)
 
@@ -91,11 +92,29 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md`](../plugins/ecmwf
 |---|---|
 | `references/keywords.md` | MARS keywords and requests |
 
+## `ecmwf-observations`
+
+Retrieves weather station observations (SYNOP and METAR — 2 m temperature, dew point, humidity, wind, pressure, precipitation) from ECMWF's MARS archive, with the departures from ECMWF's first guess and analysis and QC flags — load it first for any request for observed or measured weather at a station or airport, past observations, a WMO station id or ICAO code, or comparing a forecast with what was observed. Use when a task mentions observations, station data, SYNOP, METAR, BUFR or ODB feedback, verifying or scoring a forecast against stations (bias, MAE, RMSE), observed heat index or humidex, or finding a station's WMO id or coordinates. Gives the latest METARs from NOAA Aviation Weather only when the user asks for them, always labelled non-ECMWF. Needs an ECMWF account with MARS observation rights; forecasts come from ecmwf-open-data or ecmwf-polytope, plots from ecmwf-earthkit.
+
+**Requirements:** scripts/obs.py stations, series --dry-run and --latest-metar run on plain Python 3. Retrievals, decoding, indices and scores need uv (PEP 723 inline dependencies ecmwf-api-client, pyodc, pdbufr, earthkit-utils, earthkit-meteo, thermofeel), an ECMWF Web API key and MARS observation rights.
+
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-observations/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-observations/SKILL.md)
+
+| Script | Purpose |
+|---|---|
+| `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
+| `scripts/obs.py` | Station observations from ECMWF's MARS archive — series, thermal indices, forecast checks |
+
+| Reference | Purpose |
+|---|---|
+| `references/codes.md` | Observation codes |
+| `references/requests.md` | MARS observation requests |
+
 ## `ecmwf-open-data`
 
-Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
+Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, how hot or cold it will feel (heat index, wind chill, feels-like) at a place, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
 
-**Requirements:** scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
+**Requirements:** scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, thermofeel, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
 
 Source: [`../plugins/ecmwf-weather/skills/ecmwf-open-data/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-open-data/SKILL.md)
 
@@ -134,9 +153,9 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-opencharts-wms/SKILL.md`](../plu
 
 ## `ecmwf-polytope`
 
-Extracts just the data needed from ECMWF's operational forecasts with Polytope feature extraction — hourly point time series (meteograms), 50-member ensemble percentiles at a point, vertical profiles, polygons, bounding boxes, circles and trajectories — in kilobytes instead of downloading global fields. Use when the user has ECMWF credentials (POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc) and asks for a forecast or meteogram at a place, forecast uncertainty, ensemble spread, percentiles or likely ranges at a location (preferred over open-data for any ensemble question at a point), weather along a route or inside a region, Polytope requests or errors, the earthkit polytope source, or whether they have Polytope access. Falls back to the ecmwf-open-data skill when there are no credentials.
+Extracts just the data needed from ECMWF's operational forecasts with Polytope feature extraction — hourly point time series (meteograms), 50-member ensemble percentiles at a point, vertical profiles, polygons, bounding boxes, circles and trajectories — in kilobytes instead of downloading global fields. Use when the user has ECMWF credentials (POLYTOPE_USER_KEY, ~/.polytopeapirc or ~/.ecmwfapirc) and asks for a forecast, feels-like temperature or meteogram at a place, forecast uncertainty, ensemble spread, percentiles or likely ranges at a location (preferred over open-data for any ensemble question at a point), weather along a route or inside a region, Polytope requests or errors, the earthkit polytope source, or whether they have Polytope access. Falls back to the ecmwf-open-data skill when there are no credentials.
 
-**Requirements:** scripts/ptpoint.py needs uv (PEP 723 inline dependencies — earthkit-data[polytope,covjsonkit], earthkit-meteo, earthkit-utils) and network access to polytope.ecmwf.int. `--check` without credentials runs on plain Python 3.
+**Requirements:** scripts/ptpoint.py needs uv (PEP 723 inline dependencies — earthkit-data[polytope,covjsonkit], earthkit-meteo, earthkit-utils, thermofeel) and network access to polytope.ecmwf.int. `--check` without credentials runs on plain Python 3.
 
 Source: [`../plugins/ecmwf-weather/skills/ecmwf-polytope/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-polytope/SKILL.md)
 

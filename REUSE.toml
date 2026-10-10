@@ -8,9 +8,16 @@ SPDX-FileCopyrightText = "2026 European Centre for Medium-Range Weather Forecast
 SPDX-License-Identifier = "Apache-2.0"
 
 # Files that cannot carry a comment: recorded test fixtures, JSON (manifests, eval cases,
-# lock file), generated references are Markdown and carry their own header.
+# lock file), the generated station index (CSV); generated Markdown references carry their
+# own header.
 [[annotations]]
-path = ["tests/fixtures/**", "**/*.json", "uv.lock", "**/*.png"]
+path = [
+    "tests/fixtures/**",
+    "**/*.json",
+    "uv.lock",
+    "**/*.png",
+    "plugins/ecmwf-weather/skills/ecmwf-observations/references/stations.csv",
+]
 precedence = "closest"
 SPDX-FileCopyrightText = "2026 European Centre for Medium-Range Weather Forecasts (ECMWF)"
 SPDX-License-Identifier = "Apache-2.0"
