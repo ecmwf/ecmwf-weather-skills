@@ -613,3 +613,33 @@ def test_validate_with_malformed_rc_reports_licences_unchecked(tmp_path):
     (tmp_path / ".cdsapirc").write_text("[1, 2]")
     with pytest.raises(cds.MalformedCredentials):
         cds.accepted_licences("cds", env={}, home=tmp_path, fetch=lambda u, h: {})
+
+
+def _http_error(code):
+    import io
+    import urllib.error
+
+    return urllib.error.HTTPError("https://x", code, "err", {}, io.BytesIO(b'{"title": "x"}'))
+
+
+@pytest.mark.parametrize("code", [500, 502, 503, 429])
+def test_costing_outage_keeps_a_valid_request_valid(offline_store, code):
+    def down(s, d, r):
+        raise _http_error(code)
+
+    offline_store.setattr(cds, "costing", down)
+    offline_store.setattr(cds, "accepted_licences", lambda s: {"licences": [{"id": "cc-by"}]})
+    res = cds._validate_and_cost("cds", "x", REQ)
+    assert res["valid"] is True and res["errors"] == []
+    assert res["cost"] is None
+    assert any("could not be checked" in w and str(code) in w for w in res["warnings"])
+
+
+def test_costing_rejection_still_marks_the_request_invalid(offline_store):
+    def rejected(s, d, r):
+        raise _http_error(400)
+
+    offline_store.setattr(cds, "costing", rejected)
+    offline_store.setattr(cds, "accepted_licences", lambda s: {"licences": [{"id": "cc-by"}]})
+    res = cds._validate_and_cost("cds", "x", REQ)
+    assert res["valid"] is False and "HTTP 400" in res["errors"][0]
