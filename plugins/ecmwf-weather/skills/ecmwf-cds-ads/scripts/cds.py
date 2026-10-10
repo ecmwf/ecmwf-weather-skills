@@ -674,9 +674,16 @@ def _validate_and_cost(store, dataset, request) -> dict:
         try:
             apply_costing(res, costing(store, dataset, request))
         except urllib.error.HTTPError as e:
-            body = e.read()[:300].decode(errors="replace")
-            res["errors"].append(f"server rejected the request (HTTP {e.code}): {body}")
-            res["valid"] = False
+            if e.code == 429 or e.code >= 500:  # the costing service is down, not the request
+                res["cost"] = None
+                res.setdefault("warnings", []).append(
+                    f"size limit could not be checked (costing service answered HTTP {e.code}); "
+                    "the request is locally valid — re-run validate before a large download"
+                )
+            else:
+                body = e.read()[:300].decode(errors="replace")
+                res["errors"].append(f"server rejected the request (HTTP {e.code}): {body}")
+                res["valid"] = False
     try:
         accepted = accepted_licences(store)
         reason = (
@@ -694,11 +701,13 @@ def _validate_and_cost(store, dataset, request) -> dict:
             store, dataset, form, None, f"the account's licences could not be read ({e})"
         )
     if res["licences"]["missing"]:
-        res["warnings"] = [
-            f"licence not yet accepted: {', '.join(res['licences']['missing'])} — "
-            f"accept it at {res['licences']['accept_at']} (Terms of use, bottom), "
-            "otherwise the download fails with 403"
-        ]
+        res.setdefault("warnings", []).extend(
+            [
+                f"licence not yet accepted: {', '.join(res['licences']['missing'])} — "
+                f"accept it at {res['licences']['accept_at']} (Terms of use, bottom), "
+                "otherwise the download fails with 403"
+            ]
+        )
     res["attribution"] = attribution(store)
     res["licence"] = coll.get("license")
     res["doi"] = coll.get("sci:doi")

@@ -55,6 +55,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
   access steps, and older runs are no longer tried; `ptpoint.py --check` no longer reports
   access because a collection is listed.
 - `destine.py check` exits 4 when every data bridge rejects the token.
+- `cds.py validate` marked a valid request invalid when the CDS costing service had a
+  temporary error (HTTP 5xx/429); it now stays valid with a warning that the size limit could
+  not be checked.
 - MARS retrieve/cost without a terminal no longer fail at an interactive key prompt.
 
 ## [0.5.0] - 2026-10-09
