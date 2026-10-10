@@ -19,13 +19,14 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/133) | `ecmwf/earthkit-transforms` | spatial.reduce returns NaN for western-hemisphere polygons when longitudes run 0-360 | [`transforms-spatial-reduce-0-360.py`](transforms-spatial-reduce-0-360.py) |
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/134) | `ecmwf/earthkit-transforms` | spatial.reduce(..., return_as='pandas') crashes (return_as passed on to nanmean) | [`transforms-spatial-reduce-return-as-pandas.py`](transforms-spatial-reduce-return-as-pandas.py) |
 | [filed](https://github.com/ecmwf/earthkit-utils/issues/88) | `ecmwf/earthkit-utils` | units.convert_units on a FieldList silently returns the data unconverted | [`utils-convert-units-fieldlist-noop.py`](utils-convert-units-fieldlist-noop.py) |
-| draft | `ecmwf/earthkit-data` | mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1' | [`data-mars-relative-date-string.py`](data-mars-relative-date-string.py) |
+| [filed](https://github.com/ecmwf/earthkit-data/issues/1185) | `ecmwf/earthkit-data` | mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1' | [`data-mars-relative-date-string.py`](data-mars-relative-date-string.py) |
 
 ## Pull requests
 
 | Status | Repository | Title |
 |---|---|---|
 | [merged](https://github.com/ecmwf/earthkit-data/pull/1181) | `ecmwf/earthkit-data` | Format the shape in the XArrayGeography error message |
+| [open](https://github.com/ecmwf/thermofeel/pull/59) | `ecmwf/thermofeel` | docs(examples): correct compute-obs scope and earthkit-data sel notes |
 
 ## thermo.wet_bulb_temperature_from_dewpoint: default t_method='bisect' fails on 2-D input
 
@@ -373,7 +374,7 @@ Found while writing verified earthkit recipes for the ECMWF agent skills (https:
 
 ## mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1'
 
-Repository: `ecmwf/earthkit-data` · bug · draft
+Repository: `ecmwf/earthkit-data` · bug · [filed](https://github.com/ecmwf/earthkit-data/issues/1185)
 
 **What happens:** ValueError: Invalid datetime '-1' while normalising the request, before anything is sent.
 

@@ -91,3 +91,5 @@ Record in `issues.toml`: `status = "filed"` and `url = "<issue URL>"`; then
 | transforms-spatial-reduce-return-as-pandas.py | https://github.com/ecmwf/earthkit-transforms/issues/134 | filed 2026-10-08 |
 | utils-convert-units-fieldlist-noop.py | https://github.com/ecmwf/earthkit-utils/issues/88 | filed 2026-10-08 |
 | (fix) earthkit-data XArrayGeography message | https://github.com/ecmwf/earthkit-data/pull/1181 | PR opened 2026-10-08, merged 2026-10-09 |
+| data-mars-relative-date-string.py | https://github.com/ecmwf/earthkit-data/issues/1185 | filed 2026-10-10 |
+| (docs) thermofeel examples | https://github.com/ecmwf/thermofeel/pull/59 | PR opened 2026-10-10 |
