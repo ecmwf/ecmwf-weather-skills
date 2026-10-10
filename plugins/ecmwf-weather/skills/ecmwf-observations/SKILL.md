@@ -5,7 +5,7 @@ compatibility: scripts/obs.py stations, series --dry-run and --latest-metar run 
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 <!--
