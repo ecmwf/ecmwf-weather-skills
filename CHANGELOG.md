@@ -11,6 +11,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Changed
+
+- Filed ecmwf/earthkit-data#1185 (relative MARS date as a string rejected) and opened
+  ecmwf/thermofeel#59 (example notes); both recorded in `docs/upstream/`.
+
 ## [0.6.0] - 2026-10-10
 
 ### Added

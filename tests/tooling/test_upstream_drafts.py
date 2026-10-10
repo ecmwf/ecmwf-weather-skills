@@ -81,6 +81,6 @@ def test_open_issue_still_reproduces_on_the_latest_release(i, tmp_path):
 
 @pytest.mark.parametrize("pr", DATA.get("pr", []), ids=lambda p: p["url"])
 def test_pull_request_is_recorded(pr):
-    assert pr["repo"].startswith("ecmwf/earthkit-") and pr["title"]
+    assert pr["repo"].startswith(("ecmwf/earthkit-", "ecmwf/thermofeel")) and pr["title"]
     assert pr["url"].startswith(f"https://github.com/{pr['repo']}/pull/")
     assert pr["status"] in ("open", "merged", "closed")
