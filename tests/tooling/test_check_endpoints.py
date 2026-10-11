@@ -76,9 +76,39 @@ def test_mcp_router_moving_a_service_is_reported():
     assert any("observations" in p for p in probs)
 
 
-def test_mcp_router_down_is_reported():
-    probs = ce.check(fetch=fetcher({MCP_STATUS: (502, "<title>Service not available</title>")}))
-    assert any("mcp.ecmwf.int/status" in p and "502" in p for p in probs)
+def test_mcp_router_outage_warns_but_does_not_block_a_release():
+    # The plugin's skills work without the MCP (it is an optional addition): an outage is a
+    # warning; drift (gone, moved, changed) is still a problem.
+    warnings: list[str] = []
+    probs = ce.check(
+        fetch=fetcher({MCP_STATUS: (502, "<title>Service not available</title>")}),
+        warnings=warnings,
+    )
+    assert not any("mcp" in p for p in probs), probs
+    assert any("mcp.ecmwf.int/status" in w and "502" in w for w in warnings)
+
+
+def test_mcp_router_gone_is_a_problem():
+    probs = ce.check(fetch=fetcher({MCP_STATUS: (404, "not found")}))
+    assert any("mcp.ecmwf.int/status" in p and "404" in p for p in probs)
+
+
+def test_mcp_host_that_no_longer_resolves_is_a_problem():
+    import socket
+    import urllib.error
+
+    def fetch(url):
+        if "mcp.ecmwf.int" in url:
+            raise urllib.error.URLError(socket.gaierror(-2, "Name or service not known"))
+        return fetcher({})(url)
+
+    probs = ce.check(fetch=fetch)
+    assert any("mcp" in p and "resolve" in p for p in probs), probs
+
+
+def test_required_service_outage_still_blocks():
+    probs = ce.check(fetch=fetcher({"data.ecmwf.int": (502, "")}))
+    assert any("data.ecmwf.int" in p and "502" in p for p in probs), probs
 
 
 def test_destine_catalogue_probe_is_the_one_the_skill_uses():

@@ -42,7 +42,9 @@ series from the service behind it.
 - Evals run with the bundled MCP server by default (`make evals MCP=0` without); expectation
   kinds `mcp`, `mcp_not`, `web_not` and `any`; eval cases `mcp-*`, `destine-monthly-mean`,
   `destine-which-variables`, `cds-era5-fast`.
-- `make check-endpoints` checks the MCP router's status and the DestinE catalogue.
+- `make check-endpoints` checks the MCP router's status and the DestinE catalogue. The MCP is
+  optional: its outage is a warning, while drift (host gone, HTTP 404, changed status) still
+  fails the release.
 
 ### Changed
 

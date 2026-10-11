@@ -68,6 +68,10 @@ PROBES = {
     "mcp": st.SERVICE_STATUS["mcp"],
 }
 PRESENT = {401, 403, 405}
+# Optional services: the skills work without them, so an outage (HTTP 5xx, timeout, refused
+# connection) is a warning; drift — a host that no longer resolves, HTTP 404/410, a changed
+# status document — still fails the release.
+OPTIONAL = {"mcp"}
 TIMEOUT_S = 30
 
 
@@ -116,9 +120,17 @@ def _json(fetch, url: str, problems: list[str]):
         return None
 
 
-def check(fetch=None) -> list[str]:
+def _unresolvable(e: Exception) -> bool:
+    import socket
+
+    return isinstance(getattr(e, "reason", None), socket.gaierror) or isinstance(e, socket.gaierror)
+
+
+def check(fetch=None, warnings: list[str] | None = None) -> list[str]:
+    """Problems that must block a release; outages of OPTIONAL services go to `warnings`."""
     fetch = fetch or retrying(_fetch)
     problems: list[str] = []
+    warnings = [] if warnings is None else warnings
 
     status = _json(fetch, st.STATUS, problems)
     if status is not None:
@@ -178,15 +190,26 @@ def check(fetch=None) -> list[str]:
         try:
             code, _ = fetch(url)
         except Exception as e:
-            problems.append(f"{name}: {url} unreachable ({type(e).__name__}: {e})")
+            if name in OPTIONAL and not _unresolvable(e):
+                warnings.append(f"{name}: {url} unreachable ({type(e).__name__}: {e}) — optional")
+            elif name in OPTIONAL:
+                problems.append(f"{name}: {url} no longer resolves ({e})")
+            else:
+                problems.append(f"{name}: {url} unreachable ({type(e).__name__}: {e})")
             continue
         if code >= 400 and code not in PRESENT:
-            problems.append(f"{name}: {url} answers HTTP {code}")
+            if name in OPTIONAL and code >= 500:
+                warnings.append(f"{name}: {url} answers HTTP {code} — optional, not blocking")
+            else:
+                problems.append(f"{name}: {url} answers HTTP {code}")
     return sorted(set(problems))
 
 
 def main() -> int:
-    problems = check()
+    warnings: list[str] = []
+    problems = check(warnings=warnings)
+    for w in sorted(set(warnings)):
+        print(f"WARNING: {w}")
     for p in problems:
         print(f"MISSING: {p}")
     print(
