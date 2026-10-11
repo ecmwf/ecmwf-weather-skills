@@ -16,12 +16,13 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Polytope
 
 ## Contents
-- Access check (line 39)
-- Point forecast and ensemble workflow (line 64)
-- Other features (line 93)
-- Processing and plots (line 103)
-- Licence and attribution (line 111)
-- When blocked (line 119)
+- Access check (line 40)
+- Point forecast and ensemble workflow (line 65)
+- ECMWF MCP (line 94)
+- Other features (line 116)
+- Processing and plots (line 126)
+- Licence and attribution (line 134)
+- When blocked (line 142)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -89,6 +90,28 @@ files there, never inside the skill directory.
   is the right way to state "likely range per day". Don't aggregate yourself.
 - The script picks the latest run covering the range (06/18 UTC runs reach 144 h, 00/12 UTC
   240 h+); `--date YYYYMMDD --time HHMM` pins one.
+
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). For a quick answer
+in chat, call its tools (such as `forecast_get_point_forecast`) when your client lists them;
+otherwise run the same tools with this standard-library script. If the MCP is unreachable, use
+`ptpoint.py`.
+
+```bash
+python3 scripts/ecmwf_mcp.py call forecast_get_point_forecast '{"collection_id": "operational-data",
+  "latitude": 51.45, "longitude": -0.97, "parameters": ["2t", "tp", "10u", "10v", "tcc"]}'
+```
+
+- It serves IFS HRES at the nearest native gridpoint, 00 UTC runs only. Quick answers in chat
+  only — never files or code built on its output: for the latest run, ensembles, CSV/JSON,
+  local time, daily summaries and feels-like run `ptpoint.py`.
+- `tp` is accumulated from the start of the run: the amount over a period is last minus
+  first, never the sum of the rows (`ecmwf_mcp.py` prints the total and each step). Values
+  come in raw units (K, Pa, wind as u/v components, cloud cover 0–1) and UTC. Name the model
+  run, and end with the source and licence line of the result.
+- Model output is guidance, not a warning: for official warnings name the country's national
+  meteorological service and MeteoAlarm (https://meteoalarm.org).
 
 ## Other features
 

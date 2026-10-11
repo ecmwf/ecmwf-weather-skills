@@ -10,6 +10,8 @@ from conftest import FIXTURES
 
 STATUS = json.loads((FIXTURES / "ecmwf-status.json").read_text())
 SESSIONS = json.loads((FIXTURES / "ecmwf-status-sessions.json").read_text())
+ROUTER_STATUS = json.loads((FIXTURES / "mcp" / "router-status.json").read_text())
+MCP_STATUS = "https://mcp.ecmwf.int/status"
 
 
 def fetcher(overrides=None):
@@ -23,6 +25,8 @@ def fetcher(overrides=None):
             return 200, json.dumps(STATUS)
         if url == ce.st.SESSIONS:
             return 200, json.dumps(SESSIONS)
+        if url == MCP_STATUS:
+            return 200, json.dumps(ROUTER_STATUS)
         if url.endswith("/api/catalogue/v1/messages"):
             return 200, '{"messages": []}'
         return 200, "ok"
@@ -60,6 +64,21 @@ def test_unreachable_host_is_reported_but_auth_answers_are_fine():
 
 def test_every_service_has_a_host_probe():
     assert set(ce.st.SERVICES) <= set(ce.PROBES)
+    assert ce.PROBES["mcp"] == MCP_STATUS
+
+
+def test_mcp_router_moving_a_service_is_reported():
+    moved = json.loads(json.dumps(ROUTER_STATUS))
+    moved["services"][2]["url"] = "https://charts2.mcp.ecmwf.int/mcp"
+    moved["services"].append({"name": "observations", "url": "https://obs.mcp.ecmwf.int/mcp"})
+    probs = ce.check(fetch=fetcher({MCP_STATUS: (200, json.dumps(moved))}))
+    assert any("charts" in p and "ecmwf_mcp.BACKENDS" in p for p in probs)
+    assert any("observations" in p for p in probs)
+
+
+def test_mcp_router_down_is_reported():
+    probs = ce.check(fetch=fetcher({MCP_STATUS: (502, "<title>Service not available</title>")}))
+    assert any("mcp.ecmwf.int/status" in p and "502" in p for p in probs)
 
 
 def test_destine_catalogue_probe_is_the_one_the_skill_uses():

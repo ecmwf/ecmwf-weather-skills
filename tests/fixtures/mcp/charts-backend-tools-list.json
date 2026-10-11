@@ -1,0 +1,534 @@
+{
+ "jsonrpc": "2.0",
+ "id": 2,
+ "result": {
+  "tools": [
+   {
+    "annotations": {
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": true,
+     "readOnlyHint": true,
+     "title": "Find a forecast chart"
+    },
+    "description": "Search the catalogue of official forecast charts by what a chart shows, for example 'mean sea level pressure', 'rain', '2 m temperature' or 'wave height'. Returns the product name to pass to get_chart, what each chart shows, and the inputs it takes: the areas it can be drawn on, how far ahead it runs, and the model runs on offer. It also lists the map layers get_map can draw. Start here when you don't already know the product name. It returns a catalogue, not an image.",
+    "inputSchema": {
+     "properties": {
+      "query": {
+       "description": "What the chart shows, in plain words, e.g. 'mean sea level pressure'.",
+       "type": "string"
+      },
+      "limit": {
+       "default": 6,
+       "description": "How many products to return, at most 12.",
+       "type": "integer"
+      }
+     },
+     "required": [
+      "query"
+     ],
+     "type": "object"
+    },
+    "name": "find_charts",
+    "outputSchema": {
+     "properties": {
+      "charts": {
+       "items": {
+        "additionalProperties": {
+         "type": [
+          "number",
+          "string",
+          "array",
+          "null"
+         ]
+        },
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "map_layers": {
+       "items": {
+        "additionalProperties": {
+         "type": [
+          "number",
+          "string",
+          "array",
+          "null"
+         ]
+        },
+        "type": "object"
+       },
+       "type": "array"
+      },
+      "match_count": {
+       "type": "integer"
+      },
+      "provenance": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "type": "object"
+      },
+      "notes": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "charts",
+      "provenance"
+     ],
+     "type": "object"
+    },
+    "title": "Find a forecast chart"
+   },
+   {
+    "_meta": {
+     "ui": {
+      "resourceUri": "ui://ecmwf-opencharts-mcp/chart-viewer.html"
+     }
+    },
+    "annotations": {
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": true,
+     "readOnlyHint": true,
+     "title": "Get a forecast chart"
+    },
+    "description": "One official forecast chart as an image, the same chart as on the charts website: pressure, wind, temperature, rain, cloud, waves and the rest of the catalogue. Takes a product name from find_charts, a step in hours ahead or a valid time, and an area such as europe or global; the model run is the latest that has the step unless you name one. Returns the picture with its base time, valid time, area, the page it came from and its licence. The areas are the ones the product publishes, so for a bounding box of your own use get_map. It's a picture of model output, not a table of numbers and not an official warning.",
+    "inputSchema": {
+     "properties": {
+      "product": {
+       "description": "Product name from find_charts, e.g. medium-mslp-wind850.",
+       "type": "string"
+      },
+      "step": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Hours after the model run the chart should show, e.g. 36."
+      },
+      "valid_time": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "The moment the chart should show, ISO 8601 UTC, e.g. 2026-10-10T12:00:00Z."
+      },
+      "base_time": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Model run to draw from, ISO 8601 UTC; the latest one by default."
+      },
+      "area": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Area the chart is drawn on, e.g. europe, global, north_america."
+      }
+     },
+     "required": [
+      "product"
+     ],
+     "type": "object"
+    },
+    "name": "get_chart",
+    "outputSchema": {
+     "properties": {
+      "product": {
+       "type": "string"
+      },
+      "title": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "description": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "base_time": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "valid_time": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "step_hours": {
+       "type": [
+        "number",
+        "null"
+       ]
+      },
+      "area": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "image": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "number",
+         "boolean"
+        ]
+       },
+       "type": "object"
+      },
+      "image_url": {
+       "type": "string"
+      },
+      "provenance": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "type": "object"
+      },
+      "notes": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "product",
+      "image",
+      "provenance"
+     ],
+     "type": "object"
+    },
+    "title": "Get a forecast chart"
+   },
+   {
+    "_meta": {
+     "ui": {
+      "resourceUri": "ui://ecmwf-opencharts-mcp/chart-viewer.html"
+     }
+    },
+    "annotations": {
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": true,
+     "readOnlyHint": true,
+     "title": "Get an ensemble meteogram for a place"
+    },
+    "description": "The official ensemble meteogram for one place: how the 51-member ensemble forecast spreads over the next 10 or 15 days for cloud, rain, wind and temperature, drawn as one image. Takes a latitude and longitude anywhere in the world and a place name to label it. Kinds: 10-day, 15-day, 15-day-with-climate, plume, wave. Use it for how confident a forecast for a place is, and how the weather there changes day by day. It answers with a picture of the ensemble, not with numbers, and it isn't an official warning.",
+    "inputSchema": {
+     "properties": {
+      "latitude": {
+       "description": "Latitude of the place the question is about, degrees north.",
+       "type": "number"
+      },
+      "longitude": {
+       "description": "Longitude of the place the question is about, degrees east.",
+       "type": "number"
+      },
+      "place_name": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Name of the place, used to label the meteogram."
+      },
+      "kind": {
+       "default": "10-day",
+       "description": "10-day, 15-day, 15-day-with-climate, plume or wave.",
+       "type": "string"
+      },
+      "base_time": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Model run to draw from, ISO 8601 UTC; the latest one by default."
+      }
+     },
+     "required": [
+      "latitude",
+      "longitude"
+     ],
+     "type": "object"
+    },
+    "name": "get_meteogram",
+    "outputSchema": {
+     "properties": {
+      "kind": {
+       "type": "string"
+      },
+      "place_name": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "latitude": {
+       "type": "number"
+      },
+      "longitude": {
+       "type": "number"
+      },
+      "base_time": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "image": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "number",
+         "boolean"
+        ]
+       },
+       "type": "object"
+      },
+      "image_url": {
+       "type": "string"
+      },
+      "provenance": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "type": "object"
+      },
+      "notes": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "kind",
+      "latitude",
+      "longitude",
+      "image",
+      "provenance"
+     ],
+     "type": "object"
+    },
+    "title": "Get an ensemble meteogram for a place"
+   },
+   {
+    "_meta": {
+     "ui": {
+      "resourceUri": "ui://ecmwf-opencharts-mcp/chart-viewer.html"
+     }
+    },
+    "annotations": {
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": true,
+     "readOnlyHint": true,
+     "title": "Get a forecast map for an area"
+    },
+    "description": "A forecast map for a bounding box you choose, drawn by the Web Map Service: mean sea level pressure, 500 hPa geopotential, 850 hPa temperature and wind speed, and the ensemble mean and spread of each. Takes west, south, east and north in degrees and either a valid time or a step in hours ahead, and returns the map with a background, coastlines and borders, and the legend where the layer has one. Layers: msl_mean_public, msl_public, msl_spread_public, t850_mean_public, t850_public, t850_spread_public, ws850_mean_public, ws850_public, ws850_spread_public, z500_mean_public, z500_public, z500_spread_public. Use it when the area wanted isn't one of the areas get_chart offers. These layers hold no surface temperature, rain or 10 m wind; those are chart products.",
+    "inputSchema": {
+     "properties": {
+      "layer": {
+       "description": "Map layer name, e.g. msl_public or t850_public.",
+       "type": "string"
+      },
+      "west": {
+       "description": "Western edge of the map, degrees east of Greenwich.",
+       "type": "number"
+      },
+      "south": {
+       "description": "Southern edge of the map, degrees north.",
+       "type": "number"
+      },
+      "east": {
+       "description": "Eastern edge of the map, degrees east of Greenwich.",
+       "type": "number"
+      },
+      "north": {
+       "description": "Northern edge of the map, degrees north.",
+       "type": "number"
+      },
+      "valid_time": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "The moment the chart should show, ISO 8601 UTC, e.g. 2026-10-10T12:00:00Z."
+      },
+      "step": {
+       "anyOf": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Hours ahead of the latest analysis to draw."
+      },
+      "style": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Style for the layer; its first style by default."
+      }
+     },
+     "required": [
+      "layer",
+      "west",
+      "south",
+      "east",
+      "north"
+     ],
+     "type": "object"
+    },
+    "name": "get_map",
+    "outputSchema": {
+     "properties": {
+      "layer": {
+       "type": "string"
+      },
+      "title": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "style": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "valid_time": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "bbox": {
+       "items": {
+        "type": "number"
+       },
+       "type": "array"
+      },
+      "image": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "number",
+         "boolean"
+        ]
+       },
+       "type": "object"
+      },
+      "legend": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "number",
+         "boolean"
+        ]
+       },
+       "type": [
+        "object",
+        "null"
+       ]
+      },
+      "image_url": {
+       "type": "string"
+      },
+      "provenance": {
+       "additionalProperties": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "type": "object"
+      },
+      "notes": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      }
+     },
+     "required": [
+      "layer",
+      "bbox",
+      "image",
+      "provenance"
+     ],
+     "type": "object"
+    },
+    "title": "Get a forecast map for an area"
+   }
+  ]
+ }
+}

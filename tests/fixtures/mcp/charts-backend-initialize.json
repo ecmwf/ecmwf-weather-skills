@@ -1,0 +1,27 @@
+{
+ "jsonrpc": "2.0",
+ "id": 1,
+ "result": {
+  "capabilities": {
+   "prompts": {
+    "listChanged": false
+   },
+   "resources": {
+    "listChanged": false,
+    "subscribe": false
+   },
+   "tools": {
+    "listChanged": false
+   }
+  },
+  "instructions": "This server serves published weather forecast charts from ECMWF (European Centre for Medium-Range Weather Forecasts): chart products, ensemble meteograms for a place, and maps of a chosen area. Charts come from ECMWF's OpenCharts service and from the ecCharts Web Map Service, an OGC standard.\n\nCall find_charts first for a product name and the steps, areas and runs it takes, then get_chart; get_meteogram needs only a latitude and longitude; get_map needs a layer name and a bounding box.\n\nEvery tool returns the chart as an image. Show it, and with it state the source (ECMWF) and the licence given in the result.\n\nThe charts are numerical weather prediction model output drawn as pictures. They are guidance, not an official warning, and not an observation of what happened.\n\nTimes are UTC. A chart's base time is the model run it came from and its valid time is the moment it shows.\n\nThe map layers available without an account are: msl_mean_public, msl_public, msl_spread_public, t850_mean_public, t850_public, t850_spread_public, ws850_mean_public, ws850_public, ws850_spread_public, z500_mean_public, z500_public, z500_spread_public.\n\nThe charts are drawn from the ECMWF IFS: the high-resolution forecast, the 51-member ensemble, and the AIFS machine-learning model where a product says so. Products whose name ends in _esuite come from the experimental suite and are not the operational forecast.",
+  "protocolVersion": "2025-06-18",
+  "serverInfo": {
+   "description": "Official weather forecast charts published by ECMWF: maps of pressure, temperature, wind, rain and cloud for the days ahead, ensemble meteograms for a place, and maps for an area you choose. Charts come from ECMWF's OpenCharts service and from the ecCharts Web Map Service, an OGC standard. The catalogue holds 333 products.",
+   "name": "ecmwf-opencharts-mcp",
+   "title": "ECMWF forecast charts",
+   "version": "0.2.0",
+   "websiteUrl": "https://www.ecmwf.int"
+  }
+ }
+}

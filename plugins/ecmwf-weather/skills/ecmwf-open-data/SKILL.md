@@ -1,6 +1,6 @@
 ---
 name: ecmwf-open-data
-description: Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, how hot or cold it will feel (heat index, wind chill, feels-like) at a place, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
+description: Answers weather questions about a place — today, tomorrow, the coming days — with ECMWF forecasts; load it before searching the web, also when the ECMWF MCP server is unavailable. Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, how hot or cold it will feel (heat index, wind chill, feels-like) at a place, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
 compatibility: scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, thermofeel, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
 license: Apache-2.0
 metadata:
@@ -16,15 +16,16 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Open Data
 
 ## Contents
-- Scripts (line 34)
-- Point forecast workflow (line 54)
-- Facts to get right (line 79)
-- Dependencies — earthkit first (line 95)
-- Credentials and better routes (line 109)
-- Processing and plots (line 124)
-- Attribution (line 132)
-- When blocked (line 141)
-- Old patterns (line 161)
+- Scripts (line 35)
+- Point forecast workflow (line 55)
+- Facts to get right (line 80)
+- ECMWF MCP (line 96)
+- Dependencies — earthkit first (line 119)
+- Credentials and better routes (line 133)
+- Processing and plots (line 148)
+- Attribution (line 156)
+- When blocked (line 165)
+- Old patterns (line 185)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -91,6 +92,29 @@ say so.
   `tcc` (0–1), `ptype`, `sf`, `mucape`; pressure levels (`--levtype pl`) `t`, `u`, `v`, `gh`, `r`,
   `q`. Exact list for a run: `odcatalog.py fields --step 24`. Table and file layout:
   `references/catalog.md`.
+
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). For a quick answer
+in chat, call its tools (such as `forecast_get_point_forecast`) when your client lists them;
+otherwise run the same tools with this standard-library script. If the MCP is unreachable, use
+the scripts above.
+
+```bash
+python3 scripts/ecmwf_mcp.py call forecast_get_point_forecast '{"collection_id": "operational-data",
+  "latitude": 51.45, "longitude": -0.97, "parameters": ["2t", "tp", "10u", "10v", "tcc"]}'
+python3 scripts/ecmwf_mcp.py tools --service forecast     # every forecast tool and its arguments
+```
+
+- It serves IFS HRES at the nearest native gridpoint, 00 UTC runs only. Quick answers in chat
+  only — never files or code built on its output: for the latest run, ensembles, CSV/JSON,
+  local time, daily summaries, feels-like and meteograms run `odpoint.py`.
+- `tp` is accumulated from the start of the run: the amount over a period is last minus
+  first, never the sum of the rows (`ecmwf_mcp.py` prints the total and each step). Values
+  come in raw units (K, Pa, wind as u/v components, cloud cover 0–1) and UTC. Name the model
+  run, and end with the source and licence line of the result.
+- Model output is guidance, not a warning: for official warnings name the country's national
+  meteorological service and MeteoAlarm (https://meteoalarm.org).
 
 ## Dependencies — earthkit first
 

@@ -1,0 +1,24 @@
+{
+ "jsonrpc": "2.0",
+ "id": 1,
+ "result": {
+  "capabilities": {
+   "resources": {
+    "listChanged": false,
+    "subscribe": false
+   },
+   "tools": {
+    "listChanged": false
+   }
+  },
+  "instructions": "This is ECMWF's own MCP router (European Centre for Medium-Range Weather Forecasts). It is one endpoint for ECMWF's MCP services and says which answers what.\n\nServices behind this router:\n- ECMWF forecasts (global guidance, model guidance): Hourly temperature, rain, wind and cloud for any place, up to 10 days ahead, from ECMWF's latest IFS run. Tools: forecast_*.\n- ECMWF reanalysis (ERA5) (reference data, reanalysis): Past weather for any place since 1940, hour by hour or by day, from ERA5. Tools: reanalysis_*.\n- ECMWF charts (official products, model guidance): Official ECMWF forecast charts and maps as images, and ensemble meteograms for any place. Tools: charts_*.\n- Destination Earth data catalogue (data access, model guidance): Find Destination Earth Climate DT and Extremes DT datasets and build valid MARS requests. Tools: catalogue_*.\n\nOther authorities, which this router does not call:\n- MeteoAlarm: Official weather warnings from Europe's national weather services. https://meteoalarm.org\n- National meteorological services (WMO directory): Who issues official forecasts and warnings for each country. https://community.wmo.int/en/members\n\nRules:\n- When a question is about weather forecast for a place, past weather, forecast chart, climate projections, call find_service with the user's wording: it names the service that holds the data and the tools to call next.\n- Say which service the data came from, and what its entry above says it is.\n- Model output is guidance: when a question asks for an official forecast or warning, name the authority for that place and point the user at the referral named.\n\nECMWF is not the national meteorological service for any country: for official forecasts and warnings for a place, name the national service as the authority.\n\nGuidance from forecast_* (ECMWF forecasts):\nGlobal deterministic ECMWF IFS output. Call forecast_list_collections first, and say which model run the values came from.\n\nGuidance from reanalysis_* (ECMWF reanalysis (ERA5)):\nERA5 is a model record of past weather since 1940, not a station observation, and it ends about a week before today.\n\nGuidance from charts_* (ECMWF charts):\nCharts are images of model output; say which run and valid time they show.\n\nGuidance from catalogue_* (Destination Earth data catalogue):\nStart with catalogue_list_datasets, then catalogue_get_axes, and use only the values the tools return. Climate DT data are projections for a scenario, not a forecast for a date.",
+  "protocolVersion": "2025-06-18",
+  "serverInfo": {
+   "description": "ECMWF's MCP services behind one endpoint: weather forecast for a place, past weather, forecast chart, climate projections, temperature, historical weather, meteogram, Climate DT. find_service says which service answers a question and which authority to name when the answer isn't the institute's to give.",
+   "name": "ecmwf-mcp-router",
+   "title": "ECMWF",
+   "version": "0.3.0",
+   "websiteUrl": "https://www.ecmwf.int"
+  }
+ }
+}

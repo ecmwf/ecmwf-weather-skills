@@ -16,13 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # Copernicus CDS and ADS
 
 ## Contents
-- Workflow (line 30)
-- ERA5 at a point (line 68)
-- Regional reanalyses — CARRA and CERRA (line 89)
-- CAMS air quality without a key (line 104)
-- Processing and plots (line 111)
-- Attribution and citation (line 121)
-- When blocked (line 132)
+- Workflow (line 31)
+- ERA5 at a point (line 69)
+- ECMWF MCP (line 90)
+- Regional reanalyses — CARRA and CERRA (line 111)
+- CAMS air quality without a key (line 126)
+- Processing and plots (line 133)
+- Attribution and citation (line 143)
+- When blocked (line 154)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors), `references/regional-reanalyses.md` (CARRA, CERRA: requests, subsetting, point series, limits)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -85,6 +86,27 @@ same CSV. Exit 3 means the CDS fallback needs earthkit: re-run the command with 
 output names the route and the gridpoint; end the answer with its attribution and DOI (EDR
 route: ERA5 single levels, 10.24381/cds.adbb2d47). Climate normals = 1991–2020 monthly means of
 that series (recipe in `references/datasets.md`).
+
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account or key). Its
+`reanalysis_get_point_history` tool answers quick ERA5 questions about a place in chat: hourly
+values, or per UTC day with `"daily": true` (lowest, highest, mean, totals), from 1940 to about
+a week ago, up to 366 days per call. Call it when your client lists the ECMWF MCP tools;
+otherwise run it with this standard-library script. If the MCP is unreachable, use
+`cds.py era5-point`.
+
+```bash
+python3 scripts/ecmwf_mcp.py call reanalysis_get_point_history '{"collection_id": "era5-single-levels",
+  "latitude": 48.86, "longitude": 2.35, "parameters": ["t2m", "tp"], "start": "2003-08-01",
+  "end": "2003-08-31", "daily": true}'
+```
+
+- ERA5 parameter ids are `t2m`, `d2m`, `tp`, `u10`, `v10`, `msl`, `tcc`…
+  (`reanalysis_describe_collection` lists them); `era5-pressure-levels` takes a `level` in hPa.
+- ERA5 at a point only — other datasets (ERA5-Land, CARRA, CERRA, seasonal, CAMS), gridded
+  data and files go through the workflow above.
+- ERA5 is a model reanalysis, not station observations; give the attribution below.
 
 ## Regional reanalyses — CARRA and CERRA
 

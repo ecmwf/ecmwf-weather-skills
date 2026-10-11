@@ -100,6 +100,13 @@ def test_all_is_lint_check_test():
         assert frag in out.stdout
 
 
+def test_evals_run_with_the_mcp_server_unless_mcp_0():
+    on = make("-n", "evals", "CASES=mcp-quick-forecast")
+    assert on.returncode == 0 and "run_evals.py" in on.stdout and "--no-mcp" not in on.stdout
+    off = make("-n", "evals", "MCP=0")
+    assert off.returncode == 0 and "--no-mcp" in off.stdout
+
+
 def test_clean_dry_run_never_deletes_tracked_sources():
     out = make("-n", "clean")
     assert "dist" in out.stdout and "evals/runs" in out.stdout

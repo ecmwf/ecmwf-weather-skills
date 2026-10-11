@@ -1,0 +1,16 @@
+{
+  "id": "mcp-official-warning",
+  "prompt": "Is there an official weather warning for Lisbon tomorrow?",
+  "timeout": 300,
+  "max_budget_usd": 1,
+  "expect": [
+    {
+      "kind": "final",
+      "pattern": "(?i)\\bIPMA\\b|MeteoAlarm|national (?:meteorological|weather) service"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)guidance|not (?:an |the )?official|isn['\u2019]t (?:an |the )?official|model output"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "mcp-meteogram",
+  "prompt": "Get the official ECMWF ensemble meteogram for Newbury, UK and save it as newbury.png.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "file",
+      "pattern": "newbury.png"
+    },
+    {
+      "kind": "any",
+      "of": [
+        {
+          "kind": "mcp",
+          "pattern": "charts_get_meteogram"
+        },
+        {
+          "kind": "command",
+          "pattern": "opencharts\\.py"
+        }
+      ]
+    },
+    {
+      "kind": "final",
+      "pattern": "CC[ -]BY|\u00a9"
+    }
+  ]
+}
