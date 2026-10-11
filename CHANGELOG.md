@@ -11,6 +11,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+### Added
+
+- `opencharts.py get opencharts_meteogram --lat LAT --lon LON`: the official ECMWF ENS meteogram
+  for any place, without the ECMWF MCP — `--kind 10-day|15-day|15-day-with-climate|plume|wave`,
+  `--base-time` for an earlier run; prints the run's base time and the attribution. Other charts
+  for one place (precipitation type, visibility, sub-seasonal, EFI/CDF, vertical profiles, AIFS
+  ENS, CAMS UV index) take `--lat --lon` too; `options` lists a product's place and kinds.
+- Eval case `oc-meteogram-point`.
+
+### Changed
+
+- `ecmwf_mcp.py call … -o FILE` saves the full-size chart when the MCP sent a reduced image
+  (fetched only from ECMWF's chart hosts over https; the inline image is kept if that fails).
+- The point-forecast and earthkit skills say when to use which meteogram: the official ENS
+  meteogram has fixed layouts (10 or 15 days, plume, wave); a chosen period or variables is
+  drawn with `ekplot.py meteogram`.
+- ecmwf-open-data claims weather questions about a place before any web search or weather
+  website, also when ECMWF MCP tools are listed (they have no point forecasts).
+- `opencharts.py get` refuses a chart for one place without `--lat`/`--lon` (OpenCharts would
+  draw a default point), coordinates out of range, and options a product does not take.
+- Eval case `oc-chart` accepts the bundled MCP's `charts_get_chart` (the same official product).
+
 ## [0.7.0] - 2026-10-11
 
 **ECMWF MCP.** The plugin now bundles ECMWF's MCP server (https://mcp.ecmwf.int), and the skills
