@@ -51,8 +51,16 @@ def test_every_service_maps_to_a_status_source():
         "ads",
         "ecds",
         "destine",
+        "era5-edr",
     ):
         assert svc in st.SERVICES
+
+
+def test_services_without_a_feed_point_at_the_destine_news():
+    # The ERA5 EDR runs on Destination Earth infrastructure, which publishes no status feed.
+    for svc in ("destine", "era5-edr"):
+        r = st.outage_report(svc, fetch=routes(), now=0)
+        assert st.DESTINE_NEWS in r["summary"], svc
 
 
 def test_all_ok():

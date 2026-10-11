@@ -24,7 +24,7 @@ SPDX-License-Identifier: Apache-2.0
 - Access and tokens (line 101)
 - Processing and plots (line 107)
 - Attribution (line 115)
-- When blocked (line 124)
+- When blocked (line 128)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -117,9 +117,13 @@ and time statistics (earthkit-transforms) and meteorological quantities (earthki
 Required wherever maps or charts are shown. **When you hand over an image, chart or map, end your
 answer with the attribution line the script printed.** The line:
 `Map data: © <year> ECMWF, CC BY 4.0` (linked to https://creativecommons.org/licenses/by/4.0/),
-plus "ECMWF accepts no liability for errors or omissions" in apps. CAMS layers (`composition_*`)
-add "Generated using Copernicus Atmosphere Monitoring Service information <year>". The scripts
-print the line and the web map shows it. Don't use the ECMWF logo except as a link to ecmwf.int.
+plus "ECMWF accepts no liability for errors or omissions" in apps. CAMS products — WMS layers
+`composition_*` and CAMS charts (aerosol, ozone, fire, UV index…) — need the Copernicus credit:
+"Generated using Copernicus Atmosphere Monitoring Service information <year>. Neither the
+European Commission nor ECMWF is responsible for any use that may be made of the Copernicus
+information or data it contains." (after the ECMWF line on maps; on its own for CAMS charts).
+The scripts print the line and the web map shows it. Don't use the ECMWF logo except as a link
+to ecmwf.int.
 
 ## When blocked
 

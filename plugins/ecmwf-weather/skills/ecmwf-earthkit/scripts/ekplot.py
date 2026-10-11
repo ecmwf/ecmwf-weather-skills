@@ -84,7 +84,7 @@ def attribution_text(year: int | None = None) -> str:
 
 
 def attribution_for(point: dict) -> str:
-    """Use the licence line the data carries (operational data isn't CC BY); default Open Data."""
+    """Use the attribution line the data carries; default Open Data."""
     return (point.get("attribution") or {}).get("short") or attribution_text()
 
 
@@ -542,14 +542,16 @@ def fdir_barrier(path: str, index: str) -> dict:
         "blocked": f"{index} needs fdir (direct solar radiation, paramId 228021) and {path} "
         "has none",
         "why": "ECMWF Open Data does not publish fdir; UTCI, WBGT and MRT need it. It is in "
-        "MARS and Polytope (operational data under an ECMWF licence).",
+        "MARS and Polytope (operational data: CC BY 4.0, but access needs an entitlement).",
         "user_steps": [
             "1. With ECMWF MARS or Polytope access: retrieve 2t 2d 10u 10v sp ssrd ssr strd str "
             "fdir (param=167/168/165/166/134/169/176/175/177/228021) at two consecutive steps "
             "(ecmwf-mars skill: mars.py retrieve; ecmwf-polytope: grid as a 'dx/dy' string).",
             "2. Without access: an ECMWF account and key — https://api.ecmwf.int/v1/key/ ; "
-            "operational data needs an ECMWF licence (https://www.ecmwf.int/en/forecasts/"
-            "datasets).",
+            "operational data is for users at Member and Co-operating State national "
+            "meteorological services (ask your Computing Representative) or with a Real-time "
+            "service agreement (https://www.ecmwf.int/en/forecasts/accessing-forecasts/"
+            "service-agreements).",
             "3. For a demonstration only: re-run with --approximate-fdir erbs (or disc) — fdir is "
             "then estimated from ssrd and the map is labelled as such.",
         ],
@@ -740,7 +742,7 @@ def plot_index(
     if approximate_fdir and not r["has_fdir"]:
         title += f"\nfdir estimated ({FDIR_NAMES[approximate_fdir]}) — demonstration"
     fig.title(title)
-    # fdir is only in licensed ECMWF data (MARS, Polytope), not in CC BY Open Data.
+    # fdir is not in Open Data; MARS and Polytope have it (access needs an entitlement).
     year = datetime.now(timezone.utc).year
     r["attribution"] = f"Data: © {year} ECMWF" if r["has_fdir"] else attribution_text(year)
     fig.attribution(f"{r['attribution']}; index: thermofeel")

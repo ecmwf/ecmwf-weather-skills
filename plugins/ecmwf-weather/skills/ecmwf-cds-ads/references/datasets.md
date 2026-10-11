@@ -19,7 +19,7 @@ Confirm ids and values with `cds.py search` / `cds.py describe` — the catalogu
 
 | Need | Store | Dataset id |
 |---|---|---|
-| ERA5 hourly at a point (fast) | cds | `reanalysis-era5-single-levels-timeseries` |
+| ERA5 hourly at a point (fast) | — | `cds.py era5-point`: ECMWF's EDR service (no key), else cds `reanalysis-era5-single-levels-timeseries` |
 | ERA5 hourly, gridded, surface | cds | `reanalysis-era5-single-levels` |
 | ERA5 hourly, pressure levels | cds | `reanalysis-era5-pressure-levels` |
 | ERA5 monthly means | cds | `reanalysis-era5-single-levels-monthly-means` |
@@ -62,7 +62,7 @@ CAMS Europe forecast (ADS):
 ## Climate normals recipe
 
 ERA5 point series (`cds.py era5-point`, CSV with columns `valid_time, t2m, latitude,
-longitude`) straight into earthkit-transforms and earthkit-utils:
+longitude` — the same from either route) straight into earthkit-transforms and earthkit-utils:
 
 ```python
 # /// script
@@ -87,6 +87,10 @@ earthkit-data and use the same functions — see the `ecmwf-earthkit` skill.
 - `validate` reports the server's `cost` and `limit` for the request; over the limit → split.
 - Requests are queued; retrieval of gridded ERA5 from tape can take a long time. Point time
   series and derived datasets are served from fast storage.
+- `era5-point` through the EDR has no queue and no size limit to plan for: 30 years of one hourly
+  variable come in one request (~5–10 s); longer multi-variable series are split by year. On the
+  CDS route the cost grows with the number of variables, not with the period: when all the
+  variables at once exceed the limit, request them in groups.
 
 ## Errors
 

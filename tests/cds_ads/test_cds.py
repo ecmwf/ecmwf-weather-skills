@@ -181,6 +181,8 @@ def test_live_validate_with_costing(tmp_path):
             "2020-12-31",
             "--variable",
             "2m_temperature",
+            "--route",
+            "cds",
             "--dry-run",
             "--json",
         ],
@@ -190,7 +192,7 @@ def test_live_validate_with_costing(tmp_path):
     )
     assert out.returncode == 0, out.stderr
     d = json.loads(out.stdout)
-    assert d["valid"] and d["cost"]["cost"] <= d["cost"]["limit"]
+    assert d["route"] == "cds" and d["valid"] and d["cost"]["cost"] <= d["cost"]["limit"]
 
 
 def test_ads_key_in_cdsapirc_is_found_but_flagged(tmp_path):

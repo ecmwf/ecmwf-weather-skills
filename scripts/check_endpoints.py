@@ -41,6 +41,9 @@ PROBES = {
     "ads": "https://ads.atmosphere.copernicus.eu/api/catalogue/v1/collections?limit=1",
     "ecds": "https://ecds.ecmwf.int/api/catalogue/v1/collections?limit=1",
     "destine": "https://polytope.lumi.apps.dte.destination-earth.eu/api/v1/test",
+    # The ERA5 collection the cds-ads skill reads (era5-point falls back to the CDS without it).
+    "era5-edr": "https://polytope-edr.lumi.apps.dte.destination-earth.eu/collections/"
+    "era5-single-levels?f=json",
     "destine-mn5": "https://polytope.mn5.apps.dte.destination-earth.eu/api/v1/test",
     "polytope-collections": "https://polytope.ecmwf.int/api/v1/collections",  # 401 = present
     "destine-lumi-collections": "https://polytope.lumi.apps.dte.destination-earth.eu/api/v1/collections",

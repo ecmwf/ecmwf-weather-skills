@@ -85,8 +85,8 @@ OSCAR_SEARCH = "https://oscar.wmo.int/surface/rest/api/search/station"
 
 ATTRIBUTION = {
     "ecmwf": "Observations from the WMO Global Observing System, retrieved from the ECMWF MARS "
-    "archive (departures and QC flags: © ECMWF). Licensed ECMWF data — use under your "
-    "organisation's ECMWF licence; credit '© ECMWF' and check before redistributing.",
+    "archive (departures and QC flags: © ECMWF). Credit '© ECMWF' and check the data's terms "
+    "before redistributing; MARS restricts access to observations to entitled accounts.",
     "noaa": "METAR reports from NOAA Aviation Weather Center (aviationweather.gov) — US "
     "government data, NOT from ECMWF.",
 }
@@ -877,7 +877,7 @@ def with_observations(forecast: dict, rows: list[dict], station: dict | None = N
             )
     sources = sorted({r["source"] for r in rows})
     attribution = dict(forecast.get("attribution") or {})
-    credit = "; ".join("© ECMWF (licensed)" if s == ECMWF_LABEL else s for s in sources)
+    credit = "; ".join("© ECMWF" if s == ECMWF_LABEL else s for s in sources)
     if credit:
         short = attribution.get("short") or "Forecast: © ECMWF"
         attribution["short"] = f"{short}; observations: {credit}"

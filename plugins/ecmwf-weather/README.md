@@ -43,6 +43,7 @@ The scripts contact only these services, and only to fetch data, catalogues and 
 | `polytope.ecmwf.int` | Polytope extraction | request incl. coordinates; your ECMWF key (header) |
 | `api.ecmwf.int` | ECMWF Web API / MARS | request; your ECMWF key (header) |
 | `cds.climate.copernicus.eu`, `ads.atmosphere.copernicus.eu`, `ecds.ecmwf.int` | Copernicus and ECMWF data stores | dataset requests, licence check; your data-store token (header) |
+| `polytope-edr.lumi.apps.dte.destination-earth.eu` | ECMWF's OGC API EDR service: ERA5 point series without a key | point coordinates, variables, period |
 | `polytope.lumi.apps.dte.destination-earth.eu`, `polytope.mn5.apps.dte.destination-earth.eu`, `polytope.leonardo.apps.dte.destination-earth.eu`, `auth.destine.eu`, `platform.destine.eu` | Destination Earth data and authentication | request; your DestinE token (header) |
 | `aviationweather.gov` (NOAA Aviation Weather, the one non-ECMWF source) | ICAO station metadata; the latest METARs only when you ask for them — labelled non-ECMWF | station ids |
 | `oscar.wmo.int` (WMO OSCAR/Surface) | station metadata for WMO ids missing from the bundled index | WMO station id |
@@ -59,13 +60,15 @@ by name and never print them.
 
 ## Getting started and troubleshooting
 
-No account is needed for Open Data, maps, charts or validating Copernicus requests. When a key,
-licence or service is missing, the skills print a BLOCKED report with exact steps to resolve it.
+No account is needed for Open Data, maps, charts, ERA5 point series or validating Copernicus
+requests. When a key, licence or service is missing, the skills print a BLOCKED report with exact
+steps to resolve it.
 Try: *"What's the weather in Bonn over the next 48 hours? Use ECMWF open data."*, *"Make a 3-day
 meteogram for Reading."*, *"Prepare a validated ERA5 request for hourly 2 m temperature in
 Lisbon, 1991–2020."*
 
 Support: https://support.ecmwf.int · Privacy: https://www.ecmwf.int/en/privacy · Terms:
 https://www.ecmwf.int/en/terms-use · Licence: Apache-2.0 (see `LICENSE`); the ECMWF logo is a
-trademark used with permission. Data keeps its own licence (CC BY 4.0 for Open Data and most
-Copernicus data; ECMWF licence for operational data).
+trademark used with permission. Data keeps its own licence: CC BY 4.0 for ECMWF's real-time
+forecasts (Open Data and the operational products alike) and most Copernicus data. Beyond Open
+Data, what is restricted is access (an ECMWF account with entitlement, or a service agreement).

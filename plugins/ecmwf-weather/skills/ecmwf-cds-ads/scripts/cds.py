@@ -12,13 +12,16 @@
 
 Everything except `retrieve` is standard library and needs no account (public catalogue and
 costing APIs). `retrieve` uses earthkit-data's cds/ads source (`uv run` installs it).
+`era5-point` reads ERA5 from ECMWF's OGC API EDR service (standard library, no key) and falls
+back to the CDS timeseries dataset (earthkit-data and a CDS key) when the EDR can't serve it.
 
   python3 cds.py check                                     # keys found and accepted (never printed)
   python3 cds.py search "era5 land"                         # dataset ids
   python3 cds.py describe reanalysis-era5-single-levels     # inputs, licence, DOI, citation
   python3 cds.py validate --dataset ID --request req.json   # local checks + server cost/limit
   python3 cds.py era5-point --lat 38.72 --lon -9.14 --start 1991-01-01 --end 2020-12-31 \
-      --variable 2m_temperature --dry-run                   # ERA5 point time series request
+      --variable 2m_temperature -o lisbon.csv              # ERA5 point series (EDR, seconds)
+  python3 cds.py era5-point ... --dry-run                   # the plan: EDR URLs, CDS fallback
   uv run  cds.py retrieve --dataset ID --request req.json -o out.nc
   python3 cds.py search "air quality" --store ads           # CAMS datasets
 """
@@ -26,17 +29,23 @@ costing APIs). `retrieve` uses earthkit-data's cds/ads source (`uv run` installs
 from __future__ import annotations
 
 import argparse
+import csv
 import difflib
+import functools
+import http.client
 import json
+import math
 import os
 import re
 import shutil
+import struct
 import sys
+import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 # Never write __pycache__ into the installed skill (it may be read-only, and skills must
 # not be modified); sibling scripts are imported below.
@@ -593,6 +602,406 @@ def era5_point_request(
     }
 
 
+# --- ERA5 point series from ECMWF's OGC API EDR service -------------------------------------------
+
+# ECMWF's OGC API EDR server (pygeoapi). It also serves Destination Earth Digital Twin and
+# operational collections: this script only ever requests the ERA5 collection below.
+EDR_URL = "https://polytope-edr.lumi.apps.dte.destination-earth.eu"
+EDR_COLLECTION = "era5-single-levels"
+EDR_NAME = "ECMWF's OGC API EDR service"
+ERA5_DATASET = "reanalysis-era5-single-levels"  # the data the EDR serves; cite its DOI
+ERA5_DOI = "10.24381/cds.adbb2d47"
+TIMESERIES = "reanalysis-era5-single-levels-timeseries"  # the CDS route
+# The collection document is ~20 KB and answers in well under a second; a slower answer means
+# the service is struggling and the CDS route is the better use of the user's time.
+EDR_META_TIMEOUT_S = 15
+# The largest request (EDR_MAX_VALUES values, ~21 MB) answered in 4-8 s; allow a slow server.
+EDR_DATA_TIMEOUT_S = 120
+# Values (hours x variables) per request: 30 years of one hourly variable (262,992 values,
+# 21 MB) came back in one request in 4.4 s. Longer requests are split at year boundaries.
+EDR_MAX_VALUES = 263_000
+# A gridpoint further than one 0.25° grid step from the requested point is a wrong answer.
+GRID_STEP_DEG = 0.25
+HOUR = timedelta(hours=1)
+# CDS variable -> ERA5 short name: the EDR parameter and the column of the CDS CSV.
+ERA5_SHORT = {
+    "100m_u_component_of_wind": "u100",
+    "100m_v_component_of_wind": "v100",
+    "10m_u_component_of_wind": "u10",
+    "10m_v_component_of_wind": "v10",
+    "10m_wind_gust_since_previous_post_processing": "fg10",
+    "2m_dewpoint_temperature": "d2m",
+    "2m_temperature": "t2m",
+    "boundary_layer_height": "blh",
+    "cloud_base_height": "cbh",
+    "mean_sea_level_pressure": "msl",
+    "sea_surface_temperature": "sst",
+    "skin_temperature": "skt",
+    "surface_latent_heat_flux": "slhf",
+    "surface_pressure": "sp",
+    "surface_sensible_heat_flux": "sshf",
+    "surface_solar_radiation_downwards": "ssrd",
+    "surface_thermal_radiation_downwards": "strd",
+    "total_cloud_cover": "tcc",
+    "total_precipitation": "tp",
+    "total_sky_direct_solar_radiation_at_surface": "fdir",
+}
+
+
+class EdrError(Exception):
+    """The EDR could not serve the request: an HTTP error, no answer, or a malformed answer."""
+
+    def __init__(self, message: str, status: int | None = None, network: bool = False):
+        super().__init__(message)
+        self.status, self.network = status, network
+
+
+class RouteError(ValueError):
+    """--route edr asks for something the EDR does not serve."""
+
+
+class _HttpsOnlyRedirects(urllib.request.HTTPRedirectHandler):
+    """Links from servers are followed over https only."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not newurl.startswith("https://"):
+            raise urllib.error.URLError(f"refusing redirect to non-https URL {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _edr_get(url: str, timeout: float) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.build_opener(_HttpsOnlyRedirects).open(req, timeout=timeout) as r:
+        return r.read()
+
+
+def _edr_json(fetch, url: str, timeout: float) -> dict:
+    """The JSON document at url; every failure becomes an EdrError."""
+    try:
+        raw = fetch(url, timeout)
+    except urllib.error.HTTPError as e:
+        raise EdrError(f"the EDR answered HTTP {e.code}", status=e.code) from None
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as e:
+        why = getattr(e, "reason", None) or e
+        raise EdrError(f"the EDR could not be reached ({why})", network=True) from None
+    try:
+        doc = json.loads(raw)
+    except ValueError:
+        raise EdrError("the EDR answered with something that is not JSON") from None
+    if not isinstance(doc, dict):
+        raise EdrError("the EDR answered with unexpected JSON")
+    return doc
+
+
+def _utc(iso: str) -> datetime:
+    return datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+
+def _day(date: str) -> datetime:
+    return datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+
+
+def _iso(t: datetime) -> str:
+    return t.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def edr_collection(fetch=None) -> dict:
+    """First and last time and parameters (short name -> unit) of the EDR's ERA5 collection."""
+    doc = _edr_json(
+        fetch or _edr_get, f"{EDR_URL}/collections/{EDR_COLLECTION}?f=json", EDR_META_TIMEOUT_S
+    )
+    try:
+        first, last = doc["extent"]["temporal"]["interval"][0][:2]
+        units = {k: str(v["unit"]["label"]) for k, v in doc["parameter_names"].items()}
+        return {"start": _utc(first), "end": _utc(last), "parameters": units}
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError):
+        raise EdrError("the EDR collection document has an unexpected layout") from None
+
+
+def edr_columns(variables: list[str]) -> tuple[list[str], list[str]]:
+    """(CSV columns, variables the EDR lacks). The CDS writes its columns sorted by CDS
+    variable name, whatever the request order; the EDR route writes them the same way."""
+    names = list(dict.fromkeys(variables))
+    columns = [ERA5_SHORT[v] for v in sorted(names) if v in ERA5_SHORT]
+    return columns, [v for v in names if v not in ERA5_SHORT]
+
+
+def edr_chunks(
+    start: str, end: str, nvars: int, max_values: int = EDR_MAX_VALUES
+) -> list[tuple[datetime, datetime]]:
+    """(first hour, last hour) of each request: the whole period when it fits in max_values,
+    otherwise as many whole calendar years per request as fit (at least one)."""
+    t0, t1 = _day(start), _day(end) + timedelta(hours=23)
+    chunks, first, year = [], t0, t0
+    while True:
+        year_end = min(datetime(year.year, 12, 31, 23, tzinfo=timezone.utc), t1)
+        if year != first and ((year_end - first) // HOUR + 1) * nvars > max_values:
+            chunks.append((first, year - HOUR))
+            first = year
+        if year_end == t1:
+            return [*chunks, (first, t1)]
+        year = datetime(year.year + 1, 1, 1, tzinfo=timezone.utc)
+
+
+def edr_url(lat: float, lon: float, params: list[str], t0: datetime, t1: datetime) -> str:
+    """Position query: the hourly series at the gridpoint nearest (lat, lon), t0 to t1."""
+    query = {
+        "f": "CoverageJSON",
+        "coords": f"POINT({lon!r} {lat!r})",
+        "parameter-name": ",".join(params),
+        "datetime": f"{_iso(t0)}/{_iso(t1)}",
+    }
+    path = f"{EDR_URL}/collections/{EDR_COLLECTION}/position?"
+    return path + urlencode(query, safe="(),:/", quote_via=quote)
+
+
+def _static_problem(variables: list[str], fmt: str) -> str | None:
+    missing = edr_columns(variables)[1]
+    if missing:
+        return f"the EDR has no {', '.join(missing)}"
+    if fmt != "csv":
+        return "the EDR route writes CSV only; NetCDF comes from the CDS"
+    return None
+
+
+def choose_route(
+    route: str, variables: list[str], fmt: str, start: str, end: str, collection
+) -> tuple[str, str]:
+    """('edr' | 'cds', why). auto takes the EDR when it serves every variable for the whole
+    period and answered (`collection` is its document, or the EdrError it raised); otherwise
+    the CDS. --route edr raises RouteError where auto would take the CDS."""
+    if route == "cds":
+        return "cds", "requested with --route cds"
+    problem = _static_problem(variables, fmt)
+    if problem is None and not isinstance(collection, dict):
+        problem = str(collection or "the EDR collection was not read")
+    if problem is None:
+        first, last = collection["start"], collection["end"]
+        gone = [c for c in edr_columns(variables)[0] if c not in collection["parameters"]]
+        if _day(start) < first:
+            problem = f"the period starts before the EDR's first time {first:%Y-%m-%dT%H:%MZ}"
+        elif _day(end) + timedelta(hours=23) > last:
+            problem = f"the period ends after the EDR's last time {last:%Y-%m-%dT%H:%MZ}"
+        elif gone:
+            problem = f"the EDR collection does not list {', '.join(gone)}"
+        else:
+            return "edr", (
+                f"the EDR serves every variable and the period ends by its last time "
+                f"{last:%Y-%m-%dT%H:%MZ}"
+            )
+    if route == "edr":
+        raise RouteError(f"{problem} — use --route auto (or cds)")
+    return "cds", problem
+
+
+def _hourly_times(t0: datetime, t1: datetime) -> list[str]:
+    """Every hour from t0 to t1 as the EDR writes it (2003-08-14T00:00:00Z)."""
+    out, day = [], t0.replace(hour=0)
+    while day <= t1:
+        d = day.strftime("%Y-%m-%d")
+        out += [f"{d}T{h:02d}:00:00Z" for h in range(24)]
+        day += timedelta(days=1)
+    return out[t0.hour : len(out) - (23 - t1.hour)]
+
+
+def parse_coverage(doc: dict, params: list[str], t0: datetime, t1: datetime) -> dict:
+    """An EDR PointSeries checked to hold every parameter for every hour t0..t1:
+    {"x", "y", "times", "values": {param: [float | None]}, "units": {param: unit}}."""
+    try:
+        if doc.get("type") != "Coverage" or doc.get("domainType") != "PointSeries":
+            raise EdrError("the EDR did not answer with a point series")
+        axes = doc["domain"]["axes"]
+        x, y = float(axes["x"]["values"][0]), float(axes["y"]["values"][0])
+        times = axes["t"]["values"]
+        values, units = {}, {}
+        for p in params:
+            vals = doc["ranges"][p]["values"]
+            if len(vals) != len(times):
+                raise EdrError(f"the EDR answered {len(vals)} {p} values for {len(times)} times")
+            if any(
+                v is not None and (type(v) not in (int, float) or abs(v) > F32_MAX) for v in vals
+            ):
+                raise EdrError(f"the EDR answered {p} values that are not float32 numbers")
+            values[p] = vals
+            units[p] = str(doc.get("parameters", {}).get(p, {}).get("unit", {}).get("symbol", ""))
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError):
+        raise EdrError("the EDR answer has an unexpected layout") from None
+    if times != _hourly_times(t0, t1):
+        raise EdrError(
+            f"the EDR answered {len(times)} of the {(t1 - t0) // HOUR + 1} hours "
+            f"{_iso(t0)}..{_iso(t1)}"
+        )
+    return {"x": x, "y": y, "times": times, "values": values, "units": units}
+
+
+def _gridpoint(cov: dict, lat: float, lon: float) -> dict:
+    """The answer's gridpoint, longitude in -180..180 like the CDS CSV."""
+    y, x = cov["y"], (cov["x"] + 180.0) % 360.0 - 180.0
+    if abs(y - lat) > GRID_STEP_DEG or abs((x - lon + 180.0) % 360.0 - 180.0) > GRID_STEP_DEG:
+        raise EdrError(f"the EDR answered for gridpoint {y}, {x}, not near {lat}, {lon}")
+    return {"lat": y, "lon": x}
+
+
+_F32 = struct.Struct("<f")
+_U32 = struct.Struct("<I")
+F32_MAX = 3.4028234663852886e38  # ERA5 values are float32
+
+
+def _f32(v: float) -> float:
+    return _F32.unpack(_F32.pack(v))[0]
+
+
+def _f32_digits(a: float, p: int, pow2: bool) -> str | None:
+    """The p-significant-digit decimal (as '%e' text) that reads back as float32 a, or None."""
+    s = f"{a:.{p - 1}e}"
+    if _f32(float(s)) == a:
+        return s
+    if pow2:  # below a power of two the float32 spacing halves: the next decimal up may fit
+        mant, exp = s.split("e")
+        up = f"{int(mant.replace('.', '')) + 1}e{int(exp) - p + 1}"
+        if _f32(float(up)) == a:
+            return up
+    return None
+
+
+def f32_str(v: float) -> str:
+    """str() of the numpy float32 nearest to v — how the CDS writes values into its CSV: the
+    shortest digits that read back as the same float32, positional for 1e-4 <= |x| < 1e6,
+    otherwise d.ddde±XX."""
+    # Cached by bit pattern: as dictionary keys 0.0 and -0.0 are the same, as text they differ.
+    return _f32_text(_U32.unpack(_F32.pack(v))[0])
+
+
+@functools.lru_cache(maxsize=65536)
+def _f32_text(bits: int) -> str:
+    x = _F32.unpack(_U32.pack(bits))[0]
+    if x != x:
+        return "nan"
+    sign, a = ("-" if math.copysign(1.0, x) < 0 else ""), abs(x)
+    if a in (0.0, math.inf):
+        return sign + ("0.0" if a == 0.0 else "inf")
+    pow2 = bits & 0x7FFFFF == 0
+    # Most ERA5 values need 7 or 8 digits: start at 7, then go up or down. 9 digits always
+    # identify a float32; fewer digits never fit once a length fails.
+    p, best = 7, _f32_digits(a, 7, pow2)
+    if best is None:
+        best = _f32_digits(a, 8, pow2) or _f32_digits(a, 9, pow2)
+    else:
+        while p > 1:
+            shorter = _f32_digits(a, p - 1, pow2)
+            if shorter is None:
+                break
+            p, best = p - 1, shorter
+    mant, e = best.split("e")
+    if "." in mant:
+        digits, exp = mant.replace(".", "").rstrip("0"), int(e)
+    else:  # integer digits from the power-of-two candidate; e is the last digit's exponent
+        digits, exp = mant.rstrip("0"), int(e) + len(mant) - 1
+    if 1e-4 <= a < 1e6:
+        if exp >= 0:
+            whole, frac = digits[: exp + 1].ljust(exp + 1, "0"), digits[exp + 1 :] or "0"
+        else:
+            whole, frac = "0", "0" * (-exp - 1) + digits
+        return f"{sign}{whole}.{frac}"
+    mant = digits[0] + ("." + digits[1:] if len(digits) > 1 else "")
+    return f"{sign}{mant}e{'+' if exp >= 0 else '-'}{abs(exp):02d}"
+
+
+def _csv_lines(cov: dict, columns: list[str], gridpoint: dict):
+    """Rows as the CDS writes them: 2003-08-14 00:00:00,<values>,<lat>,<lon>; missing empty."""
+    where = f"{gridpoint['lat']!r},{gridpoint['lon']!r}\n"
+    series = [cov["values"][c] for c in columns]
+    for i, t in enumerate(cov["times"]):
+        cells = ("" if s[i] is None or s[i] != s[i] else f32_str(s[i]) for s in series)
+        yield f"{t[:10]} {t[11:19]},{','.join(cells)},{where}"
+
+
+def fetch_edr(
+    lat: float, lon: float, variables: list[str], start: str, end: str, output, fetch=None, log=None
+) -> dict:
+    """Download ERA5 hourly values at the gridpoint nearest (lat, lon) from the EDR and write
+    them as the CDS timeseries route writes its CSV. Raises EdrError; never leaves a partial
+    file behind."""
+    fetch = fetch or _edr_get
+    columns = edr_columns(variables)[0]
+    chunks = edr_chunks(start, end, len(columns))
+    output = Path(output)
+    part = output.with_name(output.name + ".part")
+    began, gridpoint, units, rows, done = time.monotonic(), None, {}, 0, False
+    try:
+        with open(part, "w", newline="", encoding="utf-8") as f:
+            f.write(",".join(["valid_time", *columns, "latitude", "longitude"]) + "\n")
+            for n, (t0, t1) in enumerate(chunks, 1):
+                t = time.monotonic()
+                doc = _edr_json(fetch, edr_url(lat, lon, columns, t0, t1), EDR_DATA_TIMEOUT_S)
+                cov = parse_coverage(doc, columns, t0, t1)
+                gp = _gridpoint(cov, lat, lon)
+                if gridpoint not in (None, gp):
+                    raise EdrError("the EDR answered for different gridpoints across requests")
+                gridpoint, units = gp, units or cov["units"]
+                f.writelines(_csv_lines(cov, columns, gp))
+                rows += len(cov["times"])
+                if log and len(chunks) > 1:
+                    log(
+                        f"EDR request {n}/{len(chunks)} ({t0:%Y-%m-%d}..{t1:%Y-%m-%d}): "
+                        f"{time.monotonic() - t:.1f} s"
+                    )
+        os.replace(part, output)
+        done = True
+    finally:
+        if not done:
+            part.unlink(missing_ok=True)
+    return {
+        "rows": rows,
+        "requests": len(chunks),
+        "gridpoint": gridpoint,
+        "units": units,
+        "variables": columns,
+        "seconds": round(time.monotonic() - began, 1),
+    }
+
+
+def edr_barrier(e: EdrError) -> dict:
+    """BLOCKED report for --route edr when the EDR refuses or breaks (not unreachable)."""
+    return {
+        "blocked": f"the ERA5 route through {EDR_NAME} failed: {e}",
+        "why": "the EDR is a fast, keyless route to ERA5 whose access terms are under review by "
+        "its owners, so it may change or close; the same ERA5 data is on the CDS.",
+        "user_steps": [
+            "1. Nothing to set up for the EDR. Use the CDS route: re-run without --route (auto "
+            "falls back to the CDS by itself) or with --route cds.",
+            "2. The CDS route needs a free CDS key and the ERA5 licence ('CC-BY licence') "
+            "accepted once — python3 cds.py setup prints the steps.",
+            "3. If the EDR keeps refusing, ask https://support.ecmwf.int whether it moved.",
+        ],
+        "agent": "Re-run the same command with --route auto (or --route cds); don't retry "
+        "--route edr until the user asks.",
+    }
+
+
+def edr_blocked(e: EdrError, as_json: bool) -> int:
+    """--route edr failed: unreachable or a server error (exit 2), refused (4), broken (2)."""
+    if e.network or (e.status is not None and (e.status >= 500 or e.status == 429)):
+        import ecmwf_status  # sibling script
+
+        return blocked(ecmwf_status.network_barrier("era5-edr", str(e)), as_json, code=2)
+    return blocked(edr_barrier(e), as_json, code=4 if e.status in (401, 403) else 2)
+
+
+def csv_gridpoint(path) -> dict | None:
+    """The gridpoint the CDS chose: latitude and longitude of its CSV's first row."""
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            rows = csv.reader(f)
+            head, first = next(rows), next(rows)
+        return {
+            "lat": float(first[head.index("latitude")]),
+            "lon": float(first[head.index("longitude")]),
+        }
+    except (OSError, StopIteration, ValueError, IndexError):
+        return None
+
+
 # --- retrieve (earthkit) --------------------------------------------------------------------------
 
 
@@ -714,6 +1123,188 @@ def _validate_and_cost(store, dataset, request) -> dict:
     return res
 
 
+def validation_text(dataset: str, req: dict, res: dict, with_attribution: bool = True) -> str:
+    return "\n".join(
+        [
+            f"dataset: {dataset}",
+            "request: " + json.dumps(req),
+            "valid" if res["valid"] else "INVALID:\n  " + "\n  ".join(res["errors"]),
+            f"cost: {res.get('cost')}",
+            licence_line(res["licences"]),
+            *[f"WARNING: {w}" for w in res.get("warnings", [])],
+            *([f"attribution: {res['attribution']}"] if with_attribution else []),
+        ]
+    )
+
+
+def report_validation(store, dataset, req, res, as_json: bool, head=()) -> int:
+    """Print a validation result, and the licence report when a licence is missing."""
+    _print(res, as_json, "\n".join([*head, validation_text(dataset, req, res)]))
+    lb = licence_barrier(store, dataset, res)
+    if lb:  # the request is fine but the account can't download it yet
+        blocked(lb)
+    return 0 if res["valid"] else 2
+
+
+# --- era5-point: the EDR route or the CDS route ---------------------------------------------------
+
+
+def _point_errors(a, variables: list[str]) -> list[str]:
+    errs = []
+    try:
+        if _day(a.start) > _day(a.end):
+            errs.append(f"--start {a.start} is after --end {a.end}")
+    except ValueError:
+        errs.append(f"--start and --end must be dates like 2003-08-01 (got {a.start}, {a.end})")
+    if not -90 <= a.lat <= 90:
+        errs.append(f"location latitude {a.lat} must be within -90..90")
+    if not -180 <= a.lon <= 180:
+        errs.append(f"location longitude {a.lon} must be within -180..180")
+    if not variables:
+        errs.append("--variable names no variable")
+    return errs
+
+
+def era5_point(a) -> int:
+    """ERA5 hourly series at a point: the EDR when it serves the request (seconds, no key),
+    otherwise the CDS timeseries dataset (queued, key). --route picks one explicitly."""
+    variables = [v.strip() for v in a.variable.split(",") if v.strip()]
+    errs = _point_errors(a, variables)
+    if errs:
+        print("error: " + "; ".join(errs), file=sys.stderr)
+        return 2
+    collection = None
+    if a.route != "cds" and _static_problem(variables, a.format) is None:
+        try:
+            collection = edr_collection()
+        except EdrError as e:
+            if a.route == "edr":
+                return edr_blocked(e, a.json)
+            collection = e
+    try:
+        route, why = choose_route(a.route, variables, a.format, a.start, a.end, collection)
+    except RouteError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    if route == "cds":
+        if a.route == "auto":
+            print(f"note: using the CDS route — {why}", file=sys.stderr)
+        return era5_point_cds(a, variables, why)
+    if a.dry_run:
+        return era5_point_plan(a, variables, collection, why)
+    out = Path(a.output or f"{TIMESERIES}.csv")
+    try:
+        r = fetch_edr(
+            a.lat, a.lon, variables, a.start, a.end, out, log=lambda m: print(m, file=sys.stderr)
+        )
+    except EdrError as e:
+        if a.route == "edr":
+            return edr_blocked(e, a.json)
+        why = f"{e} — the CDS route serves the same ERA5 data"
+        print(f"note: falling back to the CDS route — {why}", file=sys.stderr)
+        return era5_point_cds(a, variables, why)
+    gp = r["gridpoint"]
+    res = {
+        "route": "edr",
+        "route_reason": why,
+        "service": f"{EDR_URL}/collections/{EDR_COLLECTION}",
+        "dataset": ERA5_DATASET,
+        "location": {"lat": a.lat, "lon": a.lon},
+        "gridpoint": gp,
+        "variables": r["variables"],
+        "units": r["units"],
+        "rows": r["rows"],
+        "requests": r["requests"],
+        "seconds": r["seconds"],
+        "output": [str(out)],
+        "attribution": attribution("cds"),
+        "licence": "CC-BY-4.0",
+        "doi": ERA5_DOI,
+    }
+    text = [
+        f"saved {out} — {r['rows']} hourly rows of {', '.join(r['variables'])}",
+        f"route: edr — {EDR_NAME}, no CDS key needed ({r['requests']} request(s), "
+        f"{r['seconds']} s); {why}",
+        f"gridpoint: {gp['lat']}, {gp['lon']} (nearest ERA5 gridpoint to {a.lat}, {a.lon})",
+        f"attribution: {res['attribution']}",
+        f"DOI: {ERA5_DOI} (ERA5 hourly data on single levels)",
+    ]
+    _print(res, a.json, "\n".join(text))
+    return 0
+
+
+def era5_point_plan(a, variables: list[str], collection: dict, why: str) -> int:
+    """--dry-run on the EDR route: the requests it would send (and, for auto, the validated CDS
+    request it would fall back to). Reads no data."""
+    columns = edr_columns(variables)[0]
+    chunks = edr_chunks(a.start, a.end, len(columns))
+    plan = {
+        "service": f"{EDR_URL}/collections/{EDR_COLLECTION}",
+        "first_time": _iso(collection["start"]),
+        "last_time": _iso(collection["end"]),
+        "parameters": columns,
+        "requests": [
+            {"start": _iso(t0), "end": _iso(t1), "url": edr_url(a.lat, a.lon, columns, t0, t1)}
+            for t0, t1 in chunks
+        ],
+        "attribution": attribution("cds"),
+        "licence": "CC-BY-4.0",
+        "doi": ERA5_DOI,
+    }
+    res = {"route": "edr", "route_reason": why, "edr": plan}
+    shown = 5  # the JSON lists every request
+    text = [
+        f"route: edr — {why}",
+        f"plan: {len(chunks)} request(s) to {EDR_NAME}, no key needed (ERA5 to "
+        f"{plan['last_time']}):",
+        *[f"  {q['url']}" for q in plan["requests"][:shown]],
+        *([f"  … {len(chunks) - shown} more (--json lists them)"] if len(chunks) > shown else []),
+        f"attribution: {plan['attribution']}",
+        f"DOI (EDR route): {ERA5_DOI} (ERA5 hourly data on single levels)",
+    ]
+    if a.route == "auto":  # what the automatic CDS fallback would request
+        req = era5_point_request(a.lat, a.lon, a.start, a.end, variables, a.format)
+        try:
+            res["cds"] = _validate_and_cost(a.store, TIMESERIES, req)
+            text += [
+                "CDS fallback (used by itself if the EDR fails; needs a CDS key):",
+                validation_text(TIMESERIES, req, res["cds"], with_attribution=False),
+                f"DOI (CDS route): {res['cds']['doi']}",
+            ]
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            res["cds"] = {"error": f"the CDS fallback could not be validated ({e})"}
+            text.append(f"CDS fallback: {res['cds']['error']}")
+    _print(res, a.json, "\n".join(text))
+    return 0
+
+
+def era5_point_cds(a, variables: list[str], why: str) -> int:
+    """The CDS route: reanalysis-era5-single-levels-timeseries (queued; a key and earthkit)."""
+    req = era5_point_request(a.lat, a.lon, a.start, a.end, variables, a.format)
+    head = [f"route: cds — {why}"]
+    if not a.dry_run and not credentials(a.store):
+        return blocked(key_barrier(a.store), a.json)
+    res = {"route": "cds", "route_reason": why, **_validate_and_cost(a.store, TIMESERIES, req)}
+    if a.dry_run or not res["valid"]:
+        return report_validation(a.store, TIMESERIES, req, res, a.json, head)
+    lb = licence_barrier(a.store, TIMESERIES, res)
+    if lb:
+        return blocked(lb, a.json)
+    out = a.output or f"{TIMESERIES}.{'csv' if a.format == 'csv' else 'nc'}"
+    files = retrieve(a.store, TIMESERIES, req, out)
+    res["output"] = [str(f) for f in files]
+    gp = csv_gridpoint(files[0]) if a.format == "csv" else None
+    text = [f"saved {', '.join(res['output'])}", *head]
+    if gp:
+        res["gridpoint"] = gp
+        text.append(
+            f"gridpoint: {gp['lat']}, {gp['lon']} (nearest ERA5 gridpoint to {a.lat}, {a.lon})"
+        )
+    text += [f"attribution: {res['attribution']}", f"DOI: {res['doi']}"]
+    _print(res, a.json, "\n".join(text))
+    return 0
+
+
 def check(as_json: bool, env=None, home: Path | None = None, fetch=_get_status) -> int:
     """Which keys exist (names only) and whether each store accepts its key. Exit 0 a key
     works, 4 none / malformed / rejected, 2 the store could not be reached."""
@@ -787,19 +1378,31 @@ def main(argv=None) -> int:
             sp.add_argument("-o", "--output", required=True)
     sp = add(
         "era5-point",
-        help="ERA5 hourly time series at a point (reanalysis-era5-single-levels-timeseries)",
+        help="ERA5 hourly time series at a point: ECMWF's EDR service (seconds, no key) or "
+        f"the CDS ({TIMESERIES})",
     )
     sp.add_argument("--lat", type=float, required=True)
     sp.add_argument("--lon", type=float, required=True)
     sp.add_argument("--start", required=True, help="YYYY-MM-DD (from 1940-01-01)")
-    sp.add_argument("--end", required=True, help="YYYY-MM-DD (to ~5 days ago)")
+    sp.add_argument(
+        "--end", required=True, help="YYYY-MM-DD (the EDR ends ~10 days ago, the CDS ~5)"
+    )
     sp.add_argument(
         "--variable",
         default="2m_temperature",
         help="comma list, e.g. 2m_temperature,total_precipitation",
     )
     sp.add_argument("--format", default="csv", choices=["csv", "netcdf"])
-    sp.add_argument("--dry-run", action="store_true", help="validate and cost only")
+    sp.add_argument(
+        "--route",
+        choices=["auto", "edr", "cds"],
+        default="auto",
+        help="auto: the EDR when it serves every variable for the whole period, else the CDS "
+        "(also when the EDR fails); edr / cds: only that route",
+    )
+    sp.add_argument(
+        "--dry-run", action="store_true", help="the plan only: EDR URLs, CDS request validated"
+    )
     sp.add_argument("-o", "--output")
     a = ap.parse_args(argv)
 
@@ -851,34 +1454,16 @@ def main(argv=None) -> int:
             return 0
 
         if a.cmd == "era5-point":
-            req = era5_point_request(a.lat, a.lon, a.start, a.end, a.variable.split(","), a.format)
-            dataset = "reanalysis-era5-single-levels-timeseries"
-        else:
-            req = json.loads(Path(a.request).read_text())
-            dataset = a.dataset
+            return era5_point(a)
 
-        needs_key = a.cmd == "retrieve" or (a.cmd == "era5-point" and not a.dry_run)
-        if needs_key and not credentials(a.store):
+        req = json.loads(Path(a.request).read_text())
+        dataset = a.dataset
+        if a.cmd == "retrieve" and not credentials(a.store):
             return blocked(key_barrier(a.store), a.json)
 
         res = _validate_and_cost(a.store, dataset, req)
-        if a.cmd == "validate" or (a.cmd == "era5-point" and a.dry_run) or not res["valid"]:
-            text = "\n".join(
-                [
-                    f"dataset: {dataset}",
-                    "request: " + json.dumps(req),
-                    "valid" if res["valid"] else "INVALID:\n  " + "\n  ".join(res["errors"]),
-                    f"cost: {res.get('cost')}",
-                    licence_line(res["licences"]),
-                    *[f"WARNING: {w}" for w in res.get("warnings", [])],
-                    f"attribution: {res['attribution']}",
-                ]
-            )
-            _print(res, a.json, text)
-            lb = licence_barrier(a.store, dataset, res)
-            if lb:  # the request is fine but the account can't download it yet
-                blocked(lb)
-            return 0 if res["valid"] else 2
+        if a.cmd == "validate" or not res["valid"]:
+            return report_validation(a.store, dataset, req, res, a.json)
 
         lb = licence_barrier(a.store, dataset, res)
         if lb:
@@ -911,7 +1496,10 @@ def main(argv=None) -> int:
         return 2
     except Exception as e:  # earthkit/cdsapi errors: licence not accepted, queue failures
         msg = str(e)
-        b = barrier_for_error(a.store, getattr(a, "dataset", None) or "<dataset-id>", msg)
+        dataset = getattr(a, "dataset", None) or (
+            TIMESERIES if a.cmd == "era5-point" else "<dataset-id>"
+        )
+        b = barrier_for_error(a.store, dataset, msg)
         if b:
             return blocked(b, a.json)
         print(f"error: {msg}", file=sys.stderr)

@@ -424,12 +424,26 @@ def resolve_time(valid: str | None, time: str | None) -> str | None:
 
 
 ATTRIBUTION = "Map data: © {year} ECMWF, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
+# CAMS (Copernicus Atmosphere Monitoring Service) layers add the Copernicus licence's credit.
+CAMS_CREDIT = (
+    "Generated using Copernicus Atmosphere Monitoring Service information {year}. Neither the "
+    "European Commission nor ECMWF is responsible for any use that may be made of the Copernicus "
+    "information or data it contains."
+)
+CAMS_TITLE = re.compile(r"\bCAMS\b|Copernicus Atmosphere Monitoring Service")
 
 
-def attribution(layer: str) -> str:
-    a = ATTRIBUTION.format(year=datetime.now(timezone.utc).year)
-    if layer.startswith("composition_"):
-        a += ". Generated using Copernicus Atmosphere Monitoring Service information."
+def is_cams_layer(name: str, title: str = "") -> bool:
+    """CAMS products: every composition_* layer (layer-catalog.md), or a title naming CAMS."""
+    return name.startswith("composition_") or bool(CAMS_TITLE.search(title or ""))
+
+
+def attribution(layer: str = "", cams: bool = False) -> str:
+    """The credit for a map of `layer` (one name or a comma-separated list)."""
+    year = datetime.now(timezone.utc).year
+    a = ATTRIBUTION.format(year=year)
+    if cams or any(is_cams_layer(name.strip()) for name in layer.split(",")):
+        a += ". " + CAMS_CREDIT.format(year=year)
     return a
 
 
@@ -511,7 +525,9 @@ def main(argv=None) -> int:
     try:
         token = resolve_token(a.token)
         if a.cmd == "layers":
-            ls = [summarise(layer) for layer in filter_layers(_load_caps(a), a.search, a.public)]
+            found = filter_layers(_load_caps(a), a.search, a.public)
+            ls = [summarise(layer) for layer in found]
+            credit = attribution(cams=any(is_cams_layer(x["name"], x["title"]) for x in found))
             # Users need the endpoint to add these layers anywhere; never echo a personal key.
             shown = "public" if token == "public" else "<your ECMWF API key>"
             endpoint = f"{BASE}?token={shown}"
@@ -522,6 +538,7 @@ def main(argv=None) -> int:
                             "endpoint": endpoint,
                             "layers": ls,
                             "token": "public" if token == "public" else "key",
+                            "attribution": credit,
                         },
                         indent=2,
                     )
@@ -538,7 +555,7 @@ def main(argv=None) -> int:
                 print(f"\n{len(ls)} layer(s). WMS 1.3.0 endpoint: {endpoint}")
                 if token == "public":
                     print("No ECMWF account needed for these layers (token=public).")
-                print(f"Attribution: {attribution('')}")
+                print(f"Attribution: {credit}")
             return 0
 
         if a.cmd == "times":
