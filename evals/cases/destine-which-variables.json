@@ -1,0 +1,29 @@
+{
+  "id": "destine-which-variables",
+  "prompt": "Which variables exist as Destination Earth Climate DT monthly means for the SSP3-7.0 projection with IFS-FESOM?",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "note": "Only the DestinE catalogue knows which parameters exist for a selection; answering from memory lists instantaneous parameters (2t, tp) that monthly means do not have.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-destine"
+    },
+    {
+      "kind": "command",
+      "pattern": "destine\\.py\\s+options"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)time-mean|avg_"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)228004|avg_2t|2 ?m(etre)? temperature"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "destine\\.py\\s+retrieve"
+    }
+  ]
+}

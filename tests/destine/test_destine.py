@@ -12,11 +12,18 @@ SCRIPT = SKILLS / "ecmwf-destine" / "scripts" / "destine.py"
 
 
 def cli(*args, home):
+    # A dead proxy: the catalogue and every other host are unreachable, so these runs exercise
+    # the offline path and never go online.
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
         capture_output=True,
         text=True,
-        env={"HOME": str(home), "PATH": "/usr/bin:/bin"},
+        env={
+            "HOME": str(home),
+            "PATH": "/usr/bin:/bin",
+            "https_proxy": "http://127.0.0.1:9",
+            "HTTPS_PROXY": "http://127.0.0.1:9",
+        },
         timeout=60,
     )
 
@@ -93,7 +100,51 @@ def test_climate_template():
     r = dt.template("climate-dt", param="167", start="2014-01-01", end="2014-01-31")
     assert r["class"] == "d1" and r["dataset"] == "climate-dt" and r["generation"] == "2"
     assert r["date"] == "20140101/to/20140131" and r["stream"] == "clte"
+    assert r["time"] == "0000/to/2300/by/0100"
+    # standard: the longer availability; high resolution is kept for a limited time
+    assert r["resolution"] == "standard"
     assert dt.address_for(r).startswith("polytope.lumi")
+    assert dt.template("climate-dt", resolution="high")["resolution"] == "high"
+
+
+def test_monthly_template_uses_clmn_with_year_and_month():
+    r = dt.template("climate-dt", frequency="monthly", year="2040", month="7")
+    assert r["stream"] == "clmn" and r["year"] == "2040" and r["month"] == "7"
+    assert "date" not in r and "time" not in r
+    r = dt.template("climate-dt", frequency="monthly", start="2040-06-01", end="2040-08-31")
+    assert (r["year"], r["month"]) == ("2040", "6/7/8")
+    r = dt.template("climate-dt", frequency="monthly", start="2040-01-01", end="2041-12-31")
+    assert (r["year"], r["month"]) == ("2040/2041", "1/2/3/4/5/6/7/8/9/10/11/12")
+    r = dt.template("climate-dt", frequency="monthly", year="2040/to/2042", month="jul")
+    assert (r["year"], r["month"]) == ("2040/2041/2042", "7")
+
+
+@pytest.mark.parametrize("dataset", ["climate-dt", "extremes-dt"])
+def test_dates_must_be_iso_days(dataset):
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        dt.template(dataset, start="2014/01/01")
+    assert dt.template(dataset, start="2014-01-05")["date"].startswith("20140105")
+
+
+def test_monthly_range_across_a_year_boundary_asks_for_year_and_month():
+    # year x month is a product: Dec 2040 - Feb 2041 would also select Jan 2040 and Dec 2041.
+    with pytest.raises(ValueError, match="--year"):
+        dt.template("climate-dt", frequency="monthly", start="2040-12-01", end="2041-02-28")
+
+
+@pytest.mark.parametrize(
+    "experiment, activity",
+    [
+        ("hist", "baseline"),
+        ("cont", "baseline"),
+        ("ssp3-7.0", "projections"),
+        ("SSP3-7.0", "projections"),
+        ("tplus2.0k", "story-nudging"),
+    ],
+)
+def test_activity_follows_the_experiment(experiment, activity):
+    assert dt.template("climate-dt", experiment=experiment)["activity"] == activity
+    assert dt.template("climate-dt", experiment=experiment, activity="x")["activity"] == "x"
 
 
 def test_extremes_template_and_point_feature():
@@ -110,10 +161,36 @@ def test_lint_catches_common_mistakes():
     assert "class=d1" in errs and "format" in errs and "model" in errs
 
 
-def test_attribution_is_the_ec_text():
+def test_lint_checks_each_stream_has_its_time_axes():
+    monthly = dt.template("climate-dt", frequency="monthly", year="2040", month="7")
+    assert dt.lint(monthly) == []
+    errs = "\n".join(dt.lint({**monthly, "date": "20400701"}))
+    assert "clmn" in errs and "date" in errs
+    hourly = dt.template("climate-dt")
+    assert "year" in "\n".join(dt.lint({**hourly, "year": "2040"}))
+    assert "resolution" in "\n".join(dt.lint({**hourly, "resolution": "low"}))
+
+
+def test_monthly_point_series_is_refused():
+    r = dt.template("climate-dt", frequency="monthly", year="2040", month="7", lat=38.7, lon=-9.1)
+    assert "--lat/--lon" in "\n".join(dt.lint(r))
+
+
+# The terms for users granted upgraded access (v2.1, section 3.4) prescribe this wording.
+TC_ATTRIBUTION = (
+    "This service/application/tool/data is created [based on data of the European Union] "
+    "and/or [using Destination Earth Platform] (but has been modified by [User's name])."
+)
+
+
+def test_attribution_is_the_upgraded_access_wording():
     a = dt.attribution("climate-dt")
-    assert "European Commission" in a["text"] and "Destination Earth" in a["text"]
-    assert "10.21957/79c6af3105" in a["citation"] and "redistribut" in a["note"]
+    assert a["text"] == TC_ATTRIBUTION and "European Commission" not in a["text"]
+    for term in ("official use", "written consent", "reverse engineered", "third part"):
+        assert term in a["note"], term
+    assert "modified by" in a["how"] and "aggregation" in a["how"]
+    assert "10.21957/79c6af3105" in a["citation"]
+    assert dt.attribution("extremes-dt")["citation"] == ""
 
 
 def test_cli_request_prints_address_and_request(tmp_path):
@@ -135,6 +212,29 @@ def test_cli_request_prints_address_and_request(tmp_path):
     d = json.loads(out.stdout)
     assert d["address"] == "polytope.mn5.apps.dte.destination-earth.eu"
     assert d["request"]["model"] == "ifs-nemo" and d["errors"] == []
+    # no catalogue here: the request is linted offline and says it was not validated
+    assert d["validated"] is False and "NOT validated" in out.stderr
+    assert "Traceback" not in out.stderr
+
+
+def test_cli_request_text_offline_keeps_the_attribution(tmp_path):
+    out = cli("request", "extremes-dt", home=tmp_path)
+    assert out.returncode == 0, out.stderr
+    assert "NOT validated" in out.stderr and '"date": "-1"' in out.stdout
+    assert "based on data of the European Union" in out.stdout
+
+
+def test_cli_request_template_errors_are_reported(tmp_path):
+    args = ["request", "climate-dt", "--frequency", "monthly", "--start", "2040-12-01"]
+    out = cli(*args, "--end", "2041-02-28", "--json", home=tmp_path)
+    assert out.returncode == 2 and "Traceback" not in out.stderr
+    assert "--year" in json.loads(out.stdout)["errors"][0]["message"]
+
+
+def test_cli_options_offline_is_blocked(tmp_path):
+    out = cli("options", "climate-dt", "--axis", "param", home=tmp_path)
+    assert out.returncode == 2 and "BLOCKED: cannot reach" in out.stderr
+    assert "Traceback" not in out.stderr
 
 
 def test_barriers_destine():
@@ -327,3 +427,92 @@ def test_retrieve_sends_the_normalised_grid(monkeypatch, tmp_path):
     monkeypatch.setattr(dt, "read_token", lambda: FAKE)
     dt.retrieve({**dt.template("climate-dt"), "grid": [0.1, 0.1]}, str(tmp_path / "o"))
     assert sent["grid"] == "0.1/0.1"
+
+
+# --- retrieve: the `request --json` document, routed to the catalogue's server ----------------
+
+
+def _polytope(monkeypatch):
+    """A stand-in polytope-client that records which server gets which request."""
+    import types
+
+    calls = []
+
+    class Client:
+        def __init__(self, address, user_key, quiet):
+            calls.append(("client", address))
+
+        def retrieve(self, collection, req, output):
+            calls.append(("retrieve", collection, req, output))
+
+    api = types.ModuleType("polytope.api")
+    api.Client = Client
+    pkg = types.ModuleType("polytope")
+    pkg.api = api
+    monkeypatch.setitem(sys.modules, "polytope", pkg)
+    monkeypatch.setitem(sys.modules, "polytope.api", api)
+    monkeypatch.setattr(dt, "read_token", lambda *a, **k: FAKE)
+    monkeypatch.setattr(dt, "token_source", lambda *a, **k: "~/.polytopeapirc-destine")
+    checked = []
+    monkeypatch.setattr(
+        dt, "preflight", lambda req, token, fetch=None, address=None: checked.append(address)
+    )
+    return calls, checked
+
+
+MONTHLY = dt.template("climate-dt", frequency="monthly", experiment="ssp3-7.0", year="2040")
+
+
+def _document(tmp_path, entries, errors=()):
+    doc = {
+        "validated": True,
+        "collection": dt.COLLECTION,
+        "request": entries[0]["request"],
+        "address": entries[0]["address"],
+        "requests": entries,
+        "errors": list(errors),
+    }
+    f = tmp_path / "req.json"
+    f.write_text(json.dumps(doc))
+    return f
+
+
+def test_retrieve_reads_the_request_document(monkeypatch, tmp_path, capsys):
+    calls, checked = _polytope(monkeypatch)
+    f = _document(tmp_path, [{"location": "mn5", "address": dt.MN5, "request": MONTHLY}])
+    assert dt.main(["retrieve", str(f), "-o", str(tmp_path / "out.grib")]) == 0
+    assert checked == [dt.MN5] and ("client", dt.MN5) in calls
+    assert calls[-1] == ("retrieve", dt.COLLECTION, MONTHLY, str(tmp_path / "out.grib"))
+    assert "European Union" in capsys.readouterr().out
+
+
+def test_retrieve_numbers_the_outputs_of_several_requests(monkeypatch, tmp_path, capsys):
+    calls, _ = _polytope(monkeypatch)
+    second = {**MONTHLY, "year": "2041"}
+    f = _document(
+        tmp_path,
+        [
+            {"location": "lumi", "address": dt.LUMI, "request": MONTHLY},
+            {"location": "mn5", "address": dt.MN5, "request": second},
+        ],
+    )
+    assert dt.main(["retrieve", str(f), "-o", str(tmp_path / "out.grib")]) == 0
+    got = [(c[2]["year"], c[3]) for c in calls if c[0] == "retrieve"]
+    assert got == [("2040", str(tmp_path / "out-1.grib")), ("2041", str(tmp_path / "out-2.grib"))]
+    assert [c[1] for c in calls if c[0] == "client"] == [dt.LUMI, dt.MN5]
+
+
+def test_retrieve_never_sends_the_token_outside_destine(monkeypatch, tmp_path, capsys):
+    calls, checked = _polytope(monkeypatch)
+    f = _document(tmp_path, [{"location": "x", "address": "evil.test", "request": MONTHLY}])
+    assert dt.main(["retrieve", str(f), "-o", str(tmp_path / "out.grib")]) == 2
+    assert calls == [] and checked == []
+    assert "evil.test" in capsys.readouterr().err
+
+
+def test_retrieve_refuses_a_request_with_errors(monkeypatch, tmp_path, capsys):
+    calls, _ = _polytope(monkeypatch)
+    entry = {"location": "lumi", "address": dt.LUMI, "request": MONTHLY}
+    f = _document(tmp_path, [entry], errors=[{"axis": "param", "message": "param 3 ..."}])
+    assert dt.main(["retrieve", str(f), "-o", str(tmp_path / "out.grib")]) == 2
+    assert calls == [] and "destine.py request" in capsys.readouterr().err

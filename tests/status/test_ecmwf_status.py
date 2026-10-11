@@ -51,8 +51,16 @@ def test_every_service_maps_to_a_status_source():
         "ads",
         "ecds",
         "destine",
+        "destine-catalogue",
     ):
         assert svc in st.SERVICES
+
+
+@pytest.mark.parametrize("svc", ["destine", "destine-catalogue"])
+def test_destine_services_point_at_the_platform_news(svc):
+    # DestinE publishes no status feed; maintenance is announced as platform news.
+    r = st.outage_report(svc, fetch=routes(), now=0)
+    assert st.DESTINE_NEWS in r["summary"]
 
 
 def test_all_ok():

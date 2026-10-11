@@ -1,0 +1,21 @@
+{
+ "selection": {
+  "class": [
+   "d1"
+  ],
+  "dataset": [
+   "climate-dt"
+  ],
+  "activity": [
+   "projections"
+  ]
+ },
+ "count": 1,
+ "requests": [
+  {
+   "activity": "projections",
+   "class": "d1",
+   "dataset": "climate-dt"
+  }
+ ]
+}

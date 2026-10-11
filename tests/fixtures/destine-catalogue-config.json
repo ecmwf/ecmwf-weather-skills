@@ -1,0 +1,544 @@
+{
+ "datasets": [
+  {
+   "id": "climate-dt",
+   "title": "Climate DT",
+   "base_filter": {
+    "class": [
+     "d1"
+    ],
+    "dataset": [
+     "climate-dt"
+    ],
+    "experiment": [
+     "cont",
+     "hist",
+     "ssp3-7.0"
+    ],
+    "generation": [
+     "2"
+    ],
+    "realization": [
+     "1"
+    ]
+   }
+  },
+  {
+   "id": "extremes-dt",
+   "title": "Extremes DT",
+   "base_filter": {
+    "class": [
+     "d1"
+    ],
+    "dataset": [
+     "extremes-dt"
+    ]
+   }
+  }
+ ],
+ "presentation": {
+  "datasets": {
+   "climate-dt": {
+    "order": [
+     "class",
+     "dataset",
+     "activity",
+     "experiment",
+     "generation",
+     "model",
+     "realization",
+     "expver",
+     "stream",
+     "date",
+     "time",
+     "resolution",
+     "type",
+     "levtype",
+     "levelist",
+     "param"
+    ]
+   },
+   "extremes-dt": {
+    "order": [
+     "class",
+     "dataset",
+     "expver",
+     "stream",
+     "date",
+     "time",
+     "param",
+     "levtype",
+     "levelist",
+     "step",
+     "type"
+    ]
+   }
+  }
+ },
+ "language": {
+  "class": {
+   "description": "Main category of dataset",
+   "category": "data",
+   "default": "od",
+   "flatten": false,
+   "type": "enum",
+   "values": {
+    "ai": {
+     "name": "Operational AIFS"
+    },
+    "d1": {
+     "name": "Destination Earth Digital Twins"
+    },
+    "od": {
+     "name": "Operational forecast data"
+    },
+    "rd": {
+     "name": "Research data"
+    }
+   }
+  },
+  "dataset": {
+   "description": "High-level dataset identifier",
+   "multiple": true,
+   "type": "enum",
+   "values": {
+    "climate-dt": {
+     "name": "Climate Digital Twin"
+    },
+    "extremes-dt": {
+     "name": "Extremes data"
+    },
+    "on-demand-extremes-dt": {
+     "name": "On-demand extremes data"
+    }
+   }
+  },
+  "activity": {
+   "description": "Identifier of the activity under which model runs are performed or observations are collected",
+   "category": "data",
+   "type": "enum",
+   "values": {
+    "cmip6": {
+     "name": "Coupled model intercomparison project phase 6"
+    },
+    "scenariomip": {
+     "name": "Scenario model intercomparison project"
+    },
+    "highresmip": {
+     "name": "High resolution model intercomparison project"
+    },
+    "story-nudging": {
+     "name": "Climate storylines by nudging to reanalysis"
+    },
+    "baseline": {
+     "name": "Baseline simulations for climate model evaluation"
+    },
+    "projections": {
+     "name": "Future climate projections"
+    }
+   }
+  },
+  "experiment": {
+   "description": "Identifier of the experiment",
+   "category": "data",
+   "type": "enum",
+   "values": {
+    "hist": {
+     "name": "Historical"
+    },
+    "cont": {
+     "name": "Control"
+    },
+    "amip": {
+     "name": "Atmospheric model intercomparison project"
+    },
+    "ssp1-1.9": {
+     "name": "Shared Socio-Economic Pathway 1-1.9 (very low GHG emissions)"
+    },
+    "ssp1-2.6": {
+     "name": "Shared Socio-Economic Pathway 1-2.6 (low GHG emissions)"
+    },
+    "ssp2-4.5": {
+     "name": "Shared Socio-Economic Pathway 2-4.5 (intermediate GHG emissions)"
+    },
+    "ssp3-7.0": {
+     "name": "Shared Socio-Economic Pathway 3-7.0 (high GHG emissions)"
+    },
+    "ssp5-8.5": {
+     "name": "Shared Socio-Economic Pathway 5-8.5 (very high GHG emissions)"
+    },
+    "tplus1.5k": {
+     "name": "Warmer world at 1.5 degrees k above pre-industrial temperatures"
+    },
+    "tplus2.0k": {
+     "name": "Warmer world at 2.0 degrees k above pre-industrial temperatures"
+    },
+    "tplus3.0k": {
+     "name": "Warmer world at 3.0 degrees k above pre-industrial temperatures"
+    },
+    "tplus4.0k": {
+     "name": "Warmer world at 4.0 degrees k above pre-industrial temperatures"
+    },
+    "abrupt4xco2": {
+     "name": "CO2 abruptly quadrupled and then held constant"
+    }
+   }
+  },
+  "generation": {
+   "category": "data",
+   "type": "enum",
+   "values": {
+    "1": null
+   }
+  },
+  "model": {
+   "type": "enum",
+   "description": "Identifier of the computer model",
+   "values": {
+    "ifs-fesom": {
+     "name": "Integrated forecast system + FESOM ocean model"
+    },
+    "ifs-nemo": {
+     "name": "Integrated forecast system + NEMO ocean model"
+    },
+    "icon": {
+     "name": "ICON weather model"
+    }
+   }
+  },
+  "realization": {
+   "category": "data",
+   "type": "integer",
+   "values": {
+    "1": null
+   }
+  },
+  "expver": {
+   "description": "Experiment number, 0001 is operational data",
+   "category": "data",
+   "default": "0001",
+   "flatten": false,
+   "type": "enum",
+   "values": {
+    "0001": {
+     "name": "Operational data"
+    },
+    "xxxx": {
+     "name": "Experimental data"
+    },
+    "xxxy": {
+     "name": "Experimental data"
+    }
+   }
+  },
+  "stream": {
+   "description": "Categorisation of data source, for example the forecast model or the ensemble model",
+   "category": "data",
+   "default": "oper",
+   "flatten": false,
+   "type": "enum",
+   "values": {
+    "clte": {
+     "name": "Climate run output",
+     "description": "Full-frequency climate-run output; daily/sub-daily in Climate DT.",
+     "alternative_names": [
+      "climate"
+     ]
+    },
+    "clmn": {
+     "name": "Climate run monthly means output",
+     "description": "Monthly-mean climate-run output.",
+     "alternative_names": [
+      "climate-monthly"
+     ]
+    },
+    "oper": {
+     "name": "Atmospheric model",
+     "description": "Atmospheric, non-wave operational model output.",
+     "alternative_names": [
+      "da",
+      "daily archive"
+     ]
+    },
+    "enfo": {
+     "name": "Ensemble prediction system",
+     "description": "Atmospheric ensemble forecast output.",
+     "alternative_names": [
+      "ef"
+     ]
+    },
+    "wave": {
+     "name": "Wave model",
+     "description": "Operational ocean-wave model output.",
+     "alternative_names": [
+      "wv"
+     ]
+    },
+    "waef": {
+     "name": "Wave ensemble forecast",
+     "description": "Ensemble ocean-wave forecast output.",
+     "alternative_names": [
+      "we"
+     ]
+    },
+    "lwda": {
+     "name": "Long window daily archive"
+    },
+    "lwwv": {
+     "name": "Long window wave"
+    }
+   }
+  },
+  "resolution": {
+   "category": "data",
+   "type": "enum",
+   "values": {
+    "standard": {
+     "name": "Standard resolution model output with longer availability"
+    },
+    "high": {
+     "name": "High resolution model output with limited availability"
+    }
+   }
+  },
+  "type": {
+   "description": "Dataset type distinguishing between different statics, diagnostics, or state analyses",
+   "category": "data",
+   "default": "an",
+   "flatten": false,
+   "type": "enum",
+   "multiple": true,
+   "values": {
+    "fc": {
+     "name": "Forecast"
+    },
+    "an": {
+     "name": "Analysis"
+    }
+   }
+  },
+  "levtype": {
+   "description": "Vertical level type. Can be pressure, height, depth, model levels, etc.",
+   "category": "data",
+   "default": "pl",
+   "flatten": false,
+   "type": "enum",
+   "values": {
+    "sfc": {
+     "name": "Surface of Earth"
+    },
+    "pl": {
+     "name": "Pressure levels (in hPa)"
+    },
+    "o2d": {
+     "name": "Ocean surface"
+    },
+    "o3d": {
+     "name": "Ocean model levels"
+    },
+    "hl": {
+     "name": "Height levels (in metres)"
+    },
+    "sol": {
+     "name": "3d multi-level model",
+     "alternative_names": [
+      "surface other (multi)levels"
+     ]
+    }
+   },
+   "never": [
+    {
+     "type": "ssd"
+    }
+   ]
+  },
+  "month": {
+   "description": "Simulated or observed month",
+   "category": "data",
+   "flatten": true,
+   "type": "enum",
+   "multiple": true,
+   "values": {
+    "1": {
+     "name": "January",
+     "alternative_names": [
+      "jan"
+     ]
+    },
+    "2": {
+     "name": "February",
+     "alternative_names": [
+      "feb"
+     ]
+    },
+    "3": {
+     "name": "March",
+     "alternative_names": [
+      "mar"
+     ]
+    },
+    "4": {
+     "name": "April",
+     "alternative_names": [
+      "apr"
+     ]
+    },
+    "5": {
+     "name": "May",
+     "alternative_names": [
+      "may"
+     ]
+    },
+    "6": {
+     "name": "June",
+     "alternative_names": [
+      "jun"
+     ]
+    },
+    "7": {
+     "name": "July",
+     "alternative_names": [
+      "jul"
+     ]
+    },
+    "8": {
+     "name": "August",
+     "alternative_names": [
+      "aug"
+     ]
+    },
+    "9": {
+     "name": "September",
+     "alternative_names": [
+      "sep"
+     ]
+    },
+    "10": {
+     "name": "October",
+     "alternative_names": [
+      "oct"
+     ]
+    },
+    "11": {
+     "name": "November",
+     "alternative_names": [
+      "nov"
+     ]
+    },
+    "12": {
+     "name": "December",
+     "alternative_names": [
+      "dec"
+     ]
+    }
+   }
+  },
+  "param": {
+   "description": "Parameter",
+   "values": {
+    "3": {
+     "name": "Potential temperature",
+     "alternative_names": [
+      "pt"
+     ]
+    },
+    "167": {
+     "name": "2 metre temperature",
+     "alternative_names": [
+      "2t"
+     ]
+    },
+    "168": {
+     "name": "2 metre dewpoint temperature",
+     "alternative_names": [
+      "2d"
+     ]
+    },
+    "207": {
+     "name": "10 metre wind speed",
+     "alternative_names": [
+      "10si"
+     ]
+    },
+    "228": {
+     "name": "Total precipitation",
+     "alternative_names": [
+      "tp"
+     ]
+    },
+    "141245": {
+     "name": "Time-mean 10 metre wind speed",
+     "alternative_names": [
+      "avg_wind"
+     ]
+    },
+    "172228": {
+     "name": "Time-mean total precipitation rate",
+     "alternative_names": [
+      "tprate"
+     ]
+    },
+    "228004": {
+     "name": "Time-mean 2 metre temperature",
+     "alternative_names": [
+      "avg_2t"
+     ]
+    },
+    "228005": {
+     "name": "Time-mean 10 metre wind speed",
+     "alternative_names": [
+      "avg_10ws"
+     ]
+    },
+    "228164": {
+     "name": "Total Cloud Cover",
+     "alternative_names": [
+      "tcc"
+     ]
+    },
+    "228228": {
+     "name": "Total Precipitation",
+     "alternative_names": [
+      "tp"
+     ]
+    },
+    "235055": {
+     "name": "Time-mean total precipitation rate",
+     "alternative_names": [
+      "avg_tprate"
+     ]
+    },
+    "235168": {
+     "name": "Time-mean 2 metre dewpoint temperature",
+     "alternative_names": [
+      "avg_2d"
+     ]
+    },
+    "235269": {
+     "name": "Time-mean potential temperature",
+     "alternative_names": [
+      "avg_pt"
+     ]
+    },
+    "235288": {
+     "name": "Time-mean total cloud cover",
+     "alternative_names": [
+      "avg_tcc"
+     ]
+    },
+    "260048": {
+     "name": "Total precipitation rate",
+     "alternative_names": [
+      "tprate"
+     ]
+    },
+    "300128": {
+     "name": "2 metre temperature",
+     "alternative_names": [
+      "tp2m"
+     ]
+    }
+   }
+  }
+ }
+}

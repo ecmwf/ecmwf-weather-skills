@@ -1,0 +1,41 @@
+{
+  "id": "destine-monthly-mean",
+  "prompt": "Build the Destination Earth Climate DT request for the monthly mean 2 m temperature in July 2040 under SSP3-7.0 — don't download anything.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "note": "Monthly means are stream clmn with year/month and time-mean parameters (2 m temperature 167 -> 228004 avg_2t); the catalogue spells the experiment ssp3-7.0; standard resolution has the longer availability. The wrong request is hourly clte at high resolution (744 fields).",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-destine"
+    },
+    {
+      "kind": "command",
+      "pattern": "destine\\.py\\s+request"
+    },
+    {
+      "kind": "final",
+      "pattern": "clmn"
+    },
+    {
+      "kind": "final",
+      "pattern": "228004|avg_2t"
+    },
+    {
+      "kind": "final",
+      "pattern": "ssp3-7\\.0"
+    },
+    {
+      "kind": "final",
+      "pattern": "standard"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "\"stream\":\\s*\"clte\""
+    },
+    {
+      "kind": "command_not",
+      "pattern": "destine\\.py\\s+retrieve"
+    }
+  ]
+}

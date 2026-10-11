@@ -44,6 +44,7 @@ The scripts contact only these services, and only to fetch data, catalogues and 
 | `api.ecmwf.int` | ECMWF Web API / MARS | request; your ECMWF key (header) |
 | `cds.climate.copernicus.eu`, `ads.atmosphere.copernicus.eu`, `ecds.ecmwf.int` | Copernicus and ECMWF data stores | dataset requests, licence check; your data-store token (header) |
 | `polytope.lumi.apps.dte.destination-earth.eu`, `polytope.mn5.apps.dte.destination-earth.eu`, `polytope.leonardo.apps.dte.destination-earth.eu`, `auth.destine.eu`, `platform.destine.eu` | Destination Earth data and authentication | request; your DestinE token (header) |
+| `catalogue-test.lumi.apps.dte.destination-earth.eu` | ECMWF's DestinE data catalogue (public metadata): validates and routes DestinE requests, lists what exists | request keys and values; no token |
 | `aviationweather.gov` (NOAA Aviation Weather, the one non-ECMWF source) | ICAO station metadata; the latest METARs only when you ask for them — labelled non-ECMWF | station ids |
 | `oscar.wmo.int` (WMO OSCAR/Surface) | station metadata for WMO ids missing from the bundled index | WMO station id |
 | `apps.ecmwf.int`, `status.ecmwf.int` | ECMWF service status, only after a connection failure | nothing beyond the request |
