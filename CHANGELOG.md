@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-11
+
 **A minor release for the options added in 0.7.1.** 0.7.1 gave `opencharts.py get` new options
 for charts of one place (`--lat`, `--lon`, `--kind`, `--base-time`). New options are features,
 which call for a minor version, so this release is 0.8.0.
@@ -611,7 +613,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.1...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.0...HEAD
+[0.8.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.5.0...0.6.0
