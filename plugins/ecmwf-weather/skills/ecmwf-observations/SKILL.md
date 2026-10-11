@@ -23,7 +23,7 @@ SPDX-License-Identifier: Apache-2.0
 - Thermal-comfort indices (line 112)
 - Processing and plots (line 120)
 - Licence and attribution (line 127)
-- When blocked (line 135)
+- When blocked (line 136)
 - References — `references/codes.md` (report types, varno, QC flags, missing values), `references/requests.md` (MARS request shapes, sizes, latency)
 
 Use ECMWF sources only. The one exception is NOAA Aviation Weather (aviationweather.gov):
@@ -127,7 +127,8 @@ load the `ecmwf-earthkit` skill before writing code. `ekplot.py meteogram` draws
 ## Licence and attribution
 
 - MARS observations: WMO Global Observing System data from ECMWF's archive; departures and QC
-  © ECMWF; licensed — use under the organisation's ECMWF licence. The script prints the line.
+  © ECMWF; check the data's terms before redistributing (what MARS restricts is access: accounts
+  need observation rights). The script prints the line.
 - NOAA METARs: US government data from aviationweather.gov — say "NOAA Aviation Weather
   (non-ECMWF)" next to every value taken from it.
 End the answer with the attribution line printed by the script.

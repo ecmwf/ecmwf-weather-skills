@@ -767,9 +767,18 @@ def licence_note(req: dict) -> str:
             "Credit: 'Generated using Copernicus Climate Change Service information <year>' "
             "and cite the ERA5 DOI 10.24381/cds.adbb2d47."
         )
+    cls = req.get("class", "od")  # od is the MARS default
+    if cls == "od" and not _is_obs(req):
+        return (
+            "ECMWF operational data — CC BY 4.0, like every product in ECMWF's Real-time "
+            "Catalogue. Credit: '© <year> ECMWF, CC BY 4.0' with the source www.ecmwf.int. "
+            "What MARS restricts is access (an entitled account or a service agreement), not "
+            "the licence."
+        )
+    what = "observations" if _is_obs(req) else f"class={cls} data"
     return (
-        "Licensed ECMWF data — use under your organisation's ECMWF licence; "
-        "credit '© ECMWF' and check the licence before redistributing or publishing."
+        f"ECMWF archive {what} — credit '© <year> ECMWF' and check the dataset's licence "
+        "(https://www.ecmwf.int/en/forecasts/datasets) before redistributing or publishing."
     )
 
 
@@ -937,8 +946,8 @@ def check(as_json: bool, probe: bool = False) -> int:
     c["how"] = (
         "Web API key: https://api.ecmwf.int/v1/key/ -> ~/.ecmwfapirc. A verified key means "
         "the Web API accepts you; MARS rights per dataset depend on the account "
-        "(Member/Co-operating State or licensed users) — prove them before promising MARS "
-        f"data: {PROBE_RUN} (a cost-only request, seconds when the queue is free)."
+        "(Member/Co-operating State users or a service agreement) — prove them before "
+        f"promising MARS data: {PROBE_RUN} (a cost-only request, seconds when the queue is free)."
     )
     if not (c["webapi"] or c["mars_client"]) or c.get("verified") is False:
         c["offer"] = (

@@ -115,7 +115,7 @@ Open Data needs none. If the user has better access, say once what it would add:
 | `POLYTOPE_USER_KEY`, `~/.polytopeapirc` or `~/.ecmwfapirc` (any authenticated ECMWF user) | server-side point extraction in KB — `ecmwf-polytope` skill |
 | `CDSAPI_KEY` or `~/.cdsapirc` | ERA5 history and climate normals — `ecmwf-cds-ads` skill |
 | `~/.adsapirc` | CAMS air quality — `ecmwf-cds-ads` skill |
-| `ECMWF_API_KEY` or `~/.ecmwfapirc` | MARS archive (licensed) — `ecmwf-mars` skill |
+| `ECMWF_API_KEY` or `~/.ecmwfapirc` | MARS archive (for accounts with MARS access) — `ecmwf-mars` skill |
 
 Check presence only; never print key values. If a route would clearly help and its key is
 missing, mention it once and offer step-by-step instructions — the owning skill prints them

@@ -1,6 +1,6 @@
 ---
 name: ecmwf-mars
-description: Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) ERA5 and the CARRA/CERRA regional reanalyses (class=rr) via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; licensed data needs a Member State or licensed account.
+description: Handles any question about ECMWF MARS, including whether MARS access works from this machine — load it first. Writes, checks, sizes and runs requests against ECMWF's MARS archive — the full operational IFS archive (HRES, ENS, waves, past runs, model levels) ERA5 and the CARRA/CERRA regional reanalyses (class=rr) via MARS — through the ECMWF Web API (~/.ecmwfapirc) or a local mars client on ECMWF systems. Use when a task mentions MARS, asks whether MARS or the ECMWF Web API works from this machine, the ECMWF archive, past operational forecasts older than Open Data keeps, ensemble members or model levels for past dates, MARS request keywords (class, stream, type, levtype, levelist, param, date, time, step, number, expver, grid, area), tape versus disk retrieval, request size or efficiency, splitting large retrievals, or MARS/Web API errors. Validates and estimates offline; retrievals need an account with MARS access (Member State users or a service agreement).
 compatibility: scripts/mars.py lint/estimate/plan/check run on plain Python 3 offline. check --probe, cost and retrieve need uv (PEP 723 inline dependency earthkit-data[mars], which brings ecmwf-api-client) and MARS access via the ECMWF Web API or a local mars client.
 license: Apache-2.0
 metadata:
@@ -22,7 +22,7 @@ SPDX-License-Identifier: Apache-2.0
 - Efficiency rules (line 110)
 - Processing and plots (line 122)
 - Licence and attribution (line 130)
-- When blocked (line 140)
+- When blocked (line 143)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -33,7 +33,7 @@ Use ECMWF sources only — never substitute a third-party weather API.
 |---|---|
 | Latest forecast, last ~2–3 days, 0.25° | `ecmwf-open-data` skill (free, no queue) |
 | Point/area extraction from recent operational runs | `ecmwf-polytope` skill (seconds) |
-| ERA5 without an ECMWF licence | `ecmwf-cds-ads` skill (CDS, free key) |
+| ERA5 without MARS access | `ecmwf-cds-ads` skill (point series without a key; CDS, free key) |
 | Station observations (SYNOP, METAR, ODB feedback), forecast verification | `ecmwf-observations` skill (builds and decodes the MARS requests) |
 | Older operational runs, all ENS members, model levels, full resolution, research/experimental data | **MARS** |
 
@@ -129,8 +129,11 @@ and time statistics (earthkit-transforms) and meteorological quantities (earthki
 
 ## Licence and attribution
 
-- Operational and most MARS data: licensed — `© <year> ECMWF`; use under the organisation's
-  ECMWF licence; check before redistributing.
+- Operational data (`class=od`): ECMWF real-time products — CC BY 4.0, `© <year> ECMWF, CC BY
+  4.0` with the source (www.ecmwf.int). MARS restricts access (an entitled account or a service
+  agreement), not the licence.
+- Observations and other classes (e.g. research experiments): `© <year> ECMWF`; check the
+  dataset's licence (https://www.ecmwf.int/en/forecasts/datasets) before redistributing.
 - ERA5 (`class=ea`): Copernicus, CC BY 4.0 — "Generated using Copernicus Climate Change Service
   information <year>" + DOI 10.24381/cds.adbb2d47.
 - CARRA/CERRA (`class=rr`): Copernicus, CC BY 4.0 — same credit line + the dataset DOI.

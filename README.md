@@ -55,8 +55,8 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
   code recipes that the test suite executes. Bugs or gaps in earthkit are offered upstream as
   issues or pull requests — only with your approval.
 - **Attribution built in** — every script prints the licence line for its data (CC BY 4.0 for
-  open data, Copernicus credit for C3S/CAMS, ECMWF licence for operational data) and stamps it
-  on figures.
+  ECMWF data, Open Data and operational forecasts alike; Copernicus credit for C3S/CAMS) and
+  stamps it on figures.
 - **Never leaks secrets** — credentials are detected by name only and redacted from output.
 
 ## The skills
@@ -184,9 +184,10 @@ Every skill is evaluated with fresh agents on 21 tasks (`make evals AGENT=claude
 | Polytope | `POLYTOPE_USER_KEY`, `POLYTOPE_USER_EMAIL` | `~/.polytopeapirc` (falls back to `~/.ecmwfapirc`) |
 | Destination Earth (upgraded access, on request) | `DESTINE_POLYTOPE_KEY` | `~/.polytopeapirc-destine` |
 
-Polytope and MARS access depend on your account (ECMWF Member and Co-operating States, licensed
-users). Scripts check credentials by name and never print them. When a key is missing, the agent
-offers step-by-step instructions to obtain it.
+Polytope and MARS access depend on your account (users at ECMWF Member and Co-operating State
+national meteorological services, or with an ECMWF service agreement). Scripts check credentials
+by name and never print them. When a key is missing, the agent offers step-by-step instructions
+to obtain it.
 
 **Copernicus licences:** CDS and ADS refuse downloads (HTTP 403) until you accept the dataset's
 licence once: open `https://cds.climate.copernicus.eu/datasets/<dataset-id>?tab=download#manage-licences`
@@ -204,9 +205,17 @@ the scripts print a BLOCKED report with exact steps for you and for the agent.
 Data retrieved with these skills carries its own licence, separate from this software's:
 
 - **ECMWF Open Data, OpenCharts, public WMS** — CC BY 4.0: `© <year> ECMWF, CC BY 4.0`.
-- **Copernicus (ERA5, CAMS)** — "Generated using Copernicus Climate Change Service / Atmosphere
-  Monitoring Service information <year>" plus the dataset DOI.
-- **Operational and MARS data** — your organisation's ECMWF licence; check before redistributing.
+- **Copernicus (ERA5, CAMS, including CAMS charts and map layers)** — "Generated using Copernicus
+  Climate Change Service / Atmosphere Monitoring Service information <year>. Neither the European
+  Commission nor ECMWF is responsible for any use that may be made of the Copernicus information
+  or data it contains." plus the dataset DOI.
+- **Operational forecasts (Polytope, MARS)** — CC BY 4.0 too: since 1 October 2025 every product
+  in ECMWF's Real-time Catalogue is CC BY 4.0 with no information cost, so credit
+  `© <year> ECMWF, CC BY 4.0` with the source (www.ecmwf.int). What is restricted is access:
+  beyond the free Open Data (the 0.25° subset on data.ecmwf.int) you need an ECMWF account with
+  entitlement (users at Member and Co-operating State national meteorological services) or a
+  Real-time service agreement (service and delivery charges). Other MARS data (observations,
+  research experiments): check its terms before redistributing.
 
 Each skill tells the agent which line to show.
 

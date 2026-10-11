@@ -52,15 +52,17 @@ def test_every_service_maps_to_a_status_source():
         "ecds",
         "destine",
         "destine-catalogue",
+        "era5-edr",
     ):
         assert svc in st.SERVICES
 
 
-@pytest.mark.parametrize("svc", ["destine", "destine-catalogue"])
-def test_destine_services_point_at_the_platform_news(svc):
-    # DestinE publishes no status feed; maintenance is announced as platform news.
-    r = st.outage_report(svc, fetch=routes(), now=0)
-    assert st.DESTINE_NEWS in r["summary"]
+def test_services_without_a_feed_point_at_the_destine_news():
+    # The catalogue and the ERA5 EDR run on Destination Earth infrastructure, which publishes
+    # no status feed.
+    for svc in ("destine", "destine-catalogue", "era5-edr"):
+        r = st.outage_report(svc, fetch=routes(), now=0)
+        assert st.DESTINE_NEWS in r["summary"], svc
 
 
 def test_all_ok():

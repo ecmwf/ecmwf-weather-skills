@@ -451,20 +451,17 @@ def size_note(nbytes: int) -> str:
 
 
 def attribution(d: dict, year: int | None = None) -> dict:
+    """Every ECMWF real-time product is CC BY 4.0 — the Open Data section (class ai) and the
+    operational forecasts alike; Polytope restricts access, not the licence."""
     year = year or datetime.now(UTC).year
     cls = d["coverages"][0]["mars:metadata"].get("class")
-    if cls == "ai":  # the Open Data section of Polytope
-        return {
-            "short": f"Data: © {year} ECMWF, CC BY 4.0",
-            "licence": "CC-BY-4.0",
-            "note": "ECMWF Open Data — CC BY 4.0 licence.",
-        }
-    return {
-        "short": f"Data: © {year} ECMWF",
-        "licence": "ECMWF licence",
-        "note": "Operational ECMWF data under your organisation's ECMWF licence — check the "
-        "licence before redistributing or publishing.",
-    }
+    note = (
+        "ECMWF Open Data — CC BY 4.0 licence."
+        if cls == "ai"  # the Open Data section of Polytope
+        else "ECMWF operational forecast — CC BY 4.0 like every ECMWF real-time product; "
+        "what needs an entitlement is access to it. Source: www.ecmwf.int."
+    )
+    return {"short": f"Data: © {year} ECMWF, CC BY 4.0", "licence": "CC-BY-4.0", "note": note}
 
 
 # --- local time and daily summaries (standard library) ------------------------------------------
@@ -732,17 +729,20 @@ def entitlement_barrier() -> dict:
     return {
         "blocked": "this ECMWF account has no entitlement to operational forecast data",
         "why": "Polytope accepted the key — and lists the 'ecmwf-mars' collection to every "
-        "user — but refused the data request with 'insufficient permissions': operational IFS "
-        "data is licensed per account.",
+        "user — but refused the data request with 'insufficient permissions': access to "
+        "operational IFS data is granted per account. The data itself is CC BY 4.0, like every "
+        "ECMWF real-time product; what is restricted is access.",
         "user_steps": [
             "1. Users at a Member or Co-operating State national meteorological service: ask "
             "your Computing Representative "
             "(https://www.ecmwf.int/en/about/contact-us/computing-representatives) to grant "
             "your ECMWF account access to operational data.",
-            "2. Everyone else: operational data needs an ECMWF licence or service agreement "
-            "(https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements); "
+            "2. Everyone else: ECMWF Open Data (the 0.25° subset on data.ecmwf.int) needs no "
+            "account; other real-time data comes with a Real-time service agreement (service "
+            "and delivery charges; fee waivers for research and societal-benefit users): "
+            "https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements; "
             "questions: https://support.ecmwf.int",
-            "3. Once granted, re-run: uv run ptpoint.py --check",
+            "3. Once the account has access, re-run: uv run ptpoint.py --check",
         ],
         "agent": "Answer now with the ecmwf-open-data skill (uv run "
         "<ecmwf-open-data>/scripts/odpoint.py --lat LAT --lon LON: the same IFS model, free) "
@@ -771,9 +771,9 @@ def barrier_for_error(message: str) -> dict | None:
     if re.search(r"(?i)\b403\b|forbidden|rejected the credentials", message):
         return {
             "blocked": "Polytope refused this account",
-            "why": "the key is invalid, or the requested dataset is restricted (Member and "
-            "Co-operating States, commercial data clients, research licence) or not available "
-            "via Polytope.",
+            "why": "the key is invalid, or access to the requested dataset is restricted (users "
+            "at Member and Co-operating State national meteorological services, holders of an "
+            "ECMWF service agreement), or it is not available via Polytope.",
             "user_steps": setup_steps(),
             "agent": "Answer from the ecmwf-open-data skill now (odpoint.py) and give these steps; "
             "do not retry Polytope until the user confirms access.",
@@ -791,12 +791,15 @@ def setup_steps() -> list[str]:
         '   {"user_email": "<email>", "user_key": "<key>"}\n'
         "   (without this file Polytope falls back to ~/.ecmwfapirc; or set POLYTOPE_USER_EMAIL "
         "and POLYTOPE_USER_KEY)",
-        "4. Any authenticated ECMWF user can use Polytope. Some datasets are restricted to "
-        "Member and Co-operating States, ECMWF commercial data clients, and researchers under a "
-        "research licence (see https://www.ecmwf.int/en/forecasts/datasets); not all datasets "
-        "are available via Polytope. For access to restricted data ask "
-        "https://support.ecmwf.int (Member/Co-operating State users: your Computing "
-        "Representative). Meanwhile, use the ecmwf-open-data skill.",
+        "4. Any authenticated ECMWF user can use Polytope, but its operational collection "
+        "'ecmwf-mars' is for users at Member and Co-operating State national meteorological "
+        "services (access through their Computing Representative). Everyone else gets ECMWF "
+        "real-time data from the free Open Data, or with a Real-time service agreement "
+        "(https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements; service and "
+        "delivery charges). The data is CC BY 4.0 either way — access is what is restricted; "
+        "not all datasets are available via Polytope (catalogue: "
+        "https://www.ecmwf.int/en/forecasts/datasets; questions: https://support.ecmwf.int). "
+        "Meanwhile, use the ecmwf-open-data skill.",
         "5. Check: uv run ptpoint.py --check",
         "Destination Earth Digital Twin data uses a different account and token: "
         "the ecmwf-destine skill.",

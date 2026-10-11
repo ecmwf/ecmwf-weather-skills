@@ -31,8 +31,8 @@ SPDX-License-Identifier: Apache-2.0
   and respect the OSM tile usage policy.
 - Style of a layer: add `styles: 'STYLE'` to the data layer options (names from
   `wms.py layers --search NAME --json`).
-- Keep the attribution line; add the CAMS sentence if you add `composition_*` layers (app.js does
-  this automatically when such a layer is selected).
+- Keep the attribution line; `composition_*` (CAMS) layers need the Copernicus credit with the
+  year and the disclaimer — app.js sets it whenever such a layer is selected.
 
 ## Serve and deploy
 
