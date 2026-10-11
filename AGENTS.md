@@ -415,26 +415,13 @@ expectations are meaningful for it.
   or from values read off the ENS meteogram picture (opencode), without loading a skill or
   naming the run; with the server down it loaded `ecmwf-open-data` and passed. Descriptions
   say what the MCP tools don't give ("also when ECMWF MCP tools are listed (they give charts,
-  not forecast values)"): Claude Code Haiku then passed 3/3, while opencode Haiku still read
-  the picture.
+  not forecast values)").
 
-**Model recommendation.** Neither the Agent Skills standard nor the plugin manifests have a
-field for recommending models (Claude Code's `model:` frontmatter *forces* a model and breaks
-portable packaging, so it is not used). Recommendations live in the README ("Tested models"),
-backed by eval results. **Claude Haiku is unreliable at executing these skills' instructions**:
-it often answers from the skill text without running the scripts or loading the right skill
-(e.g. `mars-access`, `destine-request` below 2-of-3). Record it as such; don't contort skill
-text for it.
-
-**Current status** (2026-10-03): Claude Code Opus 19/19, Sonnet 19/19, Haiku meets the 2-of-3
-rule on every case; Codex GPT-6.1-Sol, GPT-6-Astra/Sol/Luna, GPT-5.6-Terra/Sol/Luna 19/19
-(GPT-6-Sol 18/19 on one run, grader fixed). `gpt-5.6-astra` does not exist in Codex.
-0.1.4 (21 cases): Sonnet 21/21; Codex GPT-5.6-Luna 21/21 after one fix; new cases pass on all
-ten models except Haiku, which stays below 2-of-3 on `destine-request` and `mars-access` (it
-answers from the skill text without running the script). `destine-*` evals with a real token
-are pending upgraded access (TODO.md).
-0.1.7 (21 cases): Claude Sonnet 21/21, Opus 21/21, Haiku 16/21 (not recommended).
-Gemini needs `GEMINI_API_KEY`.
+**Models.** Neither the Agent Skills standard nor the plugin manifests have a field for
+recommending models (Claude Code's `model:` frontmatter *forces* a model and breaks portable
+packaging, so it is not used). A weaker model may answer from the skill text without running
+the scripts or loading the right skill: fix the tools so it gets the same result, but don't
+contort skill text for a model that can't follow it.
 
 **Read transcripts, not just verdicts.** A PASS can hide a struggling agent: the first
 `ek-meteogram` run passed but took 283 s, retried mirrors and thinned steps — which exposed a
@@ -442,7 +429,8 @@ precipitation bug and a slow fetcher. Check `seconds`, the command list
 (`evals/runs/<ts>/<case>.<agent>.<n>.jsonl`) and any produced files (`workdir` in `summary.json`).
 
 Evals cost money and take minutes — run them when `SKILL.md`, `references/` or script CLIs change,
-not on every edit. Record pass/fail per case in the PR description.
+not on every edit. Record pass/fail per case in the PR description, never in this file or the
+README: results go stale, while the cases say what is tested and a run says how a model does.
 
 ## Development workflow
 
@@ -466,7 +454,8 @@ Agents NEVER commit, push, merge or open a PR without explicit user approval.
 
 - Semantic Versioning `MAJOR.MINOR.MICRO`. **Never bump MAJOR unless the user says so**
   (`release.py` refuses without `ALLOW_MAJOR=1`). MINOR for new features or skills, MICRO for
-  fixes and documentation.
+  fixes and documentation. A new script option or command is a feature, even when it delivers
+  what a skill already described.
 - **Never prefix tags or releases with `v`** (`0.2.0`, not `v0.2.0`).
 - The version lives in both plugin manifests and every `SKILL.md`; only the release targets (or
   `make version X.Y.Z`) change it; `make version-check` verifies it.
@@ -498,7 +487,7 @@ Agents run them only when the maintainer asks for a release.
    the changelog section, deletes the local release branch.
 
 If a step fails, fix the cause in a normal PR and start again from step 2 — never skip a gate.
-`check-endpoints` treats optional services (the bundled ECMWF MCP; the skills work without it) differently: an outage (HTTP 5xx, timeout) is a warning, while drift — a host that no longer resolves, HTTP 404, a changed status document — still fails. Endpoint drift (`check-endpoints`) means ECMWF moved or renamed something: update
+`check-endpoints` treats optional services (the bundled ECMWF MCP; the skills work without it) differently: an outage (HTTP 5xx, timeout) is a warning, while drift — a host that no longer resolves, HTTP 404, a changed status document — still fails. A network error or a rate-limited answer (HTTP 429) is asked again before it counts. Endpoint drift (`check-endpoints`) means ECMWF moved or renamed something: update
 `ecmwf_status.SERVICES`, `check_endpoints.PROBES` or the script URLs first. Agents must not
 change git config, force-push or delete remote tags.
 
