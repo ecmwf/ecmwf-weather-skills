@@ -410,6 +410,12 @@ expectations are meaningful for it.
   `--no-mcp` it loaded `ecmwf-open-data` and passed). Descriptions must say the skill works
   when the MCP server is unavailable ("load it … also when the ECMWF MCP server is
   unavailable").
+- A working MCP server competes with the skills too: with chart tools listed but no forecast
+  tool, Claude Haiku answered "the weather in Reading tomorrow" from web searches (Claude Code)
+  or from values read off the ENS meteogram picture (opencode), without loading a skill or
+  naming the run; with the server down it loaded `ecmwf-open-data` and passed. Descriptions
+  say what the MCP tools don't give ("also when ECMWF MCP tools are listed (they give charts,
+  not forecast values)").
 
 **Model recommendation.** Neither the Agent Skills standard nor the plugin manifests have a
 field for recommending models (Claude Code's `model:` frontmatter *forces* a model and breaks
