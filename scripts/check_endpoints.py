@@ -12,6 +12,8 @@ Run by `make check-endpoints`, which `make release-prepare` and the weekly CI ca
 - the ECMWF MCP router's /status still lists exactly the services ecmwf_mcp.BACKENDS calls
   directly when the router is down;
 - every service host still answers HTTP (401/403 count as present: authentication is expected).
+
+A network error or a rate-limited answer (HTTP 429) is asked again before it counts.
 """
 
 from __future__ import annotations
@@ -86,6 +88,9 @@ def _fetch(url: str) -> tuple[int, str]:
 
 # A release gate must not fail on one network hiccup: retry before reporting a problem.
 RETRIES = 3
+# HTTP 429 is a hiccup too: data.ecmwf.int throttles bursts of requests (as right after the
+# live tests) and sends no Retry-After, so the same growing pause applies.
+RETRY_STATUS = {429}
 
 
 def retrying(fetch, retries: int = RETRIES, delay: float = 2.0):
@@ -93,12 +98,16 @@ def retrying(fetch, retries: int = RETRIES, delay: float = 2.0):
 
     def get(url):
         for attempt in range(retries):
+            last = attempt == retries - 1
             try:
-                return fetch(url)
+                code, body = fetch(url)
             except Exception:
-                if attempt == retries - 1:
+                if last:
                     raise
-                time.sleep(delay * (attempt + 1))
+            else:
+                if code not in RETRY_STATUS or last:
+                    return code, body
+            time.sleep(delay * (attempt + 1))
         raise RuntimeError("unreachable")
 
     return get
