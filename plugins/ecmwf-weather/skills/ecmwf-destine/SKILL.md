@@ -5,7 +5,7 @@ compatibility: scripts/destine.py check, setup, request and options run on plain
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.6.0"
+  version: "0.7.0"
 ---
 
 <!--

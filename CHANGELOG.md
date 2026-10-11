@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-11
+
 **ECMWF MCP.** The plugin now bundles ECMWF's MCP server (https://mcp.ecmwf.int), and the skills
 use it where it helps: official charts and meteograms and the DestinE data catalogue in chat.
 Forecasts and ERA5 stay on the skills' scripts (MCP 0.4.0 has no forecast or ERA5 services);
@@ -562,7 +564,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.3.2...0.4.0
