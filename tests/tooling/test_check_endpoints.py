@@ -62,6 +62,13 @@ def test_every_service_has_a_host_probe():
     assert set(ce.st.SERVICES) <= set(ce.PROBES)
 
 
+def test_destine_catalogue_probe_is_the_one_the_skill_uses():
+    from conftest import load_script
+
+    destine = load_script("ecmwf-destine", "destine")
+    assert ce.PROBES["destine-catalogue"] == f"{destine.CATALOGUE_URL}/health"
+
+
 @pytest.mark.live
 def test_live_endpoints_exist():
     assert ce.check() == []

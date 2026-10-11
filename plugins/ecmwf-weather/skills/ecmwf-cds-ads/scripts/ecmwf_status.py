@@ -43,6 +43,7 @@ SERVICES = {
     "ecds": (["Data Stores"], ["Data Stores"], "https://ecds.ecmwf.int"),
     # DestinE has no machine-readable status; maintenance is announced as platform news.
     "destine": ([], [], None),
+    "destine-catalogue": ([], [], None),  # ECMWF's DestinE data catalogue (Omnicat)
 }
 # Client error texts that mean the service could not be reached at all.
 NETWORK_ERROR = re.compile(
@@ -106,7 +107,7 @@ def outage_report(service: str, fetch=None, now: float | None = None) -> dict:
             "summary": f"ECMWF status could not be retrieved ({type(e).__name__}); "
             f"check {STATUS_PAGE} manually.",
         }
-    if service == "destine":
+    if service.startswith("destine"):
         details.append(f"no status feed; maintenance notices: {DESTINE_NEWS}")
     summary = {
         "ok": "ECMWF reports no problem",
