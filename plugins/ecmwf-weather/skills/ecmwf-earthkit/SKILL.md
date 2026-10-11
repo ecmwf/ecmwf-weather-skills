@@ -92,7 +92,7 @@ uv run scripts/ekplot.py indices fc.grib2 --index utci --step 12 --domain Europe
       # heat-index|humidex|apparent-temperature|wind-chill (2t 2d 10u 10v) or utci|wbgt|mrt
 ```
 
-The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (or the MCP tool `charts_get_meteogram`); `ekplot.py meteogram` draws your own chart from the data, so never call that one the official meteogram.
+The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the MCP tool `charts_get_meteogram`); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
 
 Meteograms share one time axis (local time with `--tz` data), show precipitation as mm/h per
 interval and ensembles as median plus 10-90 % range; `--indices` point data adds a feels-like
