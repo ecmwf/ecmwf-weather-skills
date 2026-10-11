@@ -4,15 +4,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""ECMWF OpenCharts — find and download official ECMWF forecast charts (PNG/PDF). Stdlib only.
+"""ECMWF OpenCharts — official ECMWF forecast charts and meteograms (PNG/PDF). Stdlib only.
 
   python3 opencharts.py search "2 m temperature"           # product names
   python3 opencharts.py search temperature --model aifs
   python3 opencharts.py options medium-2t-wind              # base times, steps, projections
   python3 opencharts.py get medium-2t-wind --step 48 --projection opencharts_europe -o chart.png
+  python3 opencharts.py get opencharts_meteogram --lat 44.49 --lon 11.34 -o bologna.png
 
-No account needed. ECMWF charts are CC BY 4.0 (© ECMWF); CAMS charts carry the Copernicus
-credit instead. Keep the attribution `get` prints with the image.
+Charts drawn for one place (`search meteogram`) need --lat and --lon; the ENS meteogram's
+--kind is 10-day (default), 15-day, 15-day-with-climate, plume or wave. No account needed.
+ECMWF charts are CC BY 4.0 (© ECMWF); CAMS charts carry the Copernicus credit instead. Keep
+the attribution `get` prints with the image.
 """
 
 from __future__ import annotations
@@ -97,12 +100,15 @@ def search(products: list[dict], text: str = "", model: str | None = None) -> li
 
 
 def parse_schema(schema: dict) -> dict:
+    """A product's options. `point`: the chart is drawn for one place (its schema takes lat and
+    lon — meteograms, vertical profiles…); `kinds`: its layouts (the API's `epsgram`)."""
     path = next(k for k in schema["paths"] if k.startswith("/products/"))
     params = {p["name"]: p["schema"] for p in schema["paths"][path]["get"].get("parameters", [])}
 
     def enum(n):
         return params.get(n, {}).get("enum", [])
 
+    kinds = enum("epsgram")
     return {
         "base_times": enum("base_time"),
         "steps": [int(s) for s in enum("step")],
@@ -110,6 +116,9 @@ def parse_schema(schema: dict) -> dict:
         "projections": enum("projection"),
         "formats": enum("format"),
         "layer_names": enum("layer_name"),
+        "point": "lat" in params and "lon" in params,
+        "kinds": kinds,
+        "kind_default": params.get("epsgram", {}).get("default", kinds[0] if kinds else None),
     }
 
 
@@ -120,6 +129,101 @@ def validate_choice(what: str, value, allowed: list) -> None:
         )
 
 
+# --- charts for one place ---------------------------------------------------------------------
+
+# The ENS meteogram layouts (`epsgram`) by the names the ECMWF MCP's charts_get_meteogram uses.
+# Other meteograms prefix the same layouts (aifs_ens_classical_plume is the AIFS ENS plume).
+KINDS = {
+    "10-day": "classical_10d",
+    "15-day": "classical_15d",
+    "15-day-with-climate": "classical_15d_with_climate",
+    "plume": "classical_plume",
+    "wave": "classical_wave",
+}
+
+
+def _is_kind(value: str, token: str) -> bool:
+    return value == token or value.endswith(f"_{token}")
+
+
+def kind_name(value: str) -> str:
+    """The name of an `epsgram` layout (classical_10d -> 10-day); other layouts keep theirs."""
+    return next((name for name, token in KINDS.items() if _is_kind(value, token)), value)
+
+
+def resolve_kind(kind: str, allowed: list[str], product: str) -> str:
+    """The product's `epsgram` for a layout name (plume), the end of one (public) or its value."""
+    if not allowed:
+        raise ValueError(f"{product} has one layout: drop --kind")
+    if kind in allowed:
+        return kind
+    token = KINDS.get(kind, kind)
+    hits = [v for v in allowed if _is_kind(v, token)]
+    if len(hits) == 1:
+        return hits[0]
+    names = ", ".join(kind_name(v) for v in allowed)
+    raise ValueError(f"kind {kind!r} not available for {product}; choose from: {names}")
+
+
+def check_place(
+    product: str, point: bool, lat: float | None, lon: float | None
+) -> tuple[float, float] | None:
+    """The place of a chart drawn for one place; None for maps, which take no place. Asked
+    without one, OpenCharts draws a default point (HTTP 200), so a missing place is an error."""
+    if not point:
+        if lat is not None or lon is not None:
+            raise ValueError(
+                f"{product} is not drawn for a place: drop --lat/--lon "
+                "(charts for one place: opencharts.py search meteogram)"
+            )
+        return None
+    if lat is None or lon is None:
+        raise ValueError(
+            f"{product} is drawn for one place: add --lat LAT --lon LON "
+            "(decimal degrees, north and east positive)"
+        )
+    if not -90 <= lat <= 90:
+        raise ValueError(f"latitude {lat} must be within -90..90")
+    if not -180 <= lon <= 360:  # OpenCharts reads 180..360 as west longitudes
+        raise ValueError(f"longitude {lon} must be within -180..360")
+    return lat, lon
+
+
+def _degrees(value: float, positive: str, negative: str) -> str:
+    return f"{abs(value):.10g}°{positive if value >= 0 else negative}"
+
+
+def run_label(base_time: str) -> str:
+    """2026-10-11T00:00:00Z -> Sun 11 Oct 2026 00 UTC, as OpenCharts writes base times."""
+    try:
+        t = datetime.strptime(base_time, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:  # not the API's format: show it as given
+        return base_time
+    return t.strftime("%a %d %b %Y %H UTC")
+
+
+def describe_place(
+    title: str,
+    place: tuple[float, float],
+    kind: str | None,
+    base: str | None,
+    step: int | None = None,
+    valid_time: str | None = None,
+) -> list[str]:
+    """What a chart for one place shows. OpenCharts sends no description for these: the base
+    time is the run requested, the gridpoint used is named only in the chart's title, and the
+    step is printed as asked (an EFI/CDF step ends a 24 h window, so no valid time is derived)."""
+    what = f"{title} ({kind_name(kind)})" if kind else title
+    where = f"{_degrees(place[0], 'N', 'S')} {_degrees(place[1], 'E', 'W')}"
+    lines = [f"{what} for {where}; the chart title gives the model gridpoint used"]
+    if base:
+        at_step = f", step {step} h" if step is not None else ""
+        lines.append(f"Base time: {run_label(base)}{at_step}")
+    if valid_time:
+        lines.append(f"Valid time: {valid_time}")
+    return lines
+
+
 def product_url(
     name: str,
     base_time: str | None = None,
@@ -127,6 +231,9 @@ def product_url(
     valid_time: str | None = None,
     projection: str | None = None,
     fmt: str = "png",
+    lat: float | None = None,
+    lon: float | None = None,
+    epsgram: str | None = None,
 ) -> str:
     q = {
         k: v
@@ -135,6 +242,9 @@ def product_url(
             "step": step,
             "valid_time": valid_time,
             "projection": projection,
+            "lat": lat,
+            "lon": lon,
+            "epsgram": epsgram,
             "format": fmt,
         }.items()
         if v is not None
@@ -153,19 +263,22 @@ def fetch_product(
     projection: str | None,
     fmt: str = "png",
     get=None,
+    **params,
 ) -> tuple[dict, str]:
     """Newest run that already has `step`: a run is listed as soon as its first steps exist,
-    so for hours after each run starts, later steps are only in the previous run."""
+    so for hours after each run starts, later steps are only in the previous run. `params`:
+    lat, lon and epsgram of a chart drawn for one place."""
     get = get or _get_json
     last: Exception | None = None
     for base in base_times[:MAX_RUNS_TRIED]:
         try:
-            return get(product_url(name, base, step, None, projection, fmt)), base
+            return get(product_url(name, base, step, None, projection, fmt, **params)), base
         except RuntimeError as e:
             if "not available" not in str(e):
                 raise
             last = e
-    raise RuntimeError(f"step {step} not available in the latest runs: {last}")
+    what = name if step is None else f"step {step}"
+    raise RuntimeError(f"{what} not available in the latest runs: {last}")
 
 
 def image_link(resp: dict) -> tuple[str, dict]:
@@ -227,7 +340,13 @@ def main(argv=None) -> int:
     sp.add_argument("--base-time", help="ISO, e.g. 2026-10-02T00:00:00Z (default: latest)")
     sp.add_argument("--step", type=int, help="hours after base time")
     sp.add_argument("--valid-time", help="ISO valid time (instead of --step)")
-    sp.add_argument("--projection", default="opencharts_europe")
+    sp.add_argument("--projection", help="map area (default: opencharts_europe); maps only")
+    sp.add_argument("--lat", type=float, help="degrees north; charts drawn for one place")
+    sp.add_argument("--lon", type=float, help="degrees east; charts drawn for one place")
+    sp.add_argument(
+        "--kind",
+        help="meteogram layout: 10-day (default), 15-day, 15-day-with-climate, plume, wave",
+    )
     sp.add_argument("--format", default="png", choices=["png", "pdf"])
     sp.add_argument("-o", "--output", required=True)
     a = ap.parse_args(argv)
@@ -265,26 +384,56 @@ def main(argv=None) -> int:
                 print(f"projections: {', '.join(opts['projections']) or 'none'}")
                 if opts["layer_names"]:
                     print(f"layers     : {', '.join(opts['layer_names'])}")
+                if opts["point"]:
+                    print("place      : --lat LAT --lon LON (required)")
+                if opts["kinds"]:
+                    names = ", ".join(kind_name(k) for k in opts["kinds"])
+                    default = kind_name(opts["kind_default"])
+                    print(f"kinds      : {names} (--kind; default {default})")
             return 0
 
-        validate_choice("projection", a.projection, opts["projections"])
+        place = check_place(a.product, opts["point"], a.lat, a.lon)
+        kind = a.kind or opts["kind_default"]
+        params = {"epsgram": resolve_kind(kind, opts["kinds"], a.product) if kind else None}
+        if place:
+            params.update(lat=place[0], lon=place[1])
+        # Options the product doesn't list would be ignored or answered "not available".
+        for flag, value, listed in (
+            ("--projection", a.projection, opts["projections"]),
+            ("--step", a.step, opts["steps"]),
+            ("--valid-time", a.valid_time, opts["valid_times"]),
+        ):
+            if value is not None and not listed:
+                raise ValueError(f"{a.product} takes no {flag}: drop it")
+        projection = a.projection
+        if opts["projections"]:
+            projection = projection or "opencharts_europe"
+            validate_choice("projection", projection, opts["projections"])
         if a.base_time:
             validate_choice("base time", a.base_time, opts["base_times"])
         if a.step is not None:
             validate_choice("step", a.step, opts["steps"])
         if a.base_time or a.valid_time:
-            resp = _get_json(
-                product_url(a.product, a.base_time, a.step, a.valid_time, a.projection, a.format)
+            url = product_url(
+                a.product, a.base_time, a.step, a.valid_time, projection, a.format, **params
             )
+            resp, base = _get_json(url), a.base_time
         else:
-            resp, _base = fetch_product(
-                a.product, opts["base_times"], a.step, a.projection, a.format
+            resp, base = fetch_product(
+                a.product, opts["base_times"], a.step, projection, a.format, **params
             )
         link, _meta = image_link(resp)
         Path(a.output).write_bytes(_get_bytes(link))
         attrs = resp["data"].get("attributes", {})
         cams = is_cams(a.product, resp, attrs.get("title", ""), opts["layer_names"])
-        print(f"saved {a.output}\n{attrs.get('description', '')}\nAttribution: {attribution(cams)}")
+        lines = [f"saved {a.output}"]
+        if attrs.get("description"):
+            lines.append(attrs["description"])
+        if place:
+            title = attrs.get("title") or a.product
+            lines += describe_place(title, place, params["epsgram"], base, a.step, a.valid_time)
+        lines.append(f"Attribution: {attribution(cams)}")
+        print("\n".join(lines))
         return 0
     except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
         if not isinstance(e, urllib.error.HTTPError):

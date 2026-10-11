@@ -145,7 +145,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-opencharts-wms/SKILL.md`](../plu
 |---|---|
 | `scripts/ecmwf_mcp.py` | Call ECMWF's MCP server from the command line — standard library only |
 | `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
-| `scripts/opencharts.py` | ECMWF OpenCharts — find and download official ECMWF forecast charts (PNG/PDF). Stdlib only |
+| `scripts/opencharts.py` | ECMWF OpenCharts — official ECMWF forecast charts and meteograms (PNG/PDF). Stdlib only |
 | `scripts/webmap.py` | Build and serve an ECMWF forecast web map with click-for-meteogram. Stdlib only |
 | `scripts/wms.py` | ECMWF ecCharts WMS helper — layers, times, GetMap/GetLegend/GetFeatureInfo |
 
