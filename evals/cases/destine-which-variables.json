@@ -3,7 +3,7 @@
   "prompt": "Which variables exist as Destination Earth Climate DT monthly means for the SSP3-7.0 projection with IFS-FESOM?",
   "timeout": 600,
   "max_budget_usd": 2,
-  "note": "Only the DestinE catalogue knows which parameters exist for a selection; answering from memory lists instantaneous parameters (2t, tp) that monthly means do not have.",
+  "note": "Only the DestinE catalogue knows which parameters exist for a selection; answering from memory lists instantaneous parameters (2t, tp) that monthly means do not have. A correct answer listed the parameters as 'monthly-mean parameters' with their codes (228004 …) instead of the words 'time-mean' or 'avg_'; both are accepted.",
   "expect": [
     {
       "kind": "skill",
@@ -15,7 +15,7 @@
     },
     {
       "kind": "final",
-      "pattern": "(?i)time-mean|avg_"
+      "pattern": "(?i)time-mean|avg_|monthly[- ]means?\\b"
     },
     {
       "kind": "final",
