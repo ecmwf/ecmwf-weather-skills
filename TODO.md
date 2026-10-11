@@ -17,14 +17,66 @@ Accepted, open work only — remove items when done. Finished work is recorded i
       submit only once it works).
 - [ ] Directory submissions (after the test above): Anthropic — claude.ai/directory/manage
       (Plugin bundle, folder `plugins/ecmwf-weather`, ECMWF's paid organisation account);
-      OpenAI — platform.openai.com/plugins (Skills only; ECMWF business verification; decide
-      first whether an MCP server will ever join this plugin — it cannot be added later)
+      OpenAI — platform.openai.com/plugins (ECMWF business verification; the plugin bundles the
+      ECMWF MCP server, so submit it "With MCP" — the remote endpoint https://mcp.ecmwf.int —
+      once ECMWF confirms the endpoint is a production service)
 
 - [ ] Confirm with ECMWF: public WMS token policy and public surface layers (2t, tp)
 - [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow
 
 - [ ] Run the 21 eval cases on pi (`make evals AGENT=pi MODEL=…`) once pi has a login or API key
       on the eval machine; full opencode runs across models
+
+## ECMWF MCP
+
+- [ ] **Re-test access terms** of the services behind the bundled MCP — the MCP router, its
+      OGC API EDR backend and the DestinE data catalogue — once their owners confirm the access
+      terms: each route must follow the same requirements as the official route for the same
+      data (DestinE upgraded access for Digital Twin data; an entitled account or service
+      agreement for real-time data beyond Open Data). Then decide whether scripts may use the
+      MCP forecast route beyond quick answers in chat.
+- [ ] Re-run the `mcp-*` evals and a full suite with the MCP present on Claude (Haiku, Sonnet,
+      Opus) and Codex once the router answers again (it returned HTTP 502 when 0.7.0 was
+      prepared, so the MCP-present runs measured the fallback to the scripts).
+- [ ] **Feedback for the MCP developers** — open issues or pull requests once the repository is
+      available:
+  - Forecast `tp` is accumulated since the start of the run but each row reads "Total
+    precipitation (mm)": summing the column overstates rain (Bologna, 48 h: 1.5 mm, summed 20.9
+    mm). De-accumulate, or label it and return the amount over the requested window.
+  - Only the 00 UTC runs, and only the last two, are served (at 18 UTC it still answered from
+    00 UTC); serve the 06/12/18 UTC runs or state the run's age. Charts and forecast tools can
+    answer from different runs — say so, or align them.
+  - Pressure-level requests (e.g. `t` at 850 hPa) fail with HTTP 400 although the parameter is
+    listed.
+  - Units in the collection metadata: `q` and `tcw` are labelled "m"; `tcc` is declared % but
+    delivered as a fraction.
+  - Raw values only: wind as u/v components (no speed or direction), pressure in Pa, times in
+    UTC only, no daily summaries for forecasts.
+  - Response size: a chart is a 1.2 MB PNG inline (1.6 MB of JSON) — offer the image URL
+    without the inline image; `catalogue_get_axes` returns 57–67 kB; the 21 tool definitions
+    cost about 9,000 tokens per session.
+  - Attribution: forecast `provenance.licence` is null while the text says CC-BY-4.0; add
+    "© <year> ECMWF", the terms-of-use disclaimer and a note when values are converted. ERA5
+    output lacks the C3S disclaimer and the dataset DOI, and says "Generated using" for daily
+    statistics (modified data: "Contains modified …"). CAMS charts need the Copernicus CAMS
+    credit. The Destination Earth licence label has no URL.
+  - The DestinE authentication help tells users to save the DestinE token in
+    `~/.polytopeapirc`, which overwrites an ECMWF Polytope key: use a separate file or
+    variable.
+  - The public WMS capabilities say `AccessConstraints: Registered users only`, which
+    contradicts the public token.
+  - When the router is down, `/status` answers HTTP 502 too, so clients cannot tell which
+    services still work; keep `/status` up or publish the backend endpoints.
+- [ ] **Feedback for the DestinE catalogue (Omnicat) developers:**
+  - An invalid value marks every axis of the selection invalid without saying which one;
+    report the offending axis and its valid values.
+  - Unavailable values in a list are dropped silently, and keys that are not axes of the
+    selected branch (e.g. `date` under `clmn`) are ignored.
+  - MARS ranges (`a/to/b`) match only the two endpoints.
+  - Hours are stored with mixed types (`0000`–`0900` as text, `1000`–`2300` as numbers), so
+    one selection matches only one group.
+  - The AI-catalogue endpoints hide the storyline experiments and realizations 2–5.
+  - The service runs on a test deployment (`catalogue-test`); publish the production URL.
 
 ## Data sources
 
@@ -52,8 +104,6 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 
 ## Later
 
-- [ ] ECMWF MCP server — documented, not bundled (a bundled server cannot be disabled
-      conditionally); route end-user "weather in X" questions through it
 - [ ] Generated CDS/ADS dataset catalogue (weekly CI)
 - [ ] Claude.ai upload and ChatGPT plugin directory submission
 - [ ] Gemini CLI eval runs (needs `GEMINI_API_KEY`)
