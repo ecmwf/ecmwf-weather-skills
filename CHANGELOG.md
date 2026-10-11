@@ -28,7 +28,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
   meteogram has fixed layouts (10 or 15 days, plume, wave); a chosen period or variables is
   drawn with `ekplot.py meteogram`.
 - ecmwf-open-data claims weather questions about a place before any web search or weather
-  website, also when ECMWF MCP tools are listed (they have no point forecasts).
+  website, also when ECMWF MCP tools are listed (they give charts, not forecast values).
 - `opencharts.py get` refuses a chart for one place without `--lat`/`--lon` (OpenCharts would
   draw a default point), coordinates out of range, and options a product does not take.
 - Eval case `oc-chart` accepts the bundled MCP's `charts_get_chart` (the same official product).
