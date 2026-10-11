@@ -14,7 +14,7 @@
     },
     {
       "kind": "final",
-      "pattern": "(?is)\\b(?:run|cycle|initiali[sz]ed|base time|issued)\\b.{0,80}?\\b(?:00|06|12|18)(?::?00)?\\s?(?:UTC|GMT|Z)\\b|\\b(?:00|06|12|18)(?::?00)?\\s?(?:UTC|GMT|Z)\\b.{0,40}?\\b(?:run|cycle)\\b"
+      "pattern": "(?is)\\b(?:run|cycle|initiali[sz]ed|base time|issued)\\b.{0,80}?\\b(?:00|06|12|18)(?::?00)?\\s?(?:UTC|GMT|Z)\\b|\\b(?:00|06|12|18)(?::?00)?\\s?(?:UTC|GMT|Z)\\b.{0,40}?\\b(?:run|cycle|forecast|model)\\b"
     },
     {
       "kind": "any",
@@ -37,5 +37,6 @@
       "kind": "command_not",
       "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|wttr\\.in|meteostat"
     }
-  ]
+  ],
+  "note": "The run may be named either way round ('the 06 UTC run' or 'ECMWF's 06:00 UTC forecast'); a correct answer used the second form."
 }

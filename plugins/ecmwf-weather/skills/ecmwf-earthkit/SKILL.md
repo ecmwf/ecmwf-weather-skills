@@ -17,13 +17,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Before you write code (line 37)
-- Components (line 58)
-- Bundled scripts (line 78)
-- Writing your own code (line 104)
-- Bugs and missing features — upstream, with approval only (line 118)
-- Fallback without earthkit (line 135)
-- Attribution (line 141)
-- When blocked (line 149)
+- Components (line 59)
+- Bundled scripts (line 79)
+- Writing your own code (line 107)
+- Bugs and missing features — upstream, with approval only (line 121)
+- Fallback without earthkit (line 138)
+- Attribution (line 144)
+- When blocked (line 152)
 - References — `references/recipes.md` (verified code for every job), `references/pitfalls.md` (1.x breakages and known bugs), `references/upstream.md` (reporting bugs, contributing features), `references/versions.md` (generated: latest versions)
 
 **earthkit first.** For weather and climate data, the code an agent would write by hand already
@@ -45,6 +45,7 @@ say so.
 | `resample("1D")`, groupby day/month, climatologies, anomalies | earthkit-transforms `temporal.daily_*`, `monthly_*`, `climatology.mean / anomaly / quantiles` |
 | mask or average over a box, country or polygon | earthkit-transforms `spatial.reduce / mask` with earthkit-geo `gisco` shapes |
 | code a formula (Magnus, wind from u/v, θ, θe, wet bulb, EFI, CRPS) | earthkit-meteo `thermo`, `wind`, `solar`, `extreme`, `score`, `stats` |
+| relative humidity or dewpoint as a result (a map, a series) | earthkit-meteo `thermo.relative_humidity_from_dewpoint` — thermofeel's helpers only feed its own indices |
 | code a thermal-comfort index (heat index, humidex, wind chill, UTCI, MRT, WBGT) | thermofeel — or `ekplot.py indices`; points: `odpoint.py`/`ptpoint.py --indices` |
 | print or tabulate K in °C (`- 273.15`) | `thermofeel.kelvin_to_celsius`, earthkit-utils `convert_array(v, "degC", "K")` |
 | divide accumulated radiation by `step * 3600` | mean flux between consecutive steps: earthkit-transforms `accumulation_to_rate` |
@@ -90,6 +91,8 @@ uv run scripts/ekplot.py meteogram point.json -o meteogram.png   # from odpoint.
 uv run scripts/ekplot.py indices fc.grib2 --index utci --step 12 --domain Europe -o utci.png
       # heat-index|humidex|apparent-temperature|wind-chill (2t 2d 10u 10v) or utci|wbgt|mrt
 ```
+
+The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (or the MCP tool `charts_get_meteogram`); `ekplot.py meteogram` draws your own chart from the data, so never call that one the official meteogram.
 
 Meteograms share one time axis (local time with `--tz` data), show precipitation as mm/h per
 interval and ensembles as median plus 10-90 % range; `--indices` point data adds a feels-like

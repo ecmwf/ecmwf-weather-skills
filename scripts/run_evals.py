@@ -62,7 +62,20 @@ WEB_TOOLS = {
 
 
 def _skills_from_text(text: str) -> set[str]:
-    return set(SKILL_PATH_RE.findall(text or ""))
+    # Paths are often built from shell variables (S=…/skills/x/scripts; uv run $S/y.py).
+    return set(SKILL_PATH_RE.findall(expand_shell_vars(text or "")))
+
+
+# Web access to ECMWF's and Copernicus's own sites is not a fallback to third-party data.
+ECMWF_WEB_DOMAIN = re.compile(
+    r"(?i)^(?:[a-z0-9-]+\.)*(?:ecmwf\.int|copernicus\.eu|destination-earth\.eu|destine\.eu)$"
+)
+DOMAIN = re.compile(r"(?i)\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b")
+
+
+def _web_is_ecmwf_only(entry: str) -> bool:
+    domains = DOMAIN.findall(entry.split(":", 1)[-1])
+    return bool(domains) and all(ECMWF_WEB_DOMAIN.match(d) for d in domains)
 
 
 def _mcp_name(name: str) -> str:
@@ -248,7 +261,7 @@ def grade(t: dict, expect: list[dict], workdir: Path | None = None) -> list[dict
         elif k == "mcp_not":
             ok = not any(re.search(e["pattern"], c) for c in calls)
         elif k == "web_not":  # no web search or fetch at all, or none matching the pattern
-            web = t.get("web", [])
+            web = [w for w in t.get("web", []) if not _web_is_ecmwf_only(w)]
             ok = not any(re.search(e["pattern"], w) for w in web) if e.get("pattern") else not web
         elif k == "any":  # passes when one of several acceptable routes was taken
             ok = any(r["ok"] for r in grade(t, e["of"], workdir))

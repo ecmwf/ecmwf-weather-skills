@@ -18,14 +18,14 @@ SPDX-License-Identifier: Apache-2.0
 ## Contents
 - Scripts (line 35)
 - Point forecast workflow (line 55)
-- Facts to get right (line 80)
-- ECMWF MCP (line 96)
-- Dependencies — earthkit first (line 119)
-- Credentials and better routes (line 133)
-- Processing and plots (line 148)
-- Attribution (line 156)
-- When blocked (line 165)
-- Old patterns (line 185)
+- Facts to get right (line 81)
+- ECMWF MCP (line 97)
+- Dependencies — earthkit first (line 120)
+- Credentials and better routes (line 134)
+- Processing and plots (line 149)
+- Attribution (line 157)
+- When blocked (line 166)
+- Old patterns (line 186)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -76,6 +76,7 @@ say so.
   several minutes. Don't thin steps to go faster — it ruins meteograms.
 - On download errors retry once with `--source google`. The AWS mirror may answer `503 Slow Down`.
 - Meteogram image: pass `point.json` to the `ecmwf-earthkit` skill's `ekplot.py meteogram`.
+  The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (or the MCP tool `charts_get_meteogram`); `ekplot.py meteogram` draws your own chart from the data, so never call that one the official meteogram.
 
 ## Facts to get right
 

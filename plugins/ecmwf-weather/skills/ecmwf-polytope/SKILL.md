@@ -18,11 +18,11 @@ SPDX-License-Identifier: Apache-2.0
 ## Contents
 - Access check (line 40)
 - Point forecast and ensemble workflow (line 65)
-- ECMWF MCP (line 94)
-- Other features (line 116)
-- Processing and plots (line 126)
-- Licence and attribution (line 134)
-- When blocked (line 142)
+- ECMWF MCP (line 96)
+- Other features (line 118)
+- Processing and plots (line 128)
+- Licence and attribution (line 136)
+- When blocked (line 144)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -77,6 +77,8 @@ files there, never inside the skill directory.
 - [ ] 5. Answer in local time; give ensemble ranges as "most likely X, range Y-Z";
          end with the attribution line from the output
 ```
+
+The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (or the MCP tool `charts_get_meteogram`); `ekplot.py meteogram` draws your own chart from the data, so never call that one the official meteogram.
 
 - Output (UTC, hourly to 90 h, then 3-hourly/6-hourly): `t2m_C`, `precip_mm` (since previous
   step), `wind_speed_ms`, `wind_dir_deg`, `msl_hPa`, `tcc_pct`; ensemble adds `*_p10/_p50/_p90`

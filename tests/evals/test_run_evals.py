@@ -820,3 +820,43 @@ def test_bare_claude_gets_the_bundled_server_explicitly(tmp_path, monkeypatch):
     assert "--mcp-config" not in off
     monkeypatch.delenv("EVAL_BARE")
     assert "--mcp-config" not in re_.agent_command("claude", "hi", tmp_path, {}, plugin=plugin)
+
+
+def test_skill_used_through_a_shell_variable_is_detected():
+    raw = "\n".join(
+        json.dumps(x)
+        for x in [
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Bash",
+                            "input": {
+                                "command": "S=/tmp/p/ecmwf-weather/skills/ecmwf-polytope/scripts; uv run $S/ptpoint.py --check"
+                            },
+                        }
+                    ]
+                },
+            },
+        ]
+    )
+    assert "ecmwf-polytope" in re_.parse_transcript("claude", raw)["skills"]
+
+
+def test_web_access_to_ecmwf_and_copernicus_sites_is_not_a_web_fallback():
+    pattern = r"(?i)\b(weather|temperatures?|heat\w*)\b"
+
+    def web_ok(*entries):
+        t = {"commands": [], "final": "", "web": list(entries)}
+        return re_.grade(t, [{"kind": "web_not", "pattern": pattern}])[0]["ok"]
+
+    assert web_ok(
+        "web_search: site.ecmwf.int Paris August 2003 heatwave temperature | "
+        "site.climate.copernicus.eu August 2003 Paris heatwave"
+    )
+    assert not web_ok("WebSearch: Paris August 2003 heatwave temperature record")
+    assert not web_ok(
+        "WebFetch: https://www.metoffice.gov.uk/weather/forecast | https://www.ecmwf.int/"
+    )
