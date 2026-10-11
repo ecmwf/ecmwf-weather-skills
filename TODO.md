@@ -54,6 +54,9 @@ Accepted, open work only — remove items when done. Finished work is recorded i
   - Response size: a chart is a 1.2 MB PNG inline (1.6 MB of JSON) — offer the image URL
     without the inline image; `catalogue_get_axes` returns 57–67 kB; the 21 tool definitions
     cost about 9,000 tokens per session.
+  - The inline chart is reduced (1568 × 1411 of 2000 × 1800), and an agent asked to save it
+    may keep its client's copy of that image (Claude Code: 1254 × 1129) rather than fetch
+    `image_url`; say in the answer text that `image_url` is the full-size chart.
   - Attribution: forecast `provenance.licence` is null while the text says CC-BY-4.0; add
     "© <year> ECMWF", the terms-of-use disclaimer and a note when values are converted. ERA5
     output lacks the C3S disclaimer and the dataset DOI, and says "Generated using" for daily
