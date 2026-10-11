@@ -136,3 +136,50 @@ def test_transient_failures_are_retried():
 
     assert ce.check(fetch=ce.retrying(flaky, delay=0)) == []
     assert calls["n"] == 2
+
+
+def test_rate_limited_answers_are_retried():
+    # data.ecmwf.int answers HTTP 429 to bursts of requests, as right after the live tests:
+    # a throttled answer is not drift, so the gate asks again before reporting it.
+    calls = {"n": 0}
+    base = fetcher()
+
+    def throttled(url):
+        if url == ce.PROBES["open-data"]:
+            calls["n"] += 1
+            if calls["n"] < ce.RETRIES:
+                return 429, ""
+        return base(url)
+
+    assert ce.check(fetch=ce.retrying(throttled, delay=0)) == []
+    assert calls["n"] == ce.RETRIES
+
+
+def test_a_lasting_rate_limit_is_still_reported():
+    calls = {"n": 0}
+    base = fetcher()
+
+    def throttled(url):
+        if url == ce.PROBES["open-data"]:
+            calls["n"] += 1
+            return 429, ""
+        return base(url)
+
+    probs = ce.check(fetch=ce.retrying(throttled, delay=0))
+    assert any("data.ecmwf.int" in p and "429" in p for p in probs), probs
+    assert calls["n"] == ce.RETRIES
+
+
+def test_other_answers_are_not_retried():
+    calls = {"n": 0}
+    base = fetcher()
+
+    def gone(url):
+        if url == ce.PROBES["open-data"]:
+            calls["n"] += 1
+            return 404, ""
+        return base(url)
+
+    probs = ce.check(fetch=ce.retrying(gone, delay=0))
+    assert any("data.ecmwf.int" in p and "404" in p for p in probs), probs
+    assert calls["n"] == 1
