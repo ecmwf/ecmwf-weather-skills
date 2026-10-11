@@ -74,8 +74,8 @@ files there, never inside the skill directory.
 - [ ] 3. Check "series" is non-empty; exit 4 -> ecmwf-open-data skill; exit 2 -> read the error
 - [ ] 4. Optional image: the ecmwf-earthkit skill's ekplot.py meteogram point.json -o meteogram.png
          (ensemble output is drawn as median + shaded 10-90 % range)
-- [ ] 5. Answer in local time; give ensemble ranges as "most likely X, range Y-Z";
-         end with the attribution line from the output
+- [ ] 5. Answer in local time; name the model run ("the 06 UTC run" — the "run" field); give
+         ensemble ranges as "most likely X, range Y-Z"; end with the attribution line
 ```
 
 The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (or the MCP tool `charts_get_meteogram`); `ekplot.py meteogram` draws your own chart from the data, so never call that one the official meteogram.
