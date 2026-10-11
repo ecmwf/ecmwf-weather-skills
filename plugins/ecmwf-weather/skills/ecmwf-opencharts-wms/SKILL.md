@@ -17,15 +17,15 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Choose the route (line 31)
-- Web map workflow (line 50)
-- WMS (line 67)
-- OpenCharts (line 85)
-- ECMWF MCP (line 91)
-- Rules the server enforces (line 112)
-- Access and tokens (line 123)
-- Processing and plots (line 129)
-- Attribution (line 137)
-- When blocked (line 150)
+- Web map workflow (line 51)
+- WMS (line 68)
+- OpenCharts (line 86)
+- ECMWF MCP (line 110)
+- Rules the server enforces (line 134)
+- Access and tokens (line 145)
+- Processing and plots (line 151)
+- Attribution (line 159)
+- When blocked (line 172)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -40,6 +40,7 @@ files there, never inside the skill directory.
 | One map image for a region and time | `uv run scripts/wms.py getmap --layer NAME --bbox W,S,E,N --valid +24 -o map.png` |
 | Value at a point from a layer | `python3 scripts/wms.py info --layer NAME --lat LAT --lon LON` |
 | Official ECMWF chart (as on charts.ecmwf.int) | `python3 scripts/opencharts.py search TEXT` → `opencharts.py get NAME --step 48 -o chart.png` |
+| Official ECMWF ENS meteogram for a place | `python3 scripts/opencharts.py get opencharts_meteogram --lat LAT --lon LON -o meteogram.png` |
 | 2 m temperature or precipitation **maps** | OpenCharts (`medium-2t-wind`, `medium-rain-rate`…) — the public WMS has no surface temperature/precipitation layers |
 | Forecast numbers at a place | the `ecmwf-open-data` skill |
 | Map of a GRIB/NetCDF file the user already has | the `ecmwf-earthkit` skill (`ekplot.py map`) — not an OpenCharts image |
@@ -88,6 +89,24 @@ Official ECMWF charts (IFS and AIFS; medium and extended range). `search` matche
 name and title; `options NAME` lists base times, steps and projections (`opencharts_europe`,
 `opencharts_global`, `opencharts_north_atlantic`, …); `get` downloads the PNG/PDF. No account.
 
+The official ENS meteogram for any place — this works without the ECMWF MCP:
+
+```bash
+python3 scripts/opencharts.py get opencharts_meteogram --lat 44.49 --lon 11.34 -o bologna.png
+python3 scripts/opencharts.py get opencharts_meteogram --lat 44.49 --lon 11.34 --kind plume -o plume.png
+```
+
+`--kind`: `10-day` (default; cloud, precipitation, wind and 2 m temperature every 6 h),
+`15-day` (daily), `15-day-with-climate` (daily, against the model climate), `plume` (850 hPa
+temperature, precipitation and 500 hPa geopotential of every member) or `wave` (needs a sea
+point). `--base-time` picks an earlier run. The script prints the run's base time and the
+attribution; the chart title gives the gridpoint used. These layouts are fixed (10 or 15 days,
+plume, wave): for a chosen period or variables, use the `ecmwf-earthkit` skill's `ekplot.py
+meteogram` with data from `odpoint.py` (ecmwf-open-data) or `ptpoint.py` (ecmwf-polytope) —
+that is your own chart, never the official meteogram. Other charts for one place (`search
+meteogram`: precipitation type, visibility, sub-seasonal, EFI/CDF, vertical profiles, AIFS ENS)
+take `--lat --lon` too; `options NAME` lists their kinds and steps.
+
 ## ECMWF MCP
 
 The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). Its chart tools
@@ -104,8 +123,11 @@ python3 scripts/ecmwf_mcp.py call charts_get_chart '{"product": "medium-mslp-win
   "step": 24, "area": "europe"}' -o mslp.png
 ```
 
-- If the MCP is unreachable, use `opencharts.py` and `wms.py`; they also cover every WMS
-  layer (the MCP map tool serves only the public ones), legends, GetMap URLs and web maps.
+- When saving an MCP chart image to a file, `ecmwf_mcp.py call … -o FILE` writes the
+  full-size image (the inline image the MCP returns is reduced).
+- If the MCP is unreachable, use `opencharts.py` (the meteogram too) and `wms.py`; they also
+  cover every WMS layer (the MCP map tool serves only the public ones), legends, GetMap URLs
+  and web maps.
 - Charts can come from a different run than the forecast tools: state the base and valid
   time the result gives, and end with its attribution line.
 

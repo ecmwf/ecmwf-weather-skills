@@ -1,0 +1,30 @@
+{
+  "id": "oc-meteogram-point",
+  "prompt": "Download the official ECMWF ensemble meteogram for Bologna (44.49 N, 11.34 E) as bologna.png.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "file",
+      "pattern": "bologna.png"
+    },
+    {
+      "kind": "any",
+      "of": [
+        {
+          "kind": "command",
+          "pattern": "opencharts\\.py\\s+get\\s(?:[^\\n]|\\\\\\n)*?\\bopencharts_meteogram\\b"
+        },
+        {
+          "kind": "mcp",
+          "pattern": "charts_get_meteogram"
+        }
+      ]
+    },
+    {
+      "kind": "final",
+      "pattern": "CC[ -]BY"
+    }
+  ],
+  "note": "Two correct routes: opencharts.py get opencharts_meteogram --lat --lon, which needs no MCP server, or the MCP tool charts_get_meteogram (the client's or ecmwf_mcp.py call)."
+}
