@@ -1,0 +1,13 @@
+{
+ "jsonrpc": "2.0",
+ "id": 1,
+ "result": {
+  "content": [
+   {
+    "text": "There is no tool called forecast_get_point_forecast. Available service prefixes: charts_* (ECMWF charts); catalogue_* (Destination Earth data catalogue). Call find_service with a brief description of the request to get the right tool name, or list_services for the full list.",
+    "type": "text"
+   }
+  ],
+  "isError": true
+ }
+}

@@ -1,6 +1,6 @@
 ---
 name: ecmwf-cds-ads
-description: Answers questions about past weather at a place — how hot, cold, wet or windy it was on a day, month or year since 1940 — from ERA5 in seconds; load it before answering from memory or searching the web, also when the ECMWF MCP server is unavailable. Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (hourly point series, climate normals), the CARRA (Arctic, 2.5 km) and CERRA / CERRA-Land (Europe, 5.5 km) regional reanalyses, seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, CARRA, CERRA, regional or Arctic reanalysis, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates and costs requests without an account and explains how to get a key.
+description: Answers questions about past weather at a place — how hot, cold, wet or windy it was on a day, month or year since 1940 — from ERA5 in seconds; load it before answering from memory or searching the web (the bundled ECMWF MCP server has no ERA5). Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (hourly point series, climate normals), the CARRA (Arctic, 2.5 km) and CERRA / CERRA-Land (Europe, 5.5 km) regional reanalyses, seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, CARRA, CERRA, regional or Arctic reanalysis, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates and costs requests without an account and explains how to get a key.
 compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe, validate and era5-point (ERA5 point series from ECMWF's EDR service, no key). Data-store downloads, including the era5-point CDS fallback, use uv (PEP 723 inline dependency earthkit-data[cds]) and a CDS/ADS key. Network access to cds.climate.copernicus.eu / ads.atmosphere.copernicus.eu / polytope-edr.lumi.apps.dte.destination-earth.eu.
 license: Apache-2.0
 metadata:
@@ -19,11 +19,11 @@ SPDX-License-Identifier: Apache-2.0
 - Workflow (line 31)
 - ERA5 at a point (line 69)
 - ECMWF MCP (line 90)
-- Regional reanalyses — CARRA and CERRA (line 111)
-- CAMS air quality without a key (line 126)
-- Processing and plots (line 133)
-- Attribution and citation (line 143)
-- When blocked (line 154)
+- Regional reanalyses — CARRA and CERRA (line 97)
+- CAMS air quality without a key (line 112)
+- Processing and plots (line 119)
+- Attribution and citation (line 129)
+- When blocked (line 140)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors), `references/regional-reanalyses.md` (CARRA, CERRA: requests, subsetting, point series, limits)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -89,24 +89,10 @@ that series (recipe in `references/datasets.md`).
 
 ## ECMWF MCP
 
-The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account or key). Its
-`reanalysis_get_point_history` tool answers quick ERA5 questions about a place in chat: hourly
-values, or per UTC day with `"daily": true` (lowest, highest, mean, totals), from 1940 to about
-a week ago, up to 366 days per call. Call it when your client lists the ECMWF MCP tools;
-otherwise run it with this standard-library script. If the MCP is unreachable, use
-`cds.py era5-point`.
-
-```bash
-python3 scripts/ecmwf_mcp.py call reanalysis_get_point_history '{"collection_id": "era5-single-levels",
-  "latitude": 48.86, "longitude": 2.35, "parameters": ["t2m", "tp"], "start": "2003-08-01",
-  "end": "2003-08-31", "daily": true}'
-```
-
-- ERA5 parameter ids are `t2m`, `d2m`, `tp`, `u10`, `v10`, `msl`, `tcc`…
-  (`reanalysis_describe_collection` lists them); `era5-pressure-levels` takes a `level` in hPa.
-- ERA5 at a point only — other datasets (ERA5-Land, CARRA, CERRA, seasonal, CAMS), gridded
-  data and files go through the workflow above.
-- ERA5 is a model reanalysis, not station observations; give the attribution below.
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). It offers ECMWF charts and the
+Destination Earth data catalogue — no ERA5 or other Copernicus data: answer past-weather
+questions with `cds.py era5-point` (seconds, no key) and the workflow above, also when the MCP
+is connected. `python3 scripts/ecmwf_mcp.py tools` lists what the MCP offers now.
 
 ## Regional reanalyses — CARRA and CERRA
 

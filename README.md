@@ -59,8 +59,8 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
   stamps it on figures.
 - **Never leaks secrets** — credentials are detected by name only and redacted from output.
 - **ECMWF's MCP server bundled** — the plugins connect agents to `https://mcp.ecmwf.int` for
-  quick answers in chat (point forecasts, ERA5 history, official charts, the Destination
-  Earth catalogue); the skills say when to use it and work without it.
+  official charts and meteograms and the Destination Earth catalogue in chat; the skills say
+  when to use it and work without it.
 
 ## The skills
 
@@ -143,9 +143,11 @@ Use whichever skills directory your client documents — see <https://agentskill
 ### ECMWF MCP server
 
 The Claude Code and Codex plugins bundle ECMWF's remote MCP server, `https://mcp.ecmwf.int`
-(no account): agents use its tools for quick answers in chat, and the skills call the same
-tools through `scripts/ecmwf_mcp.py` when the client has none. Everything else — files, the
-latest runs, ensembles — goes through the skills' scripts, so the skills work without it.
+(no account). It offers ECMWF charts and meteograms and the Destination Earth data catalogue
+(MCP 0.4.0 has no point forecasts or ERA5): agents use its tools in chat, and the skills call
+the same tools through `scripts/ecmwf_mcp.py` when the client has none. Forecasts, ERA5,
+files, ensembles and everything else go through the skills' scripts, so the skills work
+without it.
 
 - Turn it off in **Claude Code**: toggle `plugin:ecmwf-weather:ecmwf` off in `/mcp`.
 - Turn it off in **Codex**: in `~/.codex/config.toml`, set

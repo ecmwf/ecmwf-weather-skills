@@ -69,7 +69,7 @@ def test_every_service_has_a_host_probe():
 
 def test_mcp_router_moving_a_service_is_reported():
     moved = json.loads(json.dumps(ROUTER_STATUS))
-    moved["services"][2]["url"] = "https://charts2.mcp.ecmwf.int/mcp"
+    moved["services"][0]["url"] = "https://charts2.mcp.ecmwf.int/mcp"
     moved["services"].append({"name": "observations", "url": "https://obs.mcp.ecmwf.int/mcp"})
     probs = ce.check(fetch=fetcher({MCP_STATUS: (200, json.dumps(moved))}))
     assert any("charts" in p and "ecmwf_mcp.BACKENDS" in p for p in probs)

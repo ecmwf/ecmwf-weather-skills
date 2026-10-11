@@ -127,9 +127,11 @@ remove the workaround from the skills.
 - **The ECMWF MCP server is bundled by default** (`https://mcp.ecmwf.int`).
   `validate_packaging.py` keeps `.mcp.json`, `mcp.json`, the Codex reference and
   `ecmwf_mcp.ROUTER` in agreement. Skills are MCP-aware and must work without it: with the
-  client's MCP tools, or `scripts/ecmwf_mcp.py` when the client has none, it gives quick answers
-  in chat; files, latest runs, ensembles and every other route stay on the skills' scripts, and
-  an unreachable MCP sends agents to those scripts. HRES point forecasts from the MCP are quick
+  client's MCP tools, or `scripts/ecmwf_mcp.py` when the client has none, it gives charts,
+  meteograms and DestinE catalogue answers in chat; forecasts, ERA5, files, ensembles and every
+  other route stay on the skills' scripts, and an unreachable MCP sends agents to those
+  scripts. Skill text describes only the tools the MCP offers now (`ecmwf_mcp.py tools`; MCP
+  0.4.0 withdrew its forecast and ERA5 services). If point forecasts return, they are quick
   answers only — no script, file or fallback builds on that output (maintainer decision: its
   access terms are not settled).
 - **Default model is IFS HRES** unless the user asks otherwise.

@@ -72,7 +72,7 @@ MCP_STATUS = "mcp.ecmwf.int/status"
 
 def test_mcp_reads_the_router_status():
     r = st.outage_report("mcp", fetch=routes(**{MCP_STATUS: ROUTER_STATUS}), now=0)
-    assert r["state"] == "ok" and "4/4 services reachable" in r["summary"]
+    assert r["state"] == "ok" and "2/2 services reachable" in r["summary"]
 
 
 def test_mcp_router_answering_with_an_error_page_is_a_reported_problem():
@@ -87,14 +87,14 @@ def test_mcp_service_the_router_cannot_reach_is_reported():
     d = json.loads(json.dumps(ROUTER_STATUS))
     d["services"][0].update(reachable=False, error="HTTP 502 from upstream")
     r = st.outage_report("mcp", fetch=routes(**{MCP_STATUS: d}), now=0)
-    assert r["state"] == "degraded" and "forecast" in r["summary"] and "HTTP 502" in r["summary"]
+    assert r["state"] == "degraded" and "charts" in r["summary"] and "HTTP 502" in r["summary"]
 
 
 def test_mcp_router_status_is_kept_when_the_status_page_is_down():
     r = st.outage_report(
         "mcp", fetch=fake({MCP_STATUS: ROUTER_STATUS, "/status/": OSError("down")}), now=0
     )
-    assert r["state"] == "ok" and "4/4 services reachable" in r["summary"]
+    assert r["state"] == "ok" and "2/2 services reachable" in r["summary"]
 
 
 def test_all_ok():

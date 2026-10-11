@@ -19,10 +19,10 @@ SPDX-License-Identifier: Apache-2.0
 - Access check (line 40)
 - Point forecast and ensemble workflow (line 65)
 - ECMWF MCP (line 96)
-- Other features (line 118)
-- Processing and plots (line 128)
-- Licence and attribution (line 136)
-- When blocked (line 144)
+- Other features (line 110)
+- Processing and plots (line 120)
+- Licence and attribution (line 128)
+- When blocked (line 136)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -95,23 +95,15 @@ The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes fro
 
 ## ECMWF MCP
 
-The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). For a quick answer
-in chat, call its tools (such as `forecast_get_point_forecast`) when your client lists them;
-otherwise run the same tools with this standard-library script. If the MCP is unreachable, use
-`ptpoint.py`.
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). It offers ECMWF charts and the
+Destination Earth data catalogue — no point forecasts: answer forecast questions with
+`ptpoint.py`, also when the MCP is connected.
 
-```bash
-python3 scripts/ecmwf_mcp.py call forecast_get_point_forecast '{"collection_id": "operational-data",
-  "latitude": 51.45, "longitude": -0.97, "parameters": ["2t", "tp", "10u", "10v", "tcc"]}'
-```
-
-- It serves IFS HRES at the nearest native gridpoint, 00 UTC runs only. Quick answers in chat
-  only — never files or code built on its output: for the latest run, ensembles, CSV/JSON,
-  local time, daily summaries and feels-like run `ptpoint.py`.
-- `tp` is accumulated from the start of the run: the amount over a period is last minus
-  first, never the sum of the rows (`ecmwf_mcp.py` prints the total and each step). Values
-  come in raw units (K, Pa, wind as u/v components, cloud cover 0–1) and UTC. Name the model
-  run, and end with the source and licence line of the result.
+- The official ECMWF ENS meteogram image for a place: its `charts_get_meteogram` tool (the
+  `ecmwf-opencharts-wms` skill), or `python3 scripts/ecmwf_mcp.py call charts_get_meteogram
+  '{"latitude": 51.45, "longitude": -0.97, "place_name": "Reading"}' -o meteogram.png` when your
+  client lists no MCP tools.
+- `python3 scripts/ecmwf_mcp.py tools` lists what the MCP offers now.
 - Model output is guidance, not a warning: for official warnings name the country's national
   meteorological service and MeteoAlarm (https://meteoalarm.org).
 
