@@ -18,14 +18,14 @@ SPDX-License-Identifier: Apache-2.0
 ## Contents
 - Scripts (line 35)
 - Point forecast workflow (line 55)
-- Facts to get right (line 81)
-- ECMWF MCP (line 97)
-- Dependencies — earthkit first (line 111)
-- Credentials and better routes (line 125)
-- Processing and plots (line 140)
-- Attribution (line 148)
-- When blocked (line 157)
-- Old patterns (line 177)
+- Facts to get right (line 82)
+- ECMWF MCP (line 98)
+- Dependencies — earthkit first (line 112)
+- Credentials and better routes (line 126)
+- Processing and plots (line 141)
+- Attribution (line 149)
+- When blocked (line 158)
+- Old patterns (line 178)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -59,7 +59,8 @@ say so.
 - [ ] 2. Window: --next-hours N for "the next N hours/days" (or --steps 0-END from the run start)
 - [ ] 3. Run: uv run scripts/odpoint.py --lat LAT --lon LON --next-hours 48 --tz ZONE --json > point.json
 - [ ] 4. Check: "series" non-empty and gridpoint distance_km small (<20 km on land)
-- [ ] 5. Answer in the user's local time; relay "note" once and the attribution
+- [ ] 5. Answer in the user's local time; name the model run ("the 06 UTC run" — the "run"
+         field), relay "note" once and the attribution
 ```
 
 - `--next-hours N` returns exactly the next N hours (runs start up to ~13 h before now, so
