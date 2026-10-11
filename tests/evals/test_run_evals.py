@@ -834,7 +834,10 @@ def test_skill_used_through_a_shell_variable_is_detected():
                             "type": "tool_use",
                             "name": "Bash",
                             "input": {
-                                "command": "S=/tmp/p/ecmwf-weather/skills/ecmwf-polytope/scripts; uv run $S/ptpoint.py --check"
+                                "command": (
+                                    "S=/tmp/p/ecmwf-weather/skills/ecmwf-polytope/scripts; "
+                                    "uv run $S/ptpoint.py --check"
+                                )
                             },
                         }
                     ]
