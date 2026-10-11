@@ -19,7 +19,6 @@ m = load_script("ecmwf-open-data", "ecmwf_mcp")
 MCP = FIXTURES / "mcp"
 ROUTER = m.ROUTER
 CHARTS = m.BACKENDS["charts"]
-FORECAST = m.BACKENDS["forecast"]
 CATALOGUE = m.BACKENDS["catalogue"]
 NOW = datetime(2026, 10, 11, 6, 0, tzinfo=timezone.utc)
 COPIES = ("ecmwf-polytope", "ecmwf-cds-ads", "ecmwf-opencharts-wms", "ecmwf-destine")
@@ -279,8 +278,9 @@ def test_router_down_falls_back_to_the_service_itself(tmp_path, capsys, monkeypa
 
 
 def test_router_and_service_down_is_a_network_barrier(capsys, status_feeds):
-    s = Server({ROUTER: DOWN, FORECAST: DOWN})
-    code, _, err = run(["call", "forecast_get_point_forecast", json.dumps(BOLOGNA)], s, capsys)
+    s = Server({ROUTER: DOWN, CHARTS: DOWN})
+    args = '{"product": "medium-mslp-wind850", "step": 24}'
+    code, _, err = run(["call", "charts_get_chart", args], s, capsys)
     assert code == 2 and "BLOCKED: cannot reach the ECMWF mcp service" in err
     assert "status.ecmwf.int" in err and "scripts" in err.split("For the agent:")[1]
 
@@ -374,12 +374,12 @@ def test_long_text_is_truncated_with_a_pointer_to_json(capsys):
 
 def test_tools_lists_names_arguments_and_one_line(capsys):
     s = Server({ROUTER: router(**{"tools/list": fx("router-tools-list.json")})})
-    code, out, _ = run(["tools", "--service", "forecast"], s, capsys)
-    lines = [ln for ln in out.splitlines() if ln.startswith("forecast_")]
+    code, out, _ = run(["tools", "--service", "charts"], s, capsys)
+    lines = [ln for ln in out.splitlines() if ln.startswith("charts_")]
     assert code == 0 and len(lines) == 4
-    point = next(ln for ln in lines if ln.startswith("forecast_get_point_forecast("))
-    assert "collection_id, latitude, longitude, parameters, [run]" in point
-    assert "Weather forecast for one place" in point and "[ECMWF forecasts]" not in point
+    meteogram = next(ln for ln in lines if ln.startswith("charts_get_meteogram("))
+    assert "latitude, longitude, [place_name]" in meteogram
+    assert "ensemble meteogram" in meteogram and "[ECMWF charts]" not in meteogram
 
 
 def test_tools_from_the_services_when_the_router_is_down(capsys):
@@ -404,28 +404,22 @@ def test_tools_from_the_services_when_the_router_is_down(capsys):
 def test_status_summarises_the_router(capsys):
     s = Server({}, gets={f"{ROUTER}/status": raw("router-status.json")})
     code, out, _ = run(["status"], s, capsys)
-    assert code == 0 and "4/4 services reachable" in out and "edr.mcp.ecmwf.int" in out
+    assert code == 0 and "2/2 services reachable" in out and "charts.mcp.ecmwf.int" in out
 
 
 def test_status_checks_each_service_when_the_router_is_down(capsys):
     s = Server(
         {
-            FORECAST: DOWN,
-            m.BACKENDS["reanalysis"]: DOWN,
             CHARTS: {"initialize": fx("charts-backend-initialize.json")},
-            CATALOGUE: {
-                "initialize": lambda msg: raw(
-                    "catalogue-backend-initialize.sse", "text/event-stream"
-                )
-            },
+            CATALOGUE: DOWN,
         },
         gets={f"{ROUTER}/status": DOWN},
     )
     code, out, _ = run(["status"], s, capsys)
     assert code == 2 and "HTTP 502" in out
     charts = next(ln for ln in out.splitlines() if ln.strip().startswith("charts"))
-    forecast = next(ln for ln in out.splitlines() if ln.strip().startswith("forecast"))
-    assert "answers" in charts and "502" in forecast
+    catalogue = next(ln for ln in out.splitlines() if ln.strip().startswith("catalogue"))
+    assert "answers" in charts and "502" in catalogue
 
 
 # --- packaging ----------------------------------------------------------------------------------
@@ -486,16 +480,18 @@ def test_live_meteogram_is_a_png(tmp_path):
 
 
 @pytest.mark.live
-def test_live_point_forecast_or_documented_outage(tmp_path):
+def test_live_point_forecast_works_or_is_reported_unavailable(tmp_path):
+    # MCP 0.4.0 no longer offers forecast tools; if they return, the notes must be there.
     r = _live("call", "forecast_get_point_forecast", json.dumps(BOLOGNA), cwd=tmp_path)
     if r.returncode == 0:
         assert "Model run" in r.stdout and "accumulated" in r.stdout
     else:
-        assert r.returncode == 2 and "BLOCKED: cannot reach" in r.stderr, r.stderr
+        assert r.returncode == 2, r.stderr
+        assert "BLOCKED: cannot reach" in r.stderr or "does not offer" in r.stderr, r.stderr
 
 
 @pytest.mark.live
-def test_live_era5_history_or_documented_outage(tmp_path):
+def test_live_era5_history_works_or_is_reported_unavailable(tmp_path):
     args = {
         "collection_id": "era5-single-levels",
         "latitude": 48.86,
@@ -509,7 +505,8 @@ def test_live_era5_history_or_documented_outage(tmp_path):
     if r.returncode == 0:
         assert "2003-08-01" in r.stdout and "Copernicus" in r.stdout
     else:
-        assert r.returncode == 2 and "BLOCKED: cannot reach" in r.stderr, r.stderr
+        assert r.returncode == 2, r.stderr
+        assert "BLOCKED: cannot reach" in r.stderr or "does not offer" in r.stderr, r.stderr
 
 
 def test_answer_cut_off_mid_way_counts_as_unavailable(capsys, status_feeds):
@@ -518,3 +515,18 @@ def test_answer_cut_off_mid_way_counts_as_unavailable(capsys, status_feeds):
     s = Server({ROUTER: http.client.IncompleteRead(b"{"), CHARTS: http.client.IncompleteRead(b"")})
     code, _, err = run(["call", "charts_find_charts", '{"query": "rain"}'], s, capsys)
     assert code == 2 and "BLOCKED" in err
+
+
+def test_a_tool_the_router_does_not_offer_points_to_the_skill_scripts(capsys):
+    # MCP 0.4.0 offers charts and the DestinE catalogue only; asking for a forecast tool must
+    # send the agent to the skill's own scripts, not leave it guessing.
+    s = Server({ROUTER: router(**{"tools/call": fx("router-no-such-tool.json")})})
+    code, _out, err = run(["call", "forecast_get_point_forecast", "{}"], s, capsys)
+    assert code == 2
+    assert "does not offer forecast_get_point_forecast" in err
+    assert "skill's scripts" in err and "charts_" in err
+
+
+def test_backends_are_the_services_the_router_lists():
+    status = json.loads((FIXTURES / "mcp" / "router-status.json").read_text())
+    assert {s["name"]: s["url"] for s in status["services"]} == m.BACKENDS

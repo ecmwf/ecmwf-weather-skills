@@ -61,11 +61,12 @@ Links shown to users only (not contacted by the scripts): `www.ecmwf.int`, `supp
 
 The plugin bundles ECMWF's remote MCP server, `https://mcp.ecmwf.int` (streamable HTTP, no
 account), declared in `.mcp.json` (Claude Code, and Codex through `.codex-plugin/plugin.json`)
-and `mcp.json` (portable Agent Plugins format). Your agent connects to it at start-up; its
-tools (`forecast_*`, `reanalysis_*`, `charts_*`, `catalogue_*`, `find_service`) give quick
-answers in chat. The skills tell the agent when to use them, call them through
-`scripts/ecmwf_mcp.py` when the client has no MCP tools, and work without the server: files,
-the latest runs, ensembles and every other route use the skills' scripts.
+and `mcp.json` (portable Agent Plugins format). Your agent connects to it at start-up. It
+offers ECMWF charts and meteograms (`charts_*`) and the Destination Earth data catalogue
+(`catalogue_*`), plus `find_service`; it has no point forecasts or ERA5 (MCP 0.4.0). The skills
+tell the agent when to use those tools, call them through `scripts/ecmwf_mcp.py` when the
+client has no MCP tools, and work without the server: forecasts, ERA5, files, ensembles and
+every other route use the skills' scripts.
 
 To turn the server off without removing the plugin:
 
