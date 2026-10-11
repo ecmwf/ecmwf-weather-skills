@@ -78,7 +78,7 @@ files there, never inside the skill directory.
          ensemble ranges as "most likely X, range Y-Z"; end with the attribution line
 ```
 
-The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (or the MCP tool `charts_get_meteogram`); `ekplot.py meteogram` draws your own chart from the data, so never call that one the official meteogram.
+The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the MCP tool `charts_get_meteogram`); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
 
 - Output (UTC, hourly to 90 h, then 3-hourly/6-hourly): `t2m_C`, `precip_mm` (since previous
   step), `wind_speed_ms`, `wind_dir_deg`, `msl_hPa`, `tcc_pct`; ensemble adds `*_p10/_p50/_p90`

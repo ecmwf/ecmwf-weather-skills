@@ -125,7 +125,8 @@ def http_post(url: str, body: bytes, headers: dict, timeout: float):
 
 
 def http_get(url: str, timeout: float):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
+    accept = "application/json, image/png;q=0.9"
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": accept})
     return _answer(lambda: urllib.request.urlopen(req, timeout=timeout))
 
 
@@ -520,12 +521,45 @@ def save_images(content: list, output: str | None, tool: str, cwd: Path) -> list
     return saved
 
 
+# The MCP shrinks chart images to fit its answer; the full-size chart is fetched only from
+# ECMWF's own chart hosts, over https (scripts follow no other links a server returns).
+FULL_SIZE_HOSTS = ("charts.ecmwf.int", "eccharts.ecmwf.int")
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+def full_size_image(structured: dict, images: list[dict], get, cwd: Path) -> bool:
+    """Replace the first saved image by the full-size chart when the MCP sent a reduced one."""
+    image = structured.get("image") if isinstance(structured.get("image"), dict) else {}
+    url = str(structured.get("image_url") or "")
+    host = urllib.parse.urlparse(url).hostname or ""
+    if not (image.get("downscaled") and url.startswith("https://") and host in FULL_SIZE_HOSTS):
+        return False
+    if not images or "path" not in images[0]:
+        return False
+    try:
+        status, _headers, body = get(url, TIMEOUT_S)
+    except (OSError, urllib.error.URLError, ValueError):
+        return False
+    if status != 200 or not body.startswith(PNG_SIGNATURE):
+        return False
+    path = Path(images[0]["path"])
+    (path if path.is_absolute() else cwd / path).write_bytes(body)
+    size = _png_size(body)
+    images[0].update(
+        bytes=len(body), width=size[0] if size else None, height=size[1] if size else None
+    )
+    images[0]["full_size"] = True
+    return True
+
+
 def _image_line(img: dict) -> str:
     if "error" in img:
         return f"Image not saved: {img['error']}."
     kind = "PNG" if img["mime_type"] == "image/png" else img["mime_type"]
     dims = f"{img['width']} x {img['height']} px, " if img["width"] else ""
-    return f"Saved image: {img['path']} ({dims}{kind}, {max(1, round(img['bytes'] / 1024))} kB)"
+    full = ", full size" if img.get("full_size") else ""
+    kb = max(1, round(img["bytes"] / 1024))
+    return f"Saved image: {img['path']} ({dims}{kind}, {kb} kB{full})"
 
 
 # --- output -------------------------------------------------------------------------------------
@@ -567,7 +601,7 @@ def _credentials(value, path: str = "") -> list[str]:
     return found
 
 
-def run_call(a, post, env, now: datetime) -> int:
+def run_call(a, post, env, now: datetime, get=None) -> int:
     try:
         arguments = json.loads(a.arguments)
     except ValueError as e:
@@ -603,12 +637,17 @@ def run_call(a, post, env, now: datetime) -> int:
     structured = result.get("structuredContent")
     structured = structured if isinstance(structured, dict) else {}
     images = save_images(content, a.output, a.tool, Path.cwd())
+    got_full_size = bool(get) and full_size_image(structured, images, get, Path.cwd())
     notes, extra = forecast_notes(structured, now) if a.tool.startswith("forecast_") else ([], {})
     for n in structured.get("notes") or []:
         if isinstance(n, str) and n and clean(n) not in "\n".join(texts):
             notes.append(f"Server note: {clean(n)}")
     image = structured.get("image") if isinstance(structured.get("image"), dict) else {}
-    if image.get("downscaled") and str(structured.get("image_url", "")).startswith("https://"):
+    if (
+        image.get("downscaled")
+        and not got_full_size
+        and str(structured.get("image_url", "")).startswith("https://")
+    ):
         notes.append(
             f"The image was reduced to fit the MCP answer; full size: {structured['image_url']}"
         )
@@ -776,7 +815,7 @@ def main(argv=None, post=None, get=None, now: datetime | None = None, env=None) 
             return run_status(a, post, get, env)
         if a.command == "tools":
             return run_tools(a, post, env)
-        return run_call(a, post, env, now)
+        return run_call(a, post, env, now, get)
     except UsageError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

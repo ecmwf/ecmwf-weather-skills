@@ -5,12 +5,30 @@
   "max_budget_usd": 2,
   "expect": [
     {
-      "kind": "skill",
-      "name": "ecmwf-opencharts-wms"
+      "kind": "any",
+      "of": [
+        {
+          "kind": "skill",
+          "name": "ecmwf-opencharts-wms"
+        },
+        {
+          "kind": "mcp",
+          "pattern": "charts_get_chart"
+        }
+      ]
     },
     {
-      "kind": "command",
-      "pattern": "opencharts\\.py"
+      "kind": "any",
+      "of": [
+        {
+          "kind": "command",
+          "pattern": "opencharts\\.py"
+        },
+        {
+          "kind": "mcp",
+          "pattern": "charts_get_chart"
+        }
+      ]
     },
     {
       "kind": "file",
@@ -18,7 +36,8 @@
     },
     {
       "kind": "final",
-      "pattern": "CC[ -]BY|\u00a9"
+      "pattern": "CC[ -]BY|©"
     }
-  ]
+  ],
+  "note": "With the ECMWF MCP bundled, its charts_get_chart tool returns the same official OpenCharts product; three models answered correctly that way (right chart, run, valid time and attribution), so either route is accepted."
 }

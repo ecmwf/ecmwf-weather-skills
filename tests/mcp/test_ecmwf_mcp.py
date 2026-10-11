@@ -530,3 +530,56 @@ def test_a_tool_the_router_does_not_offer_points_to_the_skill_scripts(capsys):
 def test_backends_are_the_services_the_router_lists():
     status = json.loads((FIXTURES / "mcp" / "router-status.json").read_text())
     assert {s["name"]: s["url"] for s in status["services"]} == m.BACKENDS
+
+
+# --- full-size images ---------------------------------------------------------------------------
+
+
+def _png(width, height):
+    import struct
+    import zlib
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    chunk = b"IHDR" + ihdr
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + struct.pack(">I", len(ihdr))
+        + chunk
+        + struct.pack(">I", zlib.crc32(chunk) & 0xFFFFFFFF)
+    )
+
+
+CHART = fx("charts-backend-chart.json")
+CHART_URL = CHART["result"]["structuredContent"]["image_url"]
+INLINE = base64.b64decode(
+    next(c for c in CHART["result"]["content"] if c["type"] == "image")["data"]
+)
+
+
+def test_reduced_chart_is_saved_full_size(tmp_path, capsys, monkeypatch):
+    # The MCP shrinks chart images to fit its answer; -o FILE writes the full-size chart.
+    monkeypatch.chdir(tmp_path)
+    full = _png(2000, 1800)
+    s = Server(
+        {ROUTER: router(**{"tools/call": CHART})},
+        gets={CHART_URL: (200, {"content-type": "image/png"}, full)},
+    )
+    code, out, _ = run(["call", "charts_get_chart", "{}", "-o", "mslp.png"], s, capsys)
+    assert code == 0 and (tmp_path / "mslp.png").read_bytes() == full
+    assert "2000 x 1800" in out and "full size" in out
+
+
+def test_full_size_download_failure_keeps_the_inline_image(tmp_path, capsys, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    s = Server({ROUTER: router(**{"tools/call": CHART})}, gets={CHART_URL: (404, {}, b"")})
+    code, out, _ = run(["call", "charts_get_chart", "{}", "-o", "mslp.png"], s, capsys)
+    assert code == 0 and (tmp_path / "mslp.png").read_bytes() == INLINE and CHART_URL in out
+
+
+def test_image_links_outside_ecmwf_chart_hosts_are_never_followed(tmp_path, capsys, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    chart = json.loads(json.dumps(CHART))
+    chart["result"]["structuredContent"]["image_url"] = "https://example.com/x.png"
+    s = Server({ROUTER: router(**{"tools/call": chart})})  # any GET would raise
+    code, _out, _ = run(["call", "charts_get_chart", "{}", "-o", "mslp.png"], s, capsys)
+    assert code == 0 and (tmp_path / "mslp.png").read_bytes() == INLINE

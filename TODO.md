@@ -66,6 +66,15 @@ Accepted, open work only — remove items when done. Finished work is recorded i
     contradicts the public token.
   - When the router is down, `/status` answers HTTP 502 too, so clients cannot tell which
     services still work; keep `/status` up or publish the backend endpoints.
+  - `find_service` routes "how much rain will fall in Bologna over the next three days" to the
+    charts service (images, not amounts), and for "how hot was August 2003 in Paris" says the
+    institute's services don't cover it — ECMWF does, through ERA5 on the Climate Data Store.
+  - With a working router that has no forecast tool, Claude Haiku answered ordinary forecast
+    questions from national weather websites (0/3; it used the skills when the router was down):
+    the instructions' "name the authority for an official forecast" reads as "send forecast
+    questions to the national service".
+  - `charts_get_meteogram` returns no base time in its structured answer (the run is only in
+    the image); the charts provenance says "© 2023"; `charts_find_charts` takes about 12 s.
 - [ ] **Feedback for the DestinE catalogue (Omnicat) developers:**
   - An invalid value marks every axis of the selection invalid without saying which one;
     report the offending axis and its valid values.
