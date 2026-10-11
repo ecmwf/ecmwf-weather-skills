@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-11
+
 **Official meteograms without the MCP, full-size MCP charts.** The official ECMWF ENS meteogram
 for any place comes straight from OpenCharts when the ECMWF MCP is off or down, charts saved
 from the MCP are full size, and forecast questions stay on ECMWF data when MCP tools are listed.
@@ -593,7 +595,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.1...HEAD
+[0.7.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.4.0...0.5.0
