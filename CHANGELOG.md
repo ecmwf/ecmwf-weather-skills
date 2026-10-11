@@ -11,6 +11,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+**A minor release for the options added in 0.7.1.** 0.7.1 gave `opencharts.py get` new options
+for charts of one place (`--lat`, `--lon`, `--kind`, `--base-time`). New options are features,
+which call for a minor version, so this release is 0.8.0.
+
+### Fixed
+
+- `make check-endpoints`, a release gate, asks again when a service answers HTTP 429 (rate
+  limited), as it does after a network error: data.ecmwf.int throttles bursts of requests, and
+  a throttled answer is not a moved endpoint.
+
+### Changed
+
+- The README and AGENTS.md describe what the evals and tests check and how to run them, without
+  results per model, which went stale; results go in pull requests. AGENTS.md: a new script
+  option or command is a feature (minor version).
+
 ## [0.7.1] - 2026-10-11
 
 **Official meteograms without the MCP, full-size MCP charts.** The official ECMWF ENS meteogram

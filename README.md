@@ -183,17 +183,24 @@ python3 ecmwf-cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
         --start 1991-01-01 --end 2020-12-31 --dry-run            # validate + cost, no key
 ```
 
-## Tested models
+## How the skills are tested
 
-Every skill is evaluated with fresh agents on 21 tasks (`make evals AGENT=claude|codex|opencode|pi`).
+- **Evals.** Each case in `evals/cases/` gives one task to a fresh agent (Claude Code, Codex,
+  opencode, pi or Gemini CLI) in an empty directory that has only this plugin, plus the bundled
+  MCP server unless `MCP=0`. The case lists what must hold: the skill loaded, the commands run
+  (and not run, such as third-party weather APIs), the files written, the MCP tools called and
+  what the answer says. Run them with your agent and model; transcripts and a summary go to
+  `evals/runs/<timestamp>/`:
 
-| Agent | Models | Result |
-|---|---|---|
-| Claude Code | Opus, Sonnet | recommended — pass all cases |
-| Codex | GPT-6.1-Sol, GPT-6-Astra, GPT-6-Sol, GPT-6-Luna, GPT-5.6-Terra, GPT-5.6-Sol, GPT-5.6-Luna | recommended — pass all cases |
-| opencode | Claude Opus 4.8, GPT-6-Luna | works — passes the cases run so far |
-| pi | — | installs and loads all skills; model runs not yet evaluated |
-| Claude Code | Haiku | **not recommended** — unreliable at executing the skills' instructions (often answers without running the scripts) |
+  ```bash
+  make evals AGENT=claude MODEL=sonnet                                    # every case
+  make evals AGENT=codex MODEL=gpt-6.1-sol CASES="od-point-forecast oc-chart" REPEAT=3
+  make evals AGENT=opencode MODEL=provider/model MCP=0                    # without the MCP server
+  ```
+
+- **Tests.** `make all` runs lint, packaging checks and the offline unit tests;
+  `make test-earthkit` decodes recorded GRIB with earthkit; `make test-live` calls the real
+  ECMWF services. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credentials (optional)
 
