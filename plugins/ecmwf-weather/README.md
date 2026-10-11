@@ -10,8 +10,8 @@ for Medium-Range Weather Forecasts (ECMWF): real-time IFS and AIFS forecasts (Op
 reanalysis and CAMS air quality (Copernicus data stores), the MARS archive and its station
 observations, Polytope point and
 area extraction, Destination Earth Digital Twins, ecCharts WMS / OpenCharts maps, and decoding and
-plotting with ECMWF's earthkit. Source, documentation and issues:
-https://github.com/ecmwf/ecmwf-weather-skills
+plotting with ECMWF's earthkit. The plugin also bundles ECMWF's MCP server for quick answers in
+chat. Source, documentation and issues: https://github.com/ecmwf/ecmwf-weather-skills
 
 ## Skills
 
@@ -46,12 +46,34 @@ The scripts contact only these services, and only to fetch data, catalogues and 
 | `polytope.lumi.apps.dte.destination-earth.eu`, `polytope.mn5.apps.dte.destination-earth.eu`, `polytope.leonardo.apps.dte.destination-earth.eu`, `auth.destine.eu`, `platform.destine.eu` | Destination Earth data and authentication | request; your DestinE token (header) |
 | `aviationweather.gov` (NOAA Aviation Weather, the one non-ECMWF source) | ICAO station metadata; the latest METARs only when you ask for them — labelled non-ECMWF | station ids |
 | `oscar.wmo.int` (WMO OSCAR/Surface) | station metadata for WMO ids missing from the bundled index | WMO station id |
+| `mcp.ecmwf.int`; when it is down, the services behind it: `edr.mcp.ecmwf.int`, `era5.mcp.ecmwf.int`, `charts.mcp.ecmwf.int`, `catalogue-test.lumi.apps.dte.destination-earth.eu` | ECMWF's MCP server, called by `ecmwf_mcp.py` when your agent has no MCP tools | tool arguments (coordinates, dates, chart names); never credentials |
 | `apps.ecmwf.int`, `status.ecmwf.int` | ECMWF service status, only after a connection failure | nothing beyond the request |
 | `pypi.org`, `files.pythonhosted.org` (via `uv`), `astral.sh` | Python packages; uv install instructions | package names |
 | `unpkg.com` (in the generated web map page, loaded by your browser) | Leaflet map library | — |
 
 Links shown to users only (not contacted by the scripts): `www.ecmwf.int`, `support.ecmwf.int`,
-`creativecommons.org`, `doi.org`, `github.com`, `docs.astral.sh`, `codes.ecmwf.int`.
+`creativecommons.org`, `doi.org`, `github.com`, `docs.astral.sh`, `codes.ecmwf.int`,
+`meteoalarm.org`.
+
+## ECMWF MCP server (bundled)
+
+The plugin bundles ECMWF's remote MCP server, `https://mcp.ecmwf.int` (streamable HTTP, no
+account), declared in `.mcp.json` (Claude Code, and Codex through `.codex-plugin/plugin.json`)
+and `mcp.json` (portable Agent Plugins format). Your agent connects to it at start-up; its
+tools (`forecast_*`, `reanalysis_*`, `charts_*`, `catalogue_*`, `find_service`) give quick
+answers in chat. The skills tell the agent when to use them, call them through
+`scripts/ecmwf_mcp.py` when the client has no MCP tools, and work without the server: files,
+the latest runs, ensembles and every other route use the skills' scripts.
+
+To turn the server off without removing the plugin:
+
+- **Claude Code**: toggle `plugin:ecmwf-weather:ecmwf` off in `/mcp` (saved per project in
+  `~/.claude.json`). Its tools are named `mcp__plugin_ecmwf-weather_ecmwf__<tool>`.
+- **Codex**: add to `~/.codex/config.toml`
+  ```toml
+  [plugins."ecmwf-weather@ecmwf".mcp_servers.ecmwf]
+  enabled = false
+  ```
 
 No personal data is collected. Credentials stay in the user's own files (`~/.ecmwfapirc`,
 `~/.cdsapirc`, `~/.adsapirc`, `~/.polytopeapirc`, `~/.polytopeapirc-destine`); scripts check them

@@ -31,6 +31,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-cds-ads/SKILL.md`](../plugins/ec
 | Script | Purpose |
 |---|---|
 | `scripts/cds.py` | Copernicus Climate (CDS) and Atmosphere (ADS) Data Stores — discover, validate, retrieve |
+| `scripts/ecmwf_mcp.py` | Call ECMWF's MCP server from the command line — standard library only |
 | `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 
 | Reference | Purpose |
@@ -49,6 +50,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md`](../plugins/ec
 | Script | Purpose |
 |---|---|
 | `scripts/destine.py` | Destination Earth (DestinE) Digital Twin data via the DestinE Polytope service |
+| `scripts/ecmwf_mcp.py` | Call ECMWF's MCP server from the command line — standard library only |
 | `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 
 | Reference | Purpose |
@@ -112,7 +114,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-observations/SKILL.md`](../plugi
 
 ## `ecmwf-open-data`
 
-Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and its AWS/Google mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, how hot or cold it will feel (heat index, wind chill, feels-like) at a place, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
+Answers weather questions about a place — today, tomorrow, the coming days — with ECMWF forecasts; load it before searching the web, also when the ECMWF MCP server is unavailable. Finds, downloads and decodes free ECMWF real-time forecasts — IFS HRES, IFS ENS, AIFS single and AIFS ENS — from ECMWF Open Data (data.ecmwf.int and mirrors). Use when a task asks for a current or recent ECMWF forecast, the weather forecast for a place or coordinates, a meteogram or time series at a point, how hot or cold it will feel (heat index, wind chill, feels-like) at a place, which run is latest or when the next one arrives, which parameters, steps, levels or streams are published openly, how big a download is, Open Data URLs or .index files, or the CC-BY-4.0 attribution ECMWF requires. For web maps or dashboards use the ecmwf-opencharts-wms skill; when the user has or mentions an ECMWF account, use the ecmwf-polytope skill for point forecasts. Default route whenever no CDS, MARS or Polytope credentials are available.
 
 **Requirements:** scripts/odcatalog.py needs only Python 3 (standard library). scripts/odpoint.py needs uv (PEP 723 inline dependencies — earthkit-data, earthkit-geo, earthkit-meteo, earthkit-utils, thermofeel, ~150 MB on first run, cached) on Linux or macOS. Both need network access to data.ecmwf.int.
 
@@ -120,6 +122,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-open-data/SKILL.md`](../plugins/
 
 | Script | Purpose |
 |---|---|
+| `scripts/ecmwf_mcp.py` | Call ECMWF's MCP server from the command line — standard library only |
 | `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 | `scripts/odcatalog.py` | ECMWF Open Data catalogue helper — standard library only |
 | `scripts/odpoint.py` | Point forecast from ECMWF Open Data — nearest gridpoint time series |
@@ -140,6 +143,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-opencharts-wms/SKILL.md`](../plu
 
 | Script | Purpose |
 |---|---|
+| `scripts/ecmwf_mcp.py` | Call ECMWF's MCP server from the command line — standard library only |
 | `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 | `scripts/opencharts.py` | ECMWF OpenCharts — find and download official ECMWF forecast charts (PNG/PDF). Stdlib only |
 | `scripts/webmap.py` | Build and serve an ECMWF forecast web map with click-for-meteogram. Stdlib only |
@@ -161,6 +165,7 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-polytope/SKILL.md`](../plugins/e
 
 | Script | Purpose |
 |---|---|
+| `scripts/ecmwf_mcp.py` | Call ECMWF's MCP server from the command line — standard library only |
 | `scripts/ecmwf_status.py` | What ECMWF says about a service's availability — used when a network request fails |
 | `scripts/ptpoint.py` | Point forecast via ECMWF Polytope — server-side extraction, a few KB instead of global fields |
 

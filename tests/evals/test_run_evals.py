@@ -504,3 +504,319 @@ def test_skills_are_real_directories_that_find_can_walk(tmp_path):
     assert not any(p.is_symlink() for p in skills.iterdir())
     found = [p for p in skills.rglob("SKILL.md")]
     assert len(found) == len(list((plugin / "skills").glob("*/SKILL.md")))
+
+
+# --- the ECMWF MCP server in evals --------------------------------------------------------------
+
+
+def _jsonl(events):
+    return "\n".join(json.dumps(x) for x in events)
+
+
+def _claude_tool(name, inp):
+    return {
+        "type": "assistant",
+        "message": {"content": [{"type": "tool_use", "name": name, "input": inp}]},
+    }
+
+
+CLAUDE_MCP = _jsonl(
+    [
+        _claude_tool(
+            "mcp__plugin_ecmwf-weather_ecmwf__forecast_get_point_forecast",
+            {"collection_id": "operational-data", "latitude": 51.45, "longitude": -0.97},
+        ),
+        _claude_tool("WebSearch", {"query": "Reading weather tomorrow"}),
+        _claude_tool("WebFetch", {"url": "https://www.example.org/forecast", "prompt": "rain?"}),
+        {"type": "result", "result": "Dry, 15 °C. Data: ECMWF", "total_cost_usd": 0.05},
+    ]
+)
+
+CODEX_MCP = _jsonl(
+    [
+        {
+            "type": "item.started",
+            "item": {"type": "mcp_tool_call", "server": "ecmwf", "tool": "find_service"},
+        },
+        {
+            "type": "item.completed",
+            "item": {
+                "type": "mcp_tool_call",
+                "server": "ecmwf",
+                "tool": "find_service",
+                "arguments": {"question": "rain in Bologna"},
+                "status": "completed",
+            },
+        },
+        {
+            "type": "item.completed",
+            "item": {
+                "type": "web_search",
+                "query": "Bologna meteo",
+                "action": {"type": "search", "queries": ["Bologna weather forecast mm"]},
+            },
+        },
+        {
+            "type": "item.completed",
+            "item": {
+                "type": "web_search",
+                "query": "",
+                "action": {"type": "open_page", "url": "https://www.14cast.com/italy/bologna"},
+            },
+        },
+        {"type": "item.completed", "item": {"type": "agent_message", "text": "About 1.5 mm."}},
+    ]
+)
+
+OPENCODE_MCP = _jsonl(
+    [
+        {
+            "type": "tool_use",
+            "part": {
+                "type": "tool",
+                "tool": "ecmwf_charts_get_meteogram",
+                "state": {"input": {"latitude": 51.4, "longitude": -1.32}},
+            },
+        },
+        {
+            "type": "tool_use",
+            "part": {
+                "type": "tool",
+                "tool": "webfetch",
+                "state": {"input": {"url": "https://www.ipma.pt/en/otempo/prev-sam/"}},
+            },
+        },
+        {
+            "type": "tool_use",
+            "part": {"type": "tool", "tool": "websearch", "state": {"input": {"query": "Lisbon"}}},
+        },
+        {"type": "text", "part": {"type": "text", "text": "Saved newbury.png"}},
+    ]
+)
+
+PI_MCP = _jsonl(
+    [
+        {
+            "type": "tool_execution_start",
+            "toolName": "mcp__ecmwf__reanalysis_get_point_history",
+            "args": {"latitude": 48.86, "longitude": 2.35},
+        },
+        {
+            "type": "tool_execution_start",
+            "toolName": "codemode",
+            "args": {"code": "await mcp__ecmwf__charts_get_chart({product: 'x'})"},
+        },
+    ]
+)
+
+
+def test_claude_mcp_calls_and_web_use_are_recorded():
+    t = re_.parse_transcript("claude", CLAUDE_MCP)
+    assert t["mcp"] == ["plugin_ecmwf-weather_ecmwf:forecast_get_point_forecast"]
+    assert t["web"] == [
+        "WebSearch: Reading weather tomorrow",
+        "WebFetch: https://www.example.org/forecast",
+    ]
+
+
+def test_codex_mcp_calls_and_web_searches_are_recorded():
+    t = re_.parse_transcript("codex", CODEX_MCP)
+    assert t["mcp"] == ["ecmwf:find_service"]  # started + completed is one call
+    assert len(t["web"]) == 2
+    assert "Bologna weather forecast mm" in t["web"][0]
+    assert "14cast.com" in t["web"][1]
+
+
+def test_opencode_mcp_calls_and_web_use_are_recorded():
+    t = re_.parse_transcript("opencode", OPENCODE_MCP, mcp_servers=("ecmwf",))
+    assert t["mcp"] == ["ecmwf:charts_get_meteogram"]
+    assert t["web"] == ["webfetch: https://www.ipma.pt/en/otempo/prev-sam/", "websearch: Lisbon"]
+
+
+def test_pi_mcp_calls_are_recorded_direct_and_through_codemode():
+    t = re_.parse_transcript("pi", PI_MCP)
+    assert t["mcp"] == ["ecmwf:reanalysis_get_point_history", "ecmwf:charts_get_chart"]
+
+
+def test_gemini_web_tools_are_recorded_from_its_stats():
+    doc = {"response": "ok", "stats": {"tools": {"byName": {"google_web_search": {"count": 2}}}}}
+    assert re_.parse_transcript("gemini", json.dumps(doc))["web"] == ["google_web_search"]
+
+
+def test_calls_through_the_mcp_script_count_as_mcp_calls():
+    t = {
+        "skills": set(),
+        "commands": [
+            "M=/x/skills/ecmwf-open-data/scripts/ecmwf_mcp.py; python3 $M status",
+            'python3 "$M" call forecast_get_point_forecast \'{"latitude": 1}\'',
+        ],
+        "final": "",
+        "error": None,
+        "mcp": [],
+        "web": [],
+    }
+    assert re_.mcp_calls(t) == ["ecmwf_mcp.py:forecast_get_point_forecast"]
+    ok = re_.grade(t, [{"kind": "mcp", "pattern": r"forecast_get_point_forecast"}])
+    assert ok[0]["ok"]
+
+
+def test_grade_mcp_web_and_any():
+    t = re_.parse_transcript("claude", CLAUDE_MCP)
+    r = re_.grade(
+        t,
+        [
+            {"kind": "mcp", "pattern": "forecast_get_point_forecast"},
+            {"kind": "mcp", "pattern": "charts_"},
+            {"kind": "mcp_not", "pattern": "forecast_"},
+            {"kind": "mcp_not", "pattern": "catalogue_"},
+            {"kind": "web_not"},
+            {"kind": "web_not", "pattern": "(?i)weather"},
+            {"kind": "web_not", "pattern": "(?i)warning"},
+            {
+                "kind": "any",
+                "of": [
+                    {"kind": "command", "pattern": r"ptpoint\.py"},
+                    {"kind": "mcp", "pattern": "forecast_get_point_forecast"},
+                ],
+            },
+            {"kind": "any", "of": [{"kind": "command", "pattern": r"odpoint\.py"}]},
+        ],
+    )
+    assert [x["ok"] for x in r] == [True, False, False, True, False, False, True, True, False]
+
+
+def test_web_not_passes_without_web_use():
+    t = re_.parse_transcript("claude", CLAUDE_STREAM)
+    assert t["web"] == [] and re_.grade(t, [{"kind": "web_not"}])[0]["ok"]
+
+
+def test_nested_expectations_are_valid_kinds():
+    for c in re_.load_cases(ROOT / "evals" / "cases"):
+        for e in c["expect"]:
+            for sub in e.get("of", []):
+                assert sub["kind"] in re_.KINDS - {"any"}, (c["id"], sub)
+
+
+def test_mcp_servers_come_from_the_plugins_portable_config():
+    assert re_.mcp_servers(re_.PLUGIN) == {"ecmwf": "https://mcp.ecmwf.int"}
+
+
+def test_claude_gets_the_bundled_server_unless_mcp_is_off(tmp_path):
+    with_mcp = re_.plugin_copy(tmp_path / "a")
+    without = re_.plugin_copy(tmp_path / "b", mcp=False)
+    assert (with_mcp / ".mcp.json").exists() and (with_mcp / "mcp.json").exists()
+    assert not (without / ".mcp.json").exists() and not (without / "mcp.json").exists()
+
+
+def test_codex_gets_the_server_on_the_command_line(tmp_path):
+    plugin = re_.plugin_copy(tmp_path / "p")
+    cmd = re_.agent_command("codex", "hi", tmp_path, {}, plugin=plugin)
+    assert cmd[cmd.index("-c") + 1] == 'mcp_servers.ecmwf.url="https://mcp.ecmwf.int"'
+    assert cmd[-1] == "hi"
+    off = re_.agent_command("codex", "hi", tmp_path, {}, plugin=plugin, mcp=False)
+    assert "-c" not in off
+
+
+def test_opencode_gemini_and_pi_get_the_server_in_their_workdir(tmp_path):
+    plugin = re_.plugin_copy(tmp_path / "p")
+    oc = re_.prepare_workdir("opencode", {"id": "c"}, plugin)
+    assert json.loads((oc / "opencode.json").read_text())["mcp"] == {
+        "ecmwf": {"type": "remote", "url": "https://mcp.ecmwf.int", "enabled": True}
+    }
+    gem = re_.prepare_workdir("gemini", {"id": "c"}, plugin)
+    assert json.loads((gem / ".gemini" / "settings.json").read_text())["mcpServers"] == {
+        "ecmwf": {"url": "https://mcp.ecmwf.int", "type": "http"}
+    }
+    pi = re_.prepare_workdir("pi", {"id": "c"}, plugin)
+    assert json.loads((pi / ".pi" / "mcp.json").read_text())["mcpServers"] == {
+        "ecmwf": {"url": "https://mcp.ecmwf.int"}
+    }
+    assert "--approve" in re_.agent_command("pi", "hi", pi, {}, plugin=plugin)
+    off = re_.prepare_workdir("opencode", {"id": "c"}, plugin, mcp=False)
+    assert not (off / "opencode.json").exists()
+    assert "--no-mcp" in re_.agent_command("pi", "hi", pi, {}, plugin=plugin, mcp=False)
+
+
+def test_no_mcp_flag():
+    assert re_.parse_args([]).mcp is True
+    assert re_.parse_args(["--no-mcp"]).mcp is False
+
+
+def _case(case_id):
+    return next(c for c in re_.load_cases(ROOT / "evals" / "cases") if c["id"] == case_id)
+
+
+def _graded(case_id, **t):
+    base = {"skills": set(), "commands": [], "final": "", "error": None, "mcp": [], "web": []}
+    return [r["ok"] for r in re_.grade({**base, **t}, _case(case_id)["expect"])]
+
+
+def test_mcp_cases_grade_concepts_not_wording():
+    import re
+
+    run = _case("mcp-quick-forecast")["expect"][2]["pattern"]
+    for ok in (
+        "From the ECMWF IFS 00 UTC run of 11 October.",
+        "Model run: 2026-10-11T00:00:00Z (ECMWF IFS HRES)",
+        "based on the run initialised at 06Z today",
+        "the 12 UTC run",
+    ):
+        assert re.search(run, ok), ok
+    for bad in ("Tomorrow will be dry, 15 °C at 12:00.", "Data: ECMWF, run by the server"):
+        assert not re.search(run, bad), bad
+
+    web = _case("mcp-quick-forecast")["expect"][0]["pattern"]
+    assert re.search(web, "WebSearch: Reading UK weather tomorrow")
+    assert re.search(web, "web_search: Bologna meteo 11 12 13 ottobre")
+    assert not re.search(web, "WebSearch: Reading UK latitude longitude")
+    assert not re.search(web, "web_search: Bologna Italy coordinates")
+
+    used = ["plugin_ecmwf-weather_ecmwf:forecast_get_point_forecast"]
+    explained = (
+        "ECMWF: about 1.5 mm — tp is accumulated since the run start, so I took the difference."
+    )
+    assert all(_graded("mcp-rain-accumulation", final=explained, mcp=used))
+    assert not all(_graded("mcp-rain-accumulation", final="ECMWF: 20.9 mm in total.", mcp=used))
+    script = ["python3 scripts/ecmwf_mcp.py call forecast_get_point_forecast '{}'"]
+    assert all(_graded("mcp-rain-accumulation", final="ECMWF: 1.5 mm", commands=script))
+
+    guidance = (
+        "ECMWF model output is guidance, not an official warning: check IPMA "
+        "(https://www.ipma.pt) or MeteoAlarm (https://meteoalarm.org)."
+    )
+    assert all(_graded("mcp-official-warning", final=guidance))
+    assert not all(_graded("mcp-official-warning", final="No warnings: it will be sunny."))
+
+    valid = _case("mcp-chart-europe")["expect"][1]["pattern"]
+    for ok in ("Valid time: Mon 12 Oct 2026 00 UTC", "valid 2026-10-12T00:00Z", "at 12:00 UTC"):
+        assert re.search(valid, ok), ok
+    assert not re.search(valid, "Saved the chart as mslp.png for tomorrow.")
+
+
+def test_claude_mcp_server_status_is_recorded():
+    init = {
+        "type": "system",
+        "subtype": "init",
+        "mcp_servers": [
+            {"name": "plugin:ecmwf-weather:ecmwf", "status": "failed", "source": "plugin"},
+            {"name": "claude.ai Google Drive", "status": "connected", "source": "claudeai"},
+        ],
+    }
+    t = re_.parse_transcript("claude", json.dumps(init))
+    assert t["mcp_servers"] == {
+        "plugin:ecmwf-weather:ecmwf": "failed",
+        "claude.ai Google Drive": "connected",
+    }
+    assert re_.parse_transcript("codex", CODEX_STREAM)["mcp_servers"] == {}
+
+
+def test_bare_claude_gets_the_bundled_server_explicitly(tmp_path, monkeypatch):
+    # --bare skips plugin MCP servers; the plugin's own .mcp.json is passed instead.
+    monkeypatch.setenv("EVAL_BARE", "1")
+    plugin = re_.plugin_copy(tmp_path / "p")
+    cmd = re_.agent_command("claude", "hi", tmp_path, {}, plugin=plugin)
+    assert cmd[cmd.index("--mcp-config") + 1] == str(plugin / ".mcp.json")
+    off = re_.agent_command("claude", "hi", tmp_path, {}, plugin=plugin, mcp=False)
+    assert "--mcp-config" not in off
+    monkeypatch.delenv("EVAL_BARE")
+    assert "--mcp-config" not in re_.agent_command("claude", "hi", tmp_path, {}, plugin=plugin)

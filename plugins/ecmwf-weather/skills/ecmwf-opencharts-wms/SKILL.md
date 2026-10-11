@@ -16,15 +16,16 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF maps — WMS, OpenCharts, web maps
 
 ## Contents
-- Choose the route (line 30)
-- Web map workflow (line 49)
-- WMS (line 66)
-- OpenCharts (line 84)
-- Rules the server enforces (line 90)
-- Access and tokens (line 101)
-- Processing and plots (line 107)
-- Attribution (line 115)
-- When blocked (line 124)
+- Choose the route (line 31)
+- Web map workflow (line 50)
+- WMS (line 67)
+- OpenCharts (line 85)
+- ECMWF MCP (line 91)
+- Rules the server enforces (line 112)
+- Access and tokens (line 123)
+- Processing and plots (line 129)
+- Attribution (line 137)
+- When blocked (line 146)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -86,6 +87,27 @@ composites background + layer + coastlines; `--no-background` gives the transpar
 Official ECMWF charts (IFS and AIFS; medium and extended range). `search` matches all words in
 name and title; `options NAME` lists base times, steps and projections (`opencharts_europe`,
 `opencharts_global`, `opencharts_north_atlantic`, …); `get` downloads the PNG/PDF. No account.
+
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). Its chart tools
+answer with an image: `charts_find_charts` then `charts_get_chart` (official charts),
+`charts_get_meteogram` (the ensemble meteogram for a place) and `charts_get_map` (public map
+layers over a bounding box). When your client lists them, the image shows in chat. To save a
+file — or when your client has no ECMWF MCP tools — run this standard-library script; it
+writes the image to the file and never prints it:
+
+```bash
+python3 scripts/ecmwf_mcp.py call charts_get_meteogram '{"latitude": 51.40, "longitude": -1.32,
+  "place_name": "Newbury"}' -o newbury.png
+python3 scripts/ecmwf_mcp.py call charts_get_chart '{"product": "medium-mslp-wind850",
+  "step": 24, "area": "europe"}' -o mslp.png
+```
+
+- If the MCP is unreachable, use `opencharts.py` and `wms.py`; they also cover every WMS
+  layer (the MCP map tool serves only the public ones), legends, GetMap URLs and web maps.
+- Charts can come from a different run than the forecast tools: state the base and valid
+  time the result gives, and end with its attribution line.
 
 ## Rules the server enforces
 

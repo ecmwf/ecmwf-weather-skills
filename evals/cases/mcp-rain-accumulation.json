@@ -1,0 +1,41 @@
+{
+  "id": "mcp-rain-accumulation",
+  "prompt": "How much rain will fall in Bologna over the next three days?",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "web_not",
+      "pattern": "(?i)\\b(weather|forecasts?|meteo\\w*|rain\\w*|precipitation|temperatures?|wetter|tempo|warnings?|alerts?|avisos?|heat\\w*|hot|climate)\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ECMWF"
+    },
+    {
+      "kind": "final",
+      "pattern": "\\bmm\\b"
+    },
+    {
+      "kind": "any",
+      "of": [
+        {
+          "kind": "command",
+          "pattern": "(ptpoint|odpoint)\\.py"
+        },
+        {
+          "kind": "command",
+          "pattern": "ecmwf_mcp\\.py\\s+call\\s+forecast_get_point_forecast"
+        },
+        {
+          "kind": "final",
+          "pattern": "(?i)accumulat|subtract|difference|minus|last value|since the (?:model )?(?:run|start)"
+        }
+      ]
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|wttr\\.in|meteostat"
+    }
+  ]
+}

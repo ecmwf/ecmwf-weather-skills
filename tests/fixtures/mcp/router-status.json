@@ -1,0 +1,43 @@
+{
+ "status": "ok",
+ "institute": "ECMWF",
+ "services": [
+  {
+   "name": "forecast",
+   "url": "https://edr.mcp.ecmwf.int/mcp",
+   "reachable": true,
+   "tool_count": 4,
+   "error": null,
+   "cache_age_seconds": 20.8
+  },
+  {
+   "name": "reanalysis",
+   "url": "https://era5.mcp.ecmwf.int/mcp",
+   "reachable": true,
+   "tool_count": 4,
+   "error": null,
+   "cache_age_seconds": 20.9
+  },
+  {
+   "name": "charts",
+   "url": "https://charts.mcp.ecmwf.int/mcp",
+   "reachable": true,
+   "tool_count": 4,
+   "error": null,
+   "cache_age_seconds": 20.9
+  },
+  {
+   "name": "catalogue",
+   "url": "https://catalogue-test.lumi.apps.dte.destination-earth.eu/mcp",
+   "reachable": true,
+   "tool_count": 7,
+   "error": null,
+   "cache_age_seconds": 19.8
+  }
+ ],
+ "services_reachable": 4,
+ "services_configured": 4,
+ "tools_federated": 19,
+ "tool_cache_ttl_seconds": 60.0,
+ "version": "0.3.0"
+}

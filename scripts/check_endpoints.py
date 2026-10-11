@@ -9,6 +9,8 @@ Run by `make check-endpoints`, which `make release-prepare` and the weekly CI ca
 - the status feeds behind status.ecmwf.int still parse with the expected shape, and every
   component mapped in ecmwf_status.SERVICES is still listed (status Ok or not doesn't matter);
 - each data store's /api/catalogue/v1/messages still answers with a message list;
+- the ECMWF MCP router's /status still lists exactly the services ecmwf_mcp.BACKENDS calls
+  directly when the router is down;
 - every service host still answers HTTP (401/403 count as present: authentication is expected).
 """
 
@@ -22,12 +24,20 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-_spec = importlib.util.spec_from_file_location(
-    "ecmwf_status", ROOT / "plugins/ecmwf-weather/skills/ecmwf-open-data/scripts/ecmwf_status.py"
-)
-assert _spec and _spec.loader
-st = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(st)
+SCRIPTS = ROOT / "plugins/ecmwf-weather/skills/ecmwf-open-data/scripts"
+
+
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location(name, SCRIPTS / f"{name}.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault(name, module)  # ecmwf_mcp imports its sibling ecmwf_status by name
+    spec.loader.exec_module(module)
+    return module
+
+
+st = _load("ecmwf_status")
+mcp = _load("ecmwf_mcp")
 
 # One cheap URL per service that must answer (any HTTP status below 404, or 401/403/405).
 PROBES = {
@@ -49,6 +59,7 @@ PROBES = {
         "https://polytope.leonardo.apps.dte.destination-earth.eu/api/v1/collections"
     ),
     "destine-news": st.DESTINE_NEWS,
+    "mcp": st.SERVICE_STATUS["mcp"],
 }
 PRESENT = {401, 403, 405}
 TIMEOUT_S = 30
@@ -131,6 +142,31 @@ def check(fetch=None) -> list[str]:
             msgs = _json(fetch, url, problems)
             if msgs is not None and not isinstance(msgs.get("messages"), list):
                 problems.append(f"{url}: changed shape (expected messages[])")
+
+    # Reachability is the "mcp" probe's job below; this checks what the router lists.
+    router_url = st.SERVICE_STATUS["mcp"]
+    try:
+        code, body = fetch(router_url)
+        router = json.loads(body) if code == 200 else None
+    except ValueError:
+        router = None
+        problems.append(f"{router_url}: not JSON any more")
+    except Exception:
+        router = None
+    if router is not None:
+        listed = {s.get("name"): s.get("url") for s in router.get("services") or []}
+        for name, url in sorted(mcp.BACKENDS.items()):
+            if listed.get(name) != url:
+                problems.append(
+                    f"{st.SERVICE_STATUS['mcp']}: the router lists service '{name}' at "
+                    f"{listed.get(name)!r}, ecmwf_mcp.BACKENDS has {url!r} — update "
+                    "ecmwf_mcp.BACKENDS"
+                )
+        for name in sorted(set(listed) - set(mcp.BACKENDS)):
+            problems.append(
+                f"{st.SERVICE_STATUS['mcp']}: the router lists a service '{name}' that "
+                "ecmwf_mcp.BACKENDS lacks — add it"
+            )
 
     for name, url in PROBES.items():
         try:

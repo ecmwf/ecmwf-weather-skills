@@ -16,13 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # Destination Earth Digital Twins
 
 ## Contents
-- Access check (line 34)
-- No access yet (line 48)
-- Request workflow (line 64)
-- Which server holds the data (line 86)
-- Processing and plots (line 97)
-- Licence and attribution (line 105)
-- When blocked (line 114)
+- Access check (line 35)
+- No access yet (line 49)
+- Request workflow (line 65)
+- Which server holds the data (line 87)
+- ECMWF MCP (line 98)
+- Processing and plots (line 120)
+- Licence and attribution (line 128)
+- When blocked (line 137)
 - References — `references/requests.md` (keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -93,6 +94,28 @@ when `check` finds no token, and give its output.
 | Some Climate DT Generation 1 data | `polytope.leonardo.apps.dte.destination-earth.eu` |
 
 `destine.py request` picks the server automatically; always state it with the request.
+
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). Its `catalogue_*` tools browse
+the Destination Earth catalogue that `destine.py` checks requests against: datasets, their
+axes and valid values for a selection, and the MARS requests plus the server that holds the
+data — no account needed. Call them when your client lists them; otherwise run them with this
+standard-library script. If the MCP is unreachable, use `destine.py request`.
+
+```bash
+python3 scripts/ecmwf_mcp.py call catalogue_get_axes '{"dataset_id": "climate-dt", "selection": {"stream": "clmn"}}'
+python3 scripts/ecmwf_mcp.py call catalogue_build_mars_requests '{"dataset_id": "climate-dt",
+  "selection": {"activity": "projections", "experiment": "ssp3-7.0", "model": "ifs-fesom",
+  "stream": "clmn", "resolution": "standard", "levtype": "sfc", "param": "228004",
+  "year": "2040", "month": "7"}}'
+```
+
+- Use only values the tools list (`catalogue_get_axes` answers are large: narrow the
+  selection first).
+- Never pass a DestinE token to an MCP tool (`catalogue_retrieve_data` accepts one): it would
+  pass through the chat. Download with `destine.py retrieve`, which reads the token itself;
+  upgraded access and the licence terms below still apply.
 
 ## Processing and plots
 

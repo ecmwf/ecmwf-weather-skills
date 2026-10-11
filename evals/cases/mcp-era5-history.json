@@ -1,0 +1,37 @@
+{
+  "id": "mcp-era5-history",
+  "prompt": "How hot was August 2003 in Paris?",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "expect": [
+    {
+      "kind": "web_not",
+      "pattern": "(?i)\\b(weather|forecasts?|meteo\\w*|rain\\w*|precipitation|temperatures?|wetter|tempo|warnings?|alerts?|avisos?|heat\\w*|hot|climate)\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "\u00b0C|degC"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)Copernicus"
+    },
+    {
+      "kind": "any",
+      "of": [
+        {
+          "kind": "mcp",
+          "pattern": "reanalysis_get_point_history"
+        },
+        {
+          "kind": "command",
+          "pattern": "cds\\.py\\s+era5-point"
+        }
+      ]
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|wttr\\.in|meteostat"
+    }
+  ]
+}

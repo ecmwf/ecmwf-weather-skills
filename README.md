@@ -58,6 +58,9 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
   open data, Copernicus credit for C3S/CAMS, ECMWF licence for operational data) and stamps it
   on figures.
 - **Never leaks secrets** — credentials are detected by name only and redacted from output.
+- **ECMWF's MCP server bundled** — the plugins connect agents to `https://mcp.ecmwf.int` for
+  quick answers in chat (point forecasts, ERA5 history, official charts, the Destination
+  Earth catalogue); the skills say when to use it and work without it.
 
 ## The skills
 
@@ -136,6 +139,23 @@ Use whichever skills directory your client documents — see <https://agentskill
   and `uv run` installs them on first use (~64 MB to read GRIB, ~150 MB for point forecasts).
 - Linux or macOS (earthkit ships eccodes as binary wheels); on Windows use WSL.
 - Python 3 alone runs the catalogue, WMS, OpenCharts, CDS/ADS and MARS helpers.
+
+### ECMWF MCP server
+
+The Claude Code and Codex plugins bundle ECMWF's remote MCP server, `https://mcp.ecmwf.int`
+(no account): agents use its tools for quick answers in chat, and the skills call the same
+tools through `scripts/ecmwf_mcp.py` when the client has none. Everything else — files, the
+latest runs, ensembles — goes through the skills' scripts, so the skills work without it.
+
+- Turn it off in **Claude Code**: toggle `plugin:ecmwf-weather:ecmwf` off in `/mcp`.
+- Turn it off in **Codex**: in `~/.codex/config.toml`, set
+  `[plugins."ecmwf-weather@ecmwf".mcp_servers.ecmwf]` `enabled = false`.
+- Add it to an agent that installed only the skills: `opencode.json`
+  `{"mcp": {"ecmwf": {"type": "remote", "url": "https://mcp.ecmwf.int"}}}`;
+  `pi mcp add ecmwf --url https://mcp.ecmwf.int`;
+  `gemini mcp add -t http ecmwf https://mcp.ecmwf.int`;
+  `claude mcp add --transport http ecmwf https://mcp.ecmwf.int`;
+  `codex mcp add ecmwf --url https://mcp.ecmwf.int`.
 
 ## Quick start
 
@@ -251,6 +271,7 @@ Agreement.
 - **`plugins/ecmwf-weather/skills/`** — the eight skills (the portable payload): `SKILL.md`,
   `references/`, `scripts/`, `assets/`.
 - **`plugins/ecmwf-weather/.claude-plugin/`, `.codex-plugin/`** — plugin manifests;
+  **`plugins/ecmwf-weather/.mcp.json`, `mcp.json`** — the bundled ECMWF MCP server;
   **`.claude-plugin/marketplace.json`** — marketplace catalogue.
 - **`tests/`** — unit, earthkit and live tests with recorded ECMWF fixtures.
 - **`evals/cases/`** — fresh-agent skill evaluation cases.

@@ -1,7 +1,7 @@
 {
   "name": "ecmwf-weather",
   "version": "0.6.0",
-  "description": "Find, request, decode and visualise ECMWF forecasts, reanalysis and atmospheric composition data — Open Data, CDS/ADS, MARS, Polytope, Destination Earth, OpenCharts/WMS and earthkit.",
+  "description": "Find, request, decode and visualise ECMWF forecasts, reanalysis and atmospheric composition data — Open Data, CDS/ADS, MARS, Polytope, Destination Earth, OpenCharts/WMS, earthkit and ECMWF's MCP server.",
   "author": {
     "name": "ECMWF",
     "url": "https://www.ecmwf.int"
@@ -25,13 +25,15 @@
     "grib",
     "earthkit",
     "destination-earth",
-    "destine"
+    "destine",
+    "mcp"
   ],
   "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "ECMWF Weather Data",
     "shortDescription": "ECMWF weather data and maps",
-    "longDescription": "Reusable ECMWF skills for fetching IFS and AIFS forecasts from Open Data, ERA5 and CAMS from the Copernicus data stores, MARS archive requests, Polytope point and area extraction, Destination Earth Digital Twin data, OpenCharts and WMS map layers, and decoding and plotting GRIB with earthkit.",
+    "longDescription": "Reusable ECMWF skills for fetching IFS and AIFS forecasts from Open Data, ERA5 and CAMS from the Copernicus data stores, MARS archive requests, Polytope point and area extraction, Destination Earth Digital Twin data, OpenCharts and WMS map layers, and decoding and plotting GRIB with earthkit. It bundles ECMWF's MCP server (https://mcp.ecmwf.int) for quick answers in chat; every skill also works without it.",
     "developerName": "ECMWF",
     "category": "Developer Tools",
     "capabilities": [

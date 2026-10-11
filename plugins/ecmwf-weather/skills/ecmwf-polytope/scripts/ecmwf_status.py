@@ -10,6 +10,7 @@ Sources (the same ones status.ecmwf.int and the data-store "Live status" pages u
   https://apps.ecmwf.int/status/status     component status (Ok / Degraded / …)
   https://apps.ecmwf.int/status/sessions   planned maintenance windows
   <data store>/api/catalogue/v1/messages   CDS/ADS/ECDS banners (live, severity)
+  https://mcp.ecmwf.int/status             the ECMWF MCP router and the services behind it
 
   python3 ecmwf_status.py cds        # report for one service
   python3 ecmwf_status.py            # all services
@@ -22,6 +23,7 @@ import json
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 
 STATUS = "https://apps.ecmwf.int/status/status"
@@ -43,7 +45,12 @@ SERVICES = {
     "ecds": (["Data Stores"], ["Data Stores"], "https://ecds.ecmwf.int"),
     # DestinE has no machine-readable status; maintenance is announced as platform news.
     "destine": ([], [], None),
+    # The MCP router publishes its own status (SERVICE_STATUS), not on status.ecmwf.int.
+    "mcp": ([], [], None),
 }
+# Services that publish their own status document: {"status", "services": [{name, reachable,
+# error}]}.
+SERVICE_STATUS = {"mcp": "https://mcp.ecmwf.int/status"}
 # Client error texts that mean the service could not be reached at all.
 NETWORK_ERROR = re.compile(
     r"(?i)connection (refused|reset|aborted)|max retries exceeded|name or service not known"
@@ -64,6 +71,30 @@ def _services(field) -> set[str]:
     return {str(field)} if field else set()
 
 
+def service_status(url: str, fetch) -> tuple[str | None, list[str]]:
+    """State and details from a service's own status document; state None if unreachable.
+
+    An HTTP error page (e.g. 502 "Service not available") is ECMWF's own front end saying the
+    service is down, so it counts as a reported problem."""
+    try:
+        doc = fetch(url)
+    except urllib.error.HTTPError as e:
+        return "degraded", [f"{url} answers HTTP {e.code}"]
+    except Exception as e:
+        return None, [f"{url} could not be retrieved ({type(e).__name__})"]
+    services = doc.get("services") or []
+    down = [s for s in services if not s.get("reachable")]
+    details = [
+        f"MCP router: {doc.get('status')}, {len(services) - len(down)}/{len(services)} "
+        f"services reachable"
+    ]
+    details += [
+        f"MCP {s.get('name')} service unreachable ({s.get('error') or 'no detail'})" for s in down
+    ]
+    ok = str(doc.get("status", "")).lower() == "ok" and not down
+    return ("ok" if ok else "degraded"), details
+
+
 def outage_report(service: str, fetch=None, now: float | None = None) -> dict:
     """{"state": ok|degraded|maintenance|unknown, "summary": text, "details": [...]}."""
     components, tags, host = SERVICES[service]
@@ -71,6 +102,9 @@ def outage_report(service: str, fetch=None, now: float | None = None) -> dict:
     now = time.time() if now is None else now
     details: list[str] = []
     state = "ok"
+    own_state, own = (None, [])
+    if service in SERVICE_STATUS:
+        own_state, own = service_status(SERVICE_STATUS[service], fetch)
     try:
         nodes = {n["node"]["Title"]: n["node"] for n in fetch(STATUS)["nodes"]}
         for c in components:
@@ -99,13 +133,19 @@ def outage_report(service: str, fetch=None, now: float | None = None) -> dict:
                     state = "degraded"
                     details.append(f"{host} notice ({m['severity']}): {m.get('summary', '')}")
     except Exception as e:  # the status service itself may be unreachable
-        return {
-            "service": service,
-            "state": "unknown",
-            "details": [],
-            "summary": f"ECMWF status could not be retrieved ({type(e).__name__}); "
-            f"check {STATUS_PAGE} manually.",
-        }
+        if own_state is None:
+            return {
+                "service": service,
+                "state": "unknown",
+                "details": own,
+                "summary": f"ECMWF status could not be retrieved ({type(e).__name__}); "
+                f"check {STATUS_PAGE} manually.",
+            }
+        state = "ok"
+        details = [f"{STATUS_PAGE} could not be retrieved ({type(e).__name__})"]
+    if own_state == "degraded":
+        state = "degraded"
+    details = own + details
     if service == "destine":
         details.append(f"no status feed; maintenance notices: {DESTINE_NEWS}")
     summary = {
