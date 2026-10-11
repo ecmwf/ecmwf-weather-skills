@@ -29,17 +29,16 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 
 ## ECMWF MCP
 
-- [ ] **Re-test access terms** of the services behind the bundled MCP — the MCP router, its
-      OGC API EDR backend and the DestinE data catalogue — once their owners confirm the access
-      terms: each route must follow the same requirements as the official route for the same
-      data (DestinE upgraded access for Digital Twin data; an entitled account or service
-      agreement for real-time data beyond Open Data). Then decide whether scripts may use the
-      MCP forecast route beyond quick answers in chat.
-- [ ] Re-run the `mcp-*` evals and a full suite with the MCP present on Claude (Haiku, Sonnet,
-      Opus) and Codex once the router answers again (it returned HTTP 502 when 0.7.0 was
-      prepared, so the MCP-present runs measured the fallback to the scripts).
+- [ ] **Re-test access terms** of the services behind the bundled MCP — its OGC API EDR
+      backend (still used directly by `cds.py era5-point`) and the DestinE data catalogue —
+      once their owners confirm the access terms: each route must follow the same requirements
+      as the official route for the same data (DestinE upgraded access for Digital Twin data;
+      an entitled account or service agreement for real-time data beyond Open Data). MCP 0.4.0
+      withdrew its forecast and ERA5 services; if they return, decide whether scripts may use
+      them beyond quick answers in chat.
 - [ ] **Feedback for the MCP developers** — open issues or pull requests once the repository is
-      available:
+      available. The forecast and ERA5 items apply if those services return (0.4.0 withdrew
+      them):
   - Forecast `tp` is accumulated since the start of the run but each row reads "Total
     precipitation (mm)": summing the column overstates rain (Bologna, 48 h: 1.5 mm, summed 20.9
     mm). De-accumulate, or label it and return the amount over the requested window.

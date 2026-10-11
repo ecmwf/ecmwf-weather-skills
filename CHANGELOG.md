@@ -12,8 +12,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 ## [Unreleased]
 
 **ECMWF MCP.** The plugin now bundles ECMWF's MCP server (https://mcp.ecmwf.int), and the skills
-use it where it helps: quick answers in chat, the DestinE data catalogue, and fast ERA5 point
-series from the service behind it.
+use it where it helps: official charts and meteograms and the DestinE data catalogue in chat.
+Forecasts and ERA5 stay on the skills' scripts (MCP 0.4.0 has no forecast or ERA5 services);
+ERA5 point series now come in seconds from ECMWF's EDR service.
 
 ### Added
 
@@ -21,13 +22,14 @@ series from the service behind it.
   (portable packages). Turn it off in Claude Code via `/mcp`, in Codex with
   `[plugins."ecmwf-weather@ecmwf".mcp_servers.ecmwf] enabled = false`.
 - `ecmwf_mcp.py` in ecmwf-open-data, -polytope, -cds-ads, -opencharts-wms and -destine: the MCP
-  tools from the command line for clients without MCP — images saved to files, forecast
-  precipitation as the amount over the window and per step, the model run's age, a fallback to
-  the service behind the router, and a BLOCKED report with ECMWF's status on outages.
-- "ECMWF MCP" sections in those skills: quick answers in chat; the scripts for files, the
-  latest runs, ensembles, processing and whenever the MCP is unreachable; HRES points from the
-  MCP for quick answers only. Point-forecast skills name the national meteorological service
-  and MeteoAlarm for official warnings.
+  tools from the command line for clients without MCP — images saved to files, a fallback to
+  the service behind the router, a clear message when the MCP does not offer a tool, and a
+  BLOCKED report with ECMWF's status on outages.
+- "ECMWF MCP" sections in those skills: charts, meteograms and the DestinE catalogue from the
+  MCP; forecasts, ERA5, files, ensembles and processing from the scripts, also whenever the MCP
+  is unreachable. Point-forecast skills name the national meteorological service and
+  MeteoAlarm for official warnings, and fetch the official ENS meteogram from OpenCharts rather
+  than calling their own chart official.
 - `cds.py era5-point` reads ERA5 from ECMWF's OGC API EDR service: hourly point series in
   seconds on plain Python 3, without a CDS key or queue, written exactly like the CDS
   timeseries CSV. `--route auto` (default) falls back to the CDS by itself and says why
@@ -52,8 +54,10 @@ series from the service behind it.
   normalised to the catalogue's (`SSP3-7.0` → `ssp3-7.0`); Extremes DT defaults to the latest
   catalogued date; `retrieve` reads `request --json` and sends the token only to DestinE
   servers.
-- ecmwf-open-data is loaded for weather questions about a place before any web search, also
-  when the MCP server is unavailable.
+- ecmwf-open-data claims forecast questions about a place, and ecmwf-cds-ads past-weather
+  questions (how hot was …), before any web search or answer from memory.
+- Relative humidity as a result comes from earthkit-meteo; thermofeel's helpers only feed its
+  own indices.
 - Filed ecmwf/earthkit-data#1185 (relative MARS date as a string rejected) and opened
   ecmwf/thermofeel#59 (example notes); both recorded in `docs/upstream/`.
 
