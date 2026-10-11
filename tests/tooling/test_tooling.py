@@ -55,6 +55,53 @@ def test_detects_skill_version_and_name_drift(repo):
     assert "mars" in probs and "version" in probs and "name" in probs
 
 
+PLUG = "plugins/ecmwf-weather"
+
+
+def test_bundles_the_ecmwf_mcp_server_for_every_host():
+    claude = json.loads((ROOT / PLUG / ".mcp.json").read_text())["mcpServers"]
+    portable = json.loads((ROOT / PLUG / "mcp.json").read_text())
+    codex = json.loads((ROOT / PLUG / ".codex-plugin" / "plugin.json").read_text())
+    assert claude == {"ecmwf": {"type": "http", "url": "https://mcp.ecmwf.int"}}
+    assert portable["$schema"] == "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
+    assert portable["mcpServers"] == {
+        "ecmwf": {"type": "streamable-http", "url": "https://mcp.ecmwf.int"}
+    }
+    assert codex["mcpServers"] == "./.mcp.json"
+
+
+def test_detects_mcp_drift(repo):
+    p = repo / PLUG / "mcp.json"
+    d = json.loads(p.read_text())
+    d["mcpServers"]["ecmwf"]["url"] = "https://mcp.example.test"
+    p.write_text(json.dumps(d))
+    probs = "\n".join(vp.problems(repo))
+    assert "mcp.json" in probs and "url" in probs
+
+
+def test_detects_mcp_server_name_type_and_scheme(repo):
+    p = repo / PLUG / ".mcp.json"
+    p.write_text(json.dumps({"mcpServers": {"other": {"type": "sse", "url": "http://x.test"}}}))
+    probs = "\n".join(vp.problems(repo))
+    assert "server names" in probs and "type" in probs and "https" in probs
+
+
+def test_detects_missing_mcp_files_and_codex_reference(repo):
+    (repo / PLUG / ".mcp.json").unlink()
+    c = repo / PLUG / ".codex-plugin" / "plugin.json"
+    d = json.loads(c.read_text())
+    d.pop("mcpServers")
+    c.write_text(json.dumps(d))
+    probs = "\n".join(vp.problems(repo))
+    assert ".mcp.json is missing" in probs and "mcpServers" in probs
+
+
+def test_bundled_server_is_the_one_the_script_calls(repo):
+    s = repo / PLUG / "skills/ecmwf-open-data/scripts/ecmwf_mcp.py"
+    s.write_text(s.read_text().replace('ROUTER = "https://mcp.ecmwf.int"', 'ROUTER = "https://x"'))
+    assert any("ecmwf_mcp.py" in p for p in vp.problems(repo))
+
+
 def test_detects_marketplace_source_and_display_name(repo):
     m = repo / ".claude-plugin/marketplace.json"
     d = json.loads(m.read_text())
@@ -101,6 +148,9 @@ def test_build_dist(repo, tmp_path):
     text = openai.read(skill).decode()
     assert "metadata:" not in text and "name: ecmwf-mars" in text
     assert any(e.endswith(".codex-plugin/plugin.json") for e in openai.namelist())
+    # the bundled MCP server travels with both uploads
+    for z in (claude, openai):
+        assert {"ecmwf-weather/.mcp.json", "ecmwf-weather/mcp.json"} <= set(z.namelist())
 
 
 # --- regenerate_references ------------------------------------------------------------------------

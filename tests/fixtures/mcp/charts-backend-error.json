@@ -1,0 +1,13 @@
+{
+ "jsonrpc": "2.0",
+ "id": 6,
+ "result": {
+  "content": [
+   {
+    "text": "Error executing tool get_chart: There's no product called 'no-such-product'. Closest in the catalogue: fire-activity, visibility_meteogram, opencharts_ptype_meteogram, opencharts_wave_spectra_diagram, seasonal_system5_tstorm_verification. Use find_charts to see what each one takes.",
+    "type": "text"
+   }
+  ],
+  "isError": true
+ }
+}

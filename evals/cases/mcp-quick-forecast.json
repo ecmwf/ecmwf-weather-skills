@@ -1,0 +1,42 @@
+{
+  "id": "mcp-quick-forecast",
+  "prompt": "What's the weather going to be like in Reading, UK tomorrow?",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "web_not",
+      "pattern": "(?i)\\b(weather|forecasts?|meteo\\w*|rain\\w*|precipitation|temperatures?|wetter|tempo|warnings?|alerts?|avisos?|heat\\w*|hot|climate)\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ECMWF"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?is)\\b(?:run|cycle|initiali[sz]ed|base time|issued)\\b.{0,80}?\\b(?:00|06|12|18)(?::?00)?\\s?(?:UTC|GMT|Z)\\b|\\b(?:00|06|12|18)(?::?00)?\\s?(?:UTC|GMT|Z)\\b.{0,40}?\\b(?:run|cycle|forecast|model)\\b"
+    },
+    {
+      "kind": "any",
+      "of": [
+        {
+          "kind": "mcp",
+          "pattern": "forecast_get_point_forecast"
+        },
+        {
+          "kind": "command",
+          "pattern": "ptpoint\\.py"
+        },
+        {
+          "kind": "command",
+          "pattern": "odpoint\\.py"
+        }
+      ]
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|openweathermap|weatherapi\\.com|api\\.met\\.no|tomorrow\\.io|wttr\\.in|meteostat"
+    }
+  ],
+  "note": "The run may be named either way round ('the 06 UTC run' or 'ECMWF's 06:00 UTC forecast'); a correct answer used the second form."
+}

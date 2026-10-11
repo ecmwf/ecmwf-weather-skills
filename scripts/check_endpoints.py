@@ -9,6 +9,8 @@ Run by `make check-endpoints`, which `make release-prepare` and the weekly CI ca
 - the status feeds behind status.ecmwf.int still parse with the expected shape, and every
   component mapped in ecmwf_status.SERVICES is still listed (status Ok or not doesn't matter);
 - each data store's /api/catalogue/v1/messages still answers with a message list;
+- the ECMWF MCP router's /status still lists exactly the services ecmwf_mcp.BACKENDS calls
+  directly when the router is down;
 - every service host still answers HTTP (401/403 count as present: authentication is expected).
 """
 
@@ -22,12 +24,20 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-_spec = importlib.util.spec_from_file_location(
-    "ecmwf_status", ROOT / "plugins/ecmwf-weather/skills/ecmwf-open-data/scripts/ecmwf_status.py"
-)
-assert _spec and _spec.loader
-st = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(st)
+SCRIPTS = ROOT / "plugins/ecmwf-weather/skills/ecmwf-open-data/scripts"
+
+
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location(name, SCRIPTS / f"{name}.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault(name, module)  # ecmwf_mcp imports its sibling ecmwf_status by name
+    spec.loader.exec_module(module)
+    return module
+
+
+st = _load("ecmwf_status")
+mcp = _load("ecmwf_mcp")
 
 # One cheap URL per service that must answer (any HTTP status below 404, or 401/403/405).
 PROBES = {
@@ -41,6 +51,9 @@ PROBES = {
     "ads": "https://ads.atmosphere.copernicus.eu/api/catalogue/v1/collections?limit=1",
     "ecds": "https://ecds.ecmwf.int/api/catalogue/v1/collections?limit=1",
     "destine": "https://polytope.lumi.apps.dte.destination-earth.eu/api/v1/test",
+    # The ERA5 collection the cds-ads skill reads (era5-point falls back to the CDS without it).
+    "era5-edr": "https://polytope-edr.lumi.apps.dte.destination-earth.eu/collections/"
+    "era5-single-levels?f=json",
     "destine-mn5": "https://polytope.mn5.apps.dte.destination-earth.eu/api/v1/test",
     "polytope-collections": "https://polytope.ecmwf.int/api/v1/collections",  # 401 = present
     "destine-lumi-collections": "https://polytope.lumi.apps.dte.destination-earth.eu/api/v1/collections",
@@ -49,8 +62,16 @@ PROBES = {
         "https://polytope.leonardo.apps.dte.destination-earth.eu/api/v1/collections"
     ),
     "destine-news": st.DESTINE_NEWS,
+    # ECMWF's DestinE data catalogue (Omnicat), a test deployment: when it moves, update
+    # CATALOGUE_URL in ecmwf-destine/scripts/destine.py too.
+    "destine-catalogue": "https://catalogue-test.lumi.apps.dte.destination-earth.eu/health",
+    "mcp": st.SERVICE_STATUS["mcp"],
 }
 PRESENT = {401, 403, 405}
+# Optional services: the skills work without them, so an outage (HTTP 5xx, timeout, refused
+# connection) is a warning; drift — a host that no longer resolves, HTTP 404/410, a changed
+# status document — still fails the release.
+OPTIONAL = {"mcp"}
 TIMEOUT_S = 30
 
 
@@ -99,9 +120,17 @@ def _json(fetch, url: str, problems: list[str]):
         return None
 
 
-def check(fetch=None) -> list[str]:
+def _unresolvable(e: Exception) -> bool:
+    import socket
+
+    return isinstance(getattr(e, "reason", None), socket.gaierror) or isinstance(e, socket.gaierror)
+
+
+def check(fetch=None, warnings: list[str] | None = None) -> list[str]:
+    """Problems that must block a release; outages of OPTIONAL services go to `warnings`."""
     fetch = fetch or retrying(_fetch)
     problems: list[str] = []
+    warnings = [] if warnings is None else warnings
 
     status = _json(fetch, st.STATUS, problems)
     if status is not None:
@@ -132,19 +161,55 @@ def check(fetch=None) -> list[str]:
             if msgs is not None and not isinstance(msgs.get("messages"), list):
                 problems.append(f"{url}: changed shape (expected messages[])")
 
+    # Reachability is the "mcp" probe's job below; this checks what the router lists.
+    router_url = st.SERVICE_STATUS["mcp"]
+    try:
+        code, body = fetch(router_url)
+        router = json.loads(body) if code == 200 else None
+    except ValueError:
+        router = None
+        problems.append(f"{router_url}: not JSON any more")
+    except Exception:
+        router = None
+    if router is not None:
+        listed = {s.get("name"): s.get("url") for s in router.get("services") or []}
+        for name, url in sorted(mcp.BACKENDS.items()):
+            if listed.get(name) != url:
+                problems.append(
+                    f"{st.SERVICE_STATUS['mcp']}: the router lists service '{name}' at "
+                    f"{listed.get(name)!r}, ecmwf_mcp.BACKENDS has {url!r} — update "
+                    "ecmwf_mcp.BACKENDS"
+                )
+        for name in sorted(set(listed) - set(mcp.BACKENDS)):
+            problems.append(
+                f"{st.SERVICE_STATUS['mcp']}: the router lists a service '{name}' that "
+                "ecmwf_mcp.BACKENDS lacks — add it"
+            )
+
     for name, url in PROBES.items():
         try:
             code, _ = fetch(url)
         except Exception as e:
-            problems.append(f"{name}: {url} unreachable ({type(e).__name__}: {e})")
+            if name in OPTIONAL and not _unresolvable(e):
+                warnings.append(f"{name}: {url} unreachable ({type(e).__name__}: {e}) — optional")
+            elif name in OPTIONAL:
+                problems.append(f"{name}: {url} no longer resolves ({e})")
+            else:
+                problems.append(f"{name}: {url} unreachable ({type(e).__name__}: {e})")
             continue
         if code >= 400 and code not in PRESENT:
-            problems.append(f"{name}: {url} answers HTTP {code}")
+            if name in OPTIONAL and code >= 500:
+                warnings.append(f"{name}: {url} answers HTTP {code} — optional, not blocking")
+            else:
+                problems.append(f"{name}: {url} answers HTTP {code}")
     return sorted(set(problems))
 
 
 def main() -> int:
-    problems = check()
+    warnings: list[str] = []
+    problems = check(warnings=warnings)
+    for w in sorted(set(warnings)):
+        print(f"WARNING: {w}")
     for p in problems:
         print(f"MISSING: {p}")
     print(

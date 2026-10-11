@@ -5,6 +5,7 @@
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -266,3 +267,44 @@ def test_redirects_to_plain_http_are_refused():
         )
         is not None
     )
+
+
+# --- CAMS layers carry the Copernicus credit -----------------------------------------------------
+
+YEAR = datetime.now(timezone.utc).year
+CAMS_CREDIT = (
+    f"Generated using Copernicus Atmosphere Monitoring Service information {YEAR}. Neither the "
+    "European Commission nor ECMWF is responsible for any use that may be made of the Copernicus "
+    "information or data it contains."
+)
+
+
+def test_cams_layers_add_the_copernicus_credit_with_year_and_disclaimer():
+    a = wms.attribution("composition_pm2p5")
+    assert a.startswith(f"Map data: © {YEAR} ECMWF, CC BY 4.0") and a.endswith(CAMS_CREDIT)
+    assert "Copernicus" not in wms.attribution("msl_public")
+
+
+def test_cams_is_recognised_among_several_layers_and_by_title():
+    assert wms.attribution("msl_public,composition_europe_pm2p5_forecast_surface").endswith(
+        CAMS_CREDIT
+    )
+    assert wms.is_cams_layer("aod", "Aerosol optical depth (provided by CAMS, the Copernicus ...)")
+    assert not wms.is_cams_layer("msl_public", "Mean sea level pressure (Public)")
+
+
+def test_cli_layer_list_with_cams_layers_prints_the_credit():
+    caps = FIXTURES / "wms-capabilities-trimmed.xml"
+    out = cli("layers", "--caps", caps, "--search", "pm2.5")
+    assert out.returncode == 0, out.stderr
+    assert "composition_pm2p5" in out.stdout and out.stdout.rstrip().endswith(CAMS_CREDIT)
+    j = json.loads(cli("layers", "--caps", caps, "--search", "pm2.5", "--json").stdout)
+    assert j["attribution"].endswith(CAMS_CREDIT)
+    assert "Copernicus" not in cli("layers", "--caps", caps, "--public").stdout
+
+
+def test_cli_getmap_url_of_a_cams_layer_names_the_credit():
+    out = cli("getmap", "--layer", "composition_pm2p5", "--bbox", "-10,35,30,60", "--url-only")
+    assert out.returncode == 0, out.stderr
+    j = cli("getmap", "--layer", "composition_pm2p5", "--bbox", "-10,35,30,60", "--json")
+    assert json.loads(j.stdout)["attribution"].endswith(CAMS_CREDIT)

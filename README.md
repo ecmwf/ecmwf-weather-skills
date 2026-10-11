@@ -55,9 +55,12 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
   code recipes that the test suite executes. Bugs or gaps in earthkit are offered upstream as
   issues or pull requests — only with your approval.
 - **Attribution built in** — every script prints the licence line for its data (CC BY 4.0 for
-  open data, Copernicus credit for C3S/CAMS, ECMWF licence for operational data) and stamps it
-  on figures.
+  ECMWF data, Open Data and operational forecasts alike; Copernicus credit for C3S/CAMS) and
+  stamps it on figures.
 - **Never leaks secrets** — credentials are detected by name only and redacted from output.
+- **ECMWF's MCP server bundled** — the plugins connect agents to `https://mcp.ecmwf.int` for
+  quick answers in chat (point forecasts, ERA5 history, official charts, the Destination
+  Earth catalogue); the skills say when to use it and work without it.
 
 ## The skills
 
@@ -137,6 +140,23 @@ Use whichever skills directory your client documents — see <https://agentskill
 - Linux or macOS (earthkit ships eccodes as binary wheels); on Windows use WSL.
 - Python 3 alone runs the catalogue, WMS, OpenCharts, CDS/ADS and MARS helpers.
 
+### ECMWF MCP server
+
+The Claude Code and Codex plugins bundle ECMWF's remote MCP server, `https://mcp.ecmwf.int`
+(no account): agents use its tools for quick answers in chat, and the skills call the same
+tools through `scripts/ecmwf_mcp.py` when the client has none. Everything else — files, the
+latest runs, ensembles — goes through the skills' scripts, so the skills work without it.
+
+- Turn it off in **Claude Code**: toggle `plugin:ecmwf-weather:ecmwf` off in `/mcp`.
+- Turn it off in **Codex**: in `~/.codex/config.toml`, set
+  `[plugins."ecmwf-weather@ecmwf".mcp_servers.ecmwf]` `enabled = false`.
+- Add it to an agent that installed only the skills: `opencode.json`
+  `{"mcp": {"ecmwf": {"type": "remote", "url": "https://mcp.ecmwf.int"}}}`;
+  `pi mcp add ecmwf --url https://mcp.ecmwf.int`;
+  `gemini mcp add -t http ecmwf https://mcp.ecmwf.int`;
+  `claude mcp add --transport http ecmwf https://mcp.ecmwf.int`;
+  `codex mcp add ecmwf --url https://mcp.ecmwf.int`.
+
 ## Quick start
 
 Ask your agent, for example:
@@ -184,9 +204,10 @@ Every skill is evaluated with fresh agents on 21 tasks (`make evals AGENT=claude
 | Polytope | `POLYTOPE_USER_KEY`, `POLYTOPE_USER_EMAIL` | `~/.polytopeapirc` (falls back to `~/.ecmwfapirc`) |
 | Destination Earth (upgraded access, on request) | `DESTINE_POLYTOPE_KEY` | `~/.polytopeapirc-destine` |
 
-Polytope and MARS access depend on your account (ECMWF Member and Co-operating States, licensed
-users). Scripts check credentials by name and never print them. When a key is missing, the agent
-offers step-by-step instructions to obtain it.
+Polytope and MARS access depend on your account (users at ECMWF Member and Co-operating State
+national meteorological services, or with an ECMWF service agreement). Scripts check credentials
+by name and never print them. When a key is missing, the agent offers step-by-step instructions
+to obtain it.
 
 **Copernicus licences:** CDS and ADS refuse downloads (HTTP 403) until you accept the dataset's
 licence once: open `https://cds.climate.copernicus.eu/datasets/<dataset-id>?tab=download#manage-licences`
@@ -204,9 +225,17 @@ the scripts print a BLOCKED report with exact steps for you and for the agent.
 Data retrieved with these skills carries its own licence, separate from this software's:
 
 - **ECMWF Open Data, OpenCharts, public WMS** — CC BY 4.0: `© <year> ECMWF, CC BY 4.0`.
-- **Copernicus (ERA5, CAMS)** — "Generated using Copernicus Climate Change Service / Atmosphere
-  Monitoring Service information <year>" plus the dataset DOI.
-- **Operational and MARS data** — your organisation's ECMWF licence; check before redistributing.
+- **Copernicus (ERA5, CAMS, including CAMS charts and map layers)** — "Generated using Copernicus
+  Climate Change Service / Atmosphere Monitoring Service information <year>. Neither the European
+  Commission nor ECMWF is responsible for any use that may be made of the Copernicus information
+  or data it contains." plus the dataset DOI.
+- **Operational forecasts (Polytope, MARS)** — CC BY 4.0 too: since 1 October 2025 every product
+  in ECMWF's Real-time Catalogue is CC BY 4.0 with no information cost, so credit
+  `© <year> ECMWF, CC BY 4.0` with the source (www.ecmwf.int). What is restricted is access:
+  beyond the free Open Data (the 0.25° subset on data.ecmwf.int) you need an ECMWF account with
+  entitlement (users at Member and Co-operating State national meteorological services) or a
+  Real-time service agreement (service and delivery charges). Other MARS data (observations,
+  research experiments): check its terms before redistributing.
 
 Each skill tells the agent which line to show.
 
@@ -251,6 +280,7 @@ Agreement.
 - **`plugins/ecmwf-weather/skills/`** — the eight skills (the portable payload): `SKILL.md`,
   `references/`, `scripts/`, `assets/`.
 - **`plugins/ecmwf-weather/.claude-plugin/`, `.codex-plugin/`** — plugin manifests;
+  **`plugins/ecmwf-weather/.mcp.json`, `mcp.json`** — the bundled ECMWF MCP server;
   **`.claude-plugin/marketplace.json`** — marketplace catalogue.
 - **`tests/`** — unit, earthkit and live tests with recorded ECMWF fixtures.
 - **`evals/cases/`** — fresh-agent skill evaluation cases.

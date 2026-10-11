@@ -1,0 +1,20 @@
+{
+  "id": "mcp-chart-europe",
+  "prompt": "Save the ECMWF mean sea level pressure chart for Europe for tomorrow as mslp.png.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "file",
+      "pattern": "mslp.png"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?is)\\bvalid\\b.{0,60}?\\d|\\b\\d{1,2}(?::\\d\\d)?\\s?(?:UTC|GMT|Z)\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "CC[ -]BY|\u00a9"
+    }
+  ]
+}

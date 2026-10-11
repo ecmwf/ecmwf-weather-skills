@@ -1,0 +1,34 @@
+{
+  "id": "cds-era5-fast",
+  "prompt": "What was the daily maximum temperature in Paris in the first half of August 2003, during the heatwave? Use ERA5.",
+  "timeout": 600,
+  "max_budget_usd": 2,
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-cds-ads"
+    },
+    {
+      "kind": "command",
+      "pattern": "cds\\.py\\s+era5-point"
+    },
+    {
+      "kind": "final",
+      "pattern": "3[6-9](?:[.,]\\d+\\s*°?|\\s*°)"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)Copernicus Climate Change Service"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)open-meteo|meteostat"
+    }
+  ],
+  "setup": {
+    "env": {
+      "CDSAPI_RC": "/nonexistent/ecmwf-eval/.cdsapirc"
+    }
+  },
+  "note": "No CDS key (CDSAPI_RC points at a missing file): era5-point must answer through ECMWF's EDR route in seconds. ERA5 daily maxima at the gridpoint 48.75N 2.25E peak at 38.2 °C (6 and 12 August, UTC days); local-day maxima are close."
+}

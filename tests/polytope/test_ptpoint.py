@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -93,9 +94,20 @@ def test_size_note_mentions_kb():
     assert "KB" in pt.size_note(9170)
 
 
-def test_licence_for_operational_data():
-    a = pt.attribution(OPER)
-    assert "©" in a["short"] and "licence" in a["note"].lower()
+def test_operational_data_is_cc_by_like_every_ecmwf_real_time_product():
+    a = pt.attribution(OPER, year=2026)
+    assert a["short"] == "Data: © 2026 ECMWF, CC BY 4.0" and a["licence"] == "CC-BY-4.0"
+    assert "www.ecmwf.int" in a["note"] and "access" in a["note"]
+
+
+def test_access_barriers_restrict_access_not_the_licence():
+    for b in (pt.entitlement_barrier(), pt.barrier_for_error("HTTP 403 Forbidden")):
+        text = " ".join([b["why"], *b["user_steps"]])
+        assert "service agreement" in text and "Co-operating State" in text, b["blocked"]
+        assert not re.search(r"(?i)ECMWF licen[cs]e|licensed per account|research licen", text)
+    steps = " ".join(pt.entitlement_barrier()["user_steps"])
+    assert "Computing Representative" in steps and "Open Data" in steps
+    assert "https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements" in steps
 
 
 # --- earthkit-backed derived output --------------------------------------------------------
@@ -279,9 +291,10 @@ def test_setup_steps_polytope():
         "~/.polytopeapirc",
         "~/.ecmwfapirc",
         "Any authenticated ECMWF user",
-        "https://www.ecmwf.int/en/forecasts/datasets",
-        "research licence",
-        "commercial",
+        "'ecmwf-mars'",
+        "Computing Representative",
+        "https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements",
+        "CC BY 4.0",
         "not all datasets",
         "https://support.ecmwf.int",
     ):

@@ -192,7 +192,13 @@ def test_credentials(tmp_path):
 
 def test_licence_note():
     assert "CC BY" in mars.licence_note({"class": "ea"})
-    assert "licence" in mars.licence_note({"class": "od"}).lower()
+    for req in ({"class": "od", "type": "fc"}, {"stream": "enfo", "type": "pf"}):
+        note = mars.licence_note(req)  # class od is the MARS default
+        assert "CC BY 4.0" in note and "© <year> ECMWF" in note and "www.ecmwf.int" in note
+        assert "access" in note and "organisation" not in note
+    for req in ({"class": "od", "type": "ofb"}, {"class": "rd", "expver": "abcd"}):
+        note = mars.licence_note(req)  # observations, research experiments: no blanket claim
+        assert "CC BY" not in note and "https://www.ecmwf.int/en/forecasts/datasets" in note
 
 
 def test_cli_lint_json(tmp_path):

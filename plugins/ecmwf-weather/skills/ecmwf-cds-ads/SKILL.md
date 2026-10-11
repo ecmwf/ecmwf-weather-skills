@@ -1,7 +1,7 @@
 ---
 name: ecmwf-cds-ads
-description: Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (historical weather since 1940, hourly point time series, climate normals), the CARRA (Arctic, 2.5 km) and CERRA / CERRA-Land (Europe, 5.5 km) regional reanalyses, seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, CARRA, CERRA, regional or Arctic reanalysis, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates requests and costs them without an account; tells the user exactly how to get a key when one is missing.
-compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe, validate and era5-point --dry-run (public CDS/ADS APIs). Downloads use uv (PEP 723 inline dependency earthkit-data[cds]) and a CDS/ADS key. Network access to cds.climate.copernicus.eu / ads.atmosphere.copernicus.eu.
+description: Answers questions about past weather at a place — how hot, cold, wet or windy it was on a day, month or year since 1940 — from ERA5 in seconds; load it before answering from memory or searching the web, also when the ECMWF MCP server is unavailable. Finds, validates and downloads data from the Copernicus Climate Data Store (CDS) and Atmosphere Data Store (ADS), operated by ECMWF — ERA5 and ERA5-Land reanalysis (hourly point series, climate normals), the CARRA (Arctic, 2.5 km) and CERRA / CERRA-Land (Europe, 5.5 km) regional reanalyses, seasonal forecasts, and CAMS air-quality and atmospheric-composition forecasts and reanalyses. Use when a task mentions ERA5, CARRA, CERRA, regional or Arctic reanalysis, reanalysis, past weather, climate normals or trends, Copernicus, C3S, CAMS, CDS or ADS dataset ids or requests, cdsapi, ~/.cdsapirc, request size or queue limits, licence acceptance errors, or citing Copernicus data. Validates and costs requests without an account and explains how to get a key.
+compatibility: scripts/cds.py runs on plain Python 3 for check, search, describe, validate and era5-point (ERA5 point series from ECMWF's EDR service, no key). Data-store downloads, including the era5-point CDS fallback, use uv (PEP 723 inline dependency earthkit-data[cds]) and a CDS/ADS key. Network access to cds.climate.copernicus.eu / ads.atmosphere.copernicus.eu / polytope-edr.lumi.apps.dte.destination-earth.eu.
 license: Apache-2.0
 metadata:
   author: ECMWF
@@ -16,13 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # Copernicus CDS and ADS
 
 ## Contents
-- Workflow (line 30)
-- ERA5 at a point (line 68)
-- Regional reanalyses — CARRA and CERRA (line 81)
-- CAMS air quality without a key (line 96)
-- Processing and plots (line 103)
-- Attribution and citation (line 113)
-- When blocked (line 124)
+- Workflow (line 31)
+- ERA5 at a point (line 69)
+- ECMWF MCP (line 90)
+- Regional reanalyses — CARRA and CERRA (line 111)
+- CAMS air quality without a key (line 126)
+- Processing and plots (line 133)
+- Attribution and citation (line 143)
+- When blocked (line 154)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors), `references/regional-reanalyses.md` (CARRA, CERRA: requests, subsetting, point series, limits)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -69,14 +70,43 @@ files there, never inside the skill directory. Paths are relative to this skill.
 
 ```bash
 python3 scripts/cds.py era5-point --lat 38.72 --lon -9.14 --start 1991-01-01 --end 2020-12-31 \
-    --variable 2m_temperature,total_precipitation --dry-run          # validate + cost
-uv run  scripts/cds.py era5-point --lat 38.72 --lon -9.14 --start 1991-01-01 --end 2020-12-31 \
-    --variable 2m_temperature -o lisbon.csv                           # with a key
+    --variable 2m_temperature,total_precipitation -o lisbon.csv       # seconds, no key
+python3 scripts/cds.py era5-point --lat 38.72 --lon -9.14 --start 1991-01-01 --end 2020-12-31 \
+    --variable 2m_temperature --dry-run          # plan: EDR URLs + the CDS request, costed
 ```
 
-Uses `reanalysis-era5-single-levels-timeseries` (hourly, 1940 → ~5 days ago, CSV or NetCDF,
-fast). Climate normals = 1991–2020 monthly means of that series (recipe in
-`references/datasets.md`).
+Hourly ERA5 at the nearest 0.25° gridpoint, 1940 onwards, as CSV: `valid_time`, one column per
+variable by ERA5 short name (`t2m`, `tp`, … in ERA5 units: K, m, Pa), `latitude`, `longitude`.
+The default `--route auto` reads it from ECMWF's OGC API EDR service — seconds, no key, no
+queue. It switches to the CDS dataset `reanalysis-era5-single-levels-timeseries` (queued, about a
+minute, CDS key) by itself when a variable is not on the EDR (wave parameters), for
+`--format netcdf`, for the most recent days (the EDR trails the CDS by a few days), or when the
+EDR fails or refuses (its access terms are under review) — and says why. Both routes write the
+same CSV. Exit 3 means the CDS fallback needs earthkit: re-run the command with `uv run`. The
+output names the route and the gridpoint; end the answer with its attribution and DOI (EDR
+route: ERA5 single levels, 10.24381/cds.adbb2d47). Climate normals = 1991–2020 monthly means of
+that series (recipe in `references/datasets.md`).
+
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account or key). Its
+`reanalysis_get_point_history` tool answers quick ERA5 questions about a place in chat: hourly
+values, or per UTC day with `"daily": true` (lowest, highest, mean, totals), from 1940 to about
+a week ago, up to 366 days per call. Call it when your client lists the ECMWF MCP tools;
+otherwise run it with this standard-library script. If the MCP is unreachable, use
+`cds.py era5-point`.
+
+```bash
+python3 scripts/ecmwf_mcp.py call reanalysis_get_point_history '{"collection_id": "era5-single-levels",
+  "latitude": 48.86, "longitude": 2.35, "parameters": ["t2m", "tp"], "start": "2003-08-01",
+  "end": "2003-08-31", "daily": true}'
+```
+
+- ERA5 parameter ids are `t2m`, `d2m`, `tp`, `u10`, `v10`, `msl`, `tcc`…
+  (`reanalysis_describe_collection` lists them); `era5-pressure-levels` takes a `level` in hPa.
+- ERA5 at a point only — other datasets (ERA5-Land, CARRA, CERRA, seasonal, CAMS), gridded
+  data and files go through the workflow above.
+- ERA5 is a model reanalysis, not station observations; give the attribution below.
 
 ## Regional reanalyses — CARRA and CERRA
 
@@ -141,6 +171,7 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 | **dataset licence not accepted** (HTTP 403) | `validate`/`retrieve` print the exact steps: log in, open `…/datasets/<id>?tab=download#manage-licences`, "Terms of use" at the bottom, Accept — then confirm in `profile?tab=licences` |
 | key rejected (401) | re-copy the token from `…/how-to-api` |
 | key file malformed (no `key:` line, not UTF-8) | rewrite it as the two `url:`/`key:` lines the report shows |
+| EDR refused or unreachable (`era5-point --route edr`) | BLOCKED report; the default `--route auto` falls back to the CDS by itself |
 
 Check licences before every download; if one is missing, stop and give the steps — only the
 user can accept terms.

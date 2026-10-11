@@ -82,9 +82,10 @@ test-live: ## Live tests against ECMWF services (network; some need credentials)
 
 test-all: test test-earthkit test-live ## Every test layer except agent evals
 
-evals: ## Fresh-agent skill evals: AGENT=claude|codex|gemini MODEL=… CASES="id1 id2" REPEAT=1
+evals: ## Fresh-agent skill evals: AGENT=claude|codex|… MODEL=… CASES="id1 id2" REPEAT=1 MCP=0
 	$(PY) scripts/run_evals.py --agent $(or $(AGENT),claude) \
 		$(if $(MODEL),--model $(MODEL)) --repeat $(or $(REPEAT),1) \
+		$(if $(filter 0 no off false,$(MCP)),--no-mcp) \
 		$(foreach c,$(CASES),--case $(c))
 
 # ── Generated artefacts ──────────────────────────────────────────────────────

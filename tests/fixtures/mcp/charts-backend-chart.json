@@ -1,0 +1,46 @@
+{
+ "jsonrpc": "2.0",
+ "id": 5,
+ "result": {
+  "content": [
+   {
+    "data": "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",
+    "mimeType": "image/png",
+    "type": "image"
+   },
+   {
+    "text": "Mean sea level pressure and 850 hPa wind speed (medium-mslp-wind850)\nBase time: Sun 11 Oct 2026 00 UTC Valid time: Mon 12 Oct 2026 00 UTC (+24h) Area : Europe\nImage: 1568 by 1411 pixels, 1131 kB PNG, downscaled to fit\n\nSource: ECMWF, https://charts.ecmwf.int/opencharts-api/v1/products/medium-mslp-wind850/\nChart page: https://charts.ecmwf.int/products/medium-mslp-wind850\nImage: https://charts.ecmwf.int/content/20261011060710-8e0b06d68058a2f16f4276c3a08c40512282cc19.png\nLicence: CC-BY-4.0 (https://apps.ecmwf.int/datasets/licences/general/)\nAttribution: © ECMWF, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)",
+    "type": "text"
+   }
+  ],
+  "isError": false,
+  "structuredContent": {
+   "product": "medium-mslp-wind850",
+   "title": "Mean sea level pressure and 850 hPa wind speed",
+   "description": "Base time: Sun 11 Oct 2026 00 UTC Valid time: Mon 12 Oct 2026 00 UTC (+24h) Area : Europe",
+   "base_time": "2026-10-11T00:00:00Z",
+   "valid_time": "2026-10-12T00:00:00Z",
+   "step_hours": 24.0,
+   "area": "opencharts_europe",
+   "image": {
+    "mime_type": "image/png",
+    "width": 1568,
+    "height": 1411,
+    "bytes": 1158734,
+    "downscaled": true
+   },
+   "image_url": "https://charts.ecmwf.int/content/20261011060710-8e0b06d68058a2f16f4276c3a08c40512282cc19.png",
+   "provenance": {
+    "publisher": "ECMWF",
+    "source_url": "https://charts.ecmwf.int/opencharts-api/v1/products/medium-mslp-wind850/",
+    "page_url": "https://charts.ecmwf.int/products/medium-mslp-wind850",
+    "image_url": "https://charts.ecmwf.int/content/20261011060710-8e0b06d68058a2f16f4276c3a08c40512282cc19.png",
+    "copyright": "© 2023 European Centre for Medium-Range Weather Forecasts",
+    "licence": "CC-BY-4.0",
+    "terms_url": "https://apps.ecmwf.int/datasets/licences/general/",
+    "attribution": "© ECMWF, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
+   },
+   "notes": []
+  }
+ }
+}

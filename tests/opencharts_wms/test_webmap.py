@@ -193,3 +193,21 @@ def test_serve_cli_passes_allowed_hosts(monkeypatch, tmp_path):
     monkeypatch.setattr(wm, "make_server", fake)
     wm.main(["serve", str(tmp_path), "--allow-host", "wx.example.int"])
     assert seen["outdir"] == tmp_path and seen["allow"] == ["wx.example.int"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
+def test_app_js_attribution_adds_the_copernicus_credit_for_cams_layers_with_node():
+    script = (ASSETS / "app.js").read_text() + (
+        "\n;console.log(JSON.stringify(['composition_pm2p5', 'msl_public', 'composition_pm2p5']"
+        ".map(name => attributionText(name, 2026, '© 2026 ECMWF, CC BY 4.0'))));"
+    )
+    res = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=30)
+    assert res.returncode == 0, res.stderr
+    cams, met, again = json.loads(res.stdout)
+    assert met == "© 2026 ECMWF, CC BY 4.0. ECMWF accepts no liability for errors or omissions."
+    assert cams == met + (
+        " Generated using Copernicus Atmosphere Monitoring Service information 2026. Neither the "
+        "European Commission nor ECMWF is responsible for any use that may be made of the "
+        "Copernicus information or data it contains."
+    )
+    assert again == cams  # selecting a layer again doesn't repeat the credit

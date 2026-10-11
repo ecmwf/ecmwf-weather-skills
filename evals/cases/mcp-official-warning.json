@@ -1,0 +1,17 @@
+{
+  "id": "mcp-official-warning",
+  "prompt": "Is there an official weather warning for Lisbon tomorrow?",
+  "timeout": 300,
+  "max_budget_usd": 1,
+  "expect": [
+    {
+      "kind": "final",
+      "pattern": "(?i)\\bIPMA\\b|MeteoAlarm|national (?:meteorological|weather) service"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)\\bECMWF\\b(?![^.\\n]{0,40}\\b(?:no|not|never|doesn['’]t|does not)\\b)[^.\\n]{0,40}\\b(?:has issued|issued|issues|is issuing)\\b[^.\\n]{0,30}\\bwarning"
+    }
+  ],
+  "note": "Grade that the authority is named and that ECMWF is never presented as the warning issuer. An earlier expectation required the answer to call ECMWF output 'guidance'; correct answers on five models named IPMA and checked IPMA's warnings without showing ECMWF data, so that grader was too literal."
+}

@@ -23,6 +23,9 @@ OFFLINE = {
         ("ecmwf-opencharts-wms", "wms.py", ["layers", "--public"]),
         ("ecmwf-opencharts-wms", "opencharts.py", ["search", "temperature"]),
         ("ecmwf-cds-ads", "cds.py", ["search", "era5"]),
+        ("ecmwf-destine", "destine.py", ["options", "climate-dt", "--axis", "param"]),
+        ("ecmwf-open-data", "ecmwf_mcp.py", ["call", "charts_find_charts", '{"query": "rain"}']),
+        ("ecmwf-opencharts-wms", "ecmwf_mcp.py", ["status"]),
     ],
 )
 def test_unreachable_service_is_blocked_with_status(tmp_path, skill, script, args):

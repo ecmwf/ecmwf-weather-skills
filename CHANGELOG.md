@@ -11,10 +11,63 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+**ECMWF MCP.** The plugin now bundles ECMWF's MCP server (https://mcp.ecmwf.int), and the skills
+use it where it helps: quick answers in chat, the DestinE data catalogue, and fast ERA5 point
+series from the service behind it.
+
+### Added
+
+- The plugin bundles the ECMWF MCP server: `.mcp.json` (Claude Code, Codex) and `mcp.json`
+  (portable packages). Turn it off in Claude Code via `/mcp`, in Codex with
+  `[plugins."ecmwf-weather@ecmwf".mcp_servers.ecmwf] enabled = false`.
+- `ecmwf_mcp.py` in ecmwf-open-data, -polytope, -cds-ads, -opencharts-wms and -destine: the MCP
+  tools from the command line for clients without MCP — images saved to files, forecast
+  precipitation as the amount over the window and per step, the model run's age, a fallback to
+  the service behind the router, and a BLOCKED report with ECMWF's status on outages.
+- "ECMWF MCP" sections in those skills: quick answers in chat; the scripts for files, the
+  latest runs, ensembles, processing and whenever the MCP is unreachable; HRES points from the
+  MCP for quick answers only. Point-forecast skills name the national meteorological service
+  and MeteoAlarm for official warnings.
+- `cds.py era5-point` reads ERA5 from ECMWF's OGC API EDR service: hourly point series in
+  seconds on plain Python 3, without a CDS key or queue, written exactly like the CDS
+  timeseries CSV. `--route auto` (default) falls back to the CDS by itself and says why
+  (variables the EDR lacks, NetCDF, the most recent days, any EDR failure); `--route edr|cds`
+  forces one; `--dry-run` shows the EDR requests.
+- `ecmwf-destine`: every request is validated against ECMWF's DestinE data catalogue (Omnicat),
+  which returns the MARS request(s) and the server that holds the data; an invalid request
+  names the axis without data and lists its valid values; unreachable catalogue: offline lint,
+  marked NOT validated. `destine.py options` lists an axis's valid values with labels.
+  Monthly means: `request --frequency monthly` (stream `clmn`) maps parameters to their
+  time-mean equivalents (167 → 228004 avg_2t).
+- Evals run with the bundled MCP server by default (`make evals MCP=0` without); expectation
+  kinds `mcp`, `mcp_not`, `web_not` and `any`; eval cases `mcp-*`, `destine-monthly-mean`,
+  `destine-which-variables`, `cds-era5-fast`.
+- `make check-endpoints` checks the MCP router's status and the DestinE catalogue. The MCP is
+  optional: its outage is a warning, while drift (host gone, HTTP 404, changed status) still
+  fails the release.
+
 ### Changed
 
+- `ecmwf-destine`: default resolution `standard` (`high` on request); experiment values are
+  normalised to the catalogue's (`SSP3-7.0` → `ssp3-7.0`); Extremes DT defaults to the latest
+  catalogued date; `retrieve` reads `request --json` and sends the token only to DestinE
+  servers.
+- ecmwf-open-data is loaded for weather questions about a place before any web search, also
+  when the MCP server is unavailable.
 - Filed ecmwf/earthkit-data#1185 (relative MARS date as a string rejected) and opened
   ecmwf/thermofeel#59 (example notes); both recorded in `docs/upstream/`.
+
+### Fixed
+
+- `ecmwf-destine` requested `SSP3-7.0` (the catalogue has `ssp3-7.0`), had no monthly means and
+  defaulted to high-resolution hourly output, so "the July 2040 monthly mean" became 744
+  high-resolution fields. Climate DT precipitation is `235055` avg_tprate.
+- DestinE attribution uses the wording of the upgraded-access terms (v2.1, §3.4): "based on
+  data of the European Union".
+- CAMS charts and CAMS WMS layers carry the full Copernicus credit (year and disclaimer); the
+  web map no longer repeats it; `opencharts.py options` no longer fails on charts without steps.
+- Licence wording: every ECMWF real-time product is CC BY 4.0, operational data included; what
+  is restricted is access (an entitled account or a Real-time service agreement).
 
 ## [0.6.0] - 2026-10-10
 

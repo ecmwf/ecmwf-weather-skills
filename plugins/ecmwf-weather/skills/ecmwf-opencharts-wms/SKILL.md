@@ -1,6 +1,6 @@
 ---
 name: ecmwf-opencharts-wms
-description: Builds ECMWF weather maps — map images and tile layers from the ECMWF ecCharts WMS (mean sea level pressure, 500 hPa geopotential, 850 hPa temperature and wind, ensemble mean and spread, tropical cyclones, CAMS air quality), official OpenCharts forecast charts as PNG/PDF, and ready-made interactive web maps (Leaflet) with a time slider, legends, click values and a 10-day meteogram on click. Use when a task asks for an ECMWF weather map or chart, WMS GetCapabilities, GetMap, GetLegend or GetFeatureInfo URLs, layer names, styles or valid times, adding ECMWF layers to Leaflet, MapLibre or OpenLayers, or building a weather web map or dashboard (always start from scripts/webmap.py). Not for a map of a local GRIB or NetCDF file — that is the ecmwf-earthkit skill.
+description: Builds ECMWF weather maps — map images and tile layers from the ECMWF ecCharts WMS (mean sea level pressure, 500 hPa geopotential, 850 hPa temperature and wind, ensemble mean and spread, tropical cyclones, CAMS air quality), official OpenCharts forecast charts as PNG/PDF (including the official ECMWF ensemble (ENS) meteogram for any place), and ready-made interactive web maps (Leaflet) with a time slider, legends, click values and a 10-day meteogram on click. Use when a task asks for an ECMWF weather map or chart, WMS GetCapabilities, GetMap, GetLegend or GetFeatureInfo URLs, layer names, styles or valid times, adding ECMWF layers to Leaflet, MapLibre or OpenLayers, or building a weather web map or dashboard (always start from scripts/webmap.py). Not for a map of a local GRIB or NetCDF file — that is the ecmwf-earthkit skill.
 compatibility: wms.py, opencharts.py and webmap.py need only Python 3 (standard library); `uv run wms.py getmap -o` adds Pillow to composite background and coastlines. Meteograms in the web map use the open-data and ecmwf-earthkit skills (uv, earthkit). Network access to eccharts.ecmwf.int, charts.ecmwf.int and data.ecmwf.int.
 license: Apache-2.0
 metadata:
@@ -16,15 +16,16 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF maps — WMS, OpenCharts, web maps
 
 ## Contents
-- Choose the route (line 30)
-- Web map workflow (line 49)
-- WMS (line 66)
-- OpenCharts (line 84)
-- Rules the server enforces (line 90)
-- Access and tokens (line 101)
-- Processing and plots (line 107)
-- Attribution (line 115)
-- When blocked (line 124)
+- Choose the route (line 31)
+- Web map workflow (line 50)
+- WMS (line 67)
+- OpenCharts (line 85)
+- ECMWF MCP (line 91)
+- Rules the server enforces (line 112)
+- Access and tokens (line 123)
+- Processing and plots (line 129)
+- Attribution (line 137)
+- When blocked (line 150)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -87,6 +88,27 @@ Official ECMWF charts (IFS and AIFS; medium and extended range). `search` matche
 name and title; `options NAME` lists base times, steps and projections (`opencharts_europe`,
 `opencharts_global`, `opencharts_north_atlantic`, …); `get` downloads the PNG/PDF. No account.
 
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). Its chart tools
+answer with an image: `charts_find_charts` then `charts_get_chart` (official charts),
+`charts_get_meteogram` (the ensemble meteogram for a place) and `charts_get_map` (public map
+layers over a bounding box). When your client lists them, the image shows in chat. To save a
+file — or when your client has no ECMWF MCP tools — run this standard-library script; it
+writes the image to the file and never prints it:
+
+```bash
+python3 scripts/ecmwf_mcp.py call charts_get_meteogram '{"latitude": 51.40, "longitude": -1.32,
+  "place_name": "Newbury"}' -o newbury.png
+python3 scripts/ecmwf_mcp.py call charts_get_chart '{"product": "medium-mslp-wind850",
+  "step": 24, "area": "europe"}' -o mslp.png
+```
+
+- If the MCP is unreachable, use `opencharts.py` and `wms.py`; they also cover every WMS
+  layer (the MCP map tool serves only the public ones), legends, GetMap URLs and web maps.
+- Charts can come from a different run than the forecast tools: state the base and valid
+  time the result gives, and end with its attribution line.
+
 ## Rules the server enforces
 
 The scripts handle these; when writing your own client code:
@@ -117,9 +139,13 @@ and time statistics (earthkit-transforms) and meteorological quantities (earthki
 Required wherever maps or charts are shown. **When you hand over an image, chart or map, end your
 answer with the attribution line the script printed.** The line:
 `Map data: © <year> ECMWF, CC BY 4.0` (linked to https://creativecommons.org/licenses/by/4.0/),
-plus "ECMWF accepts no liability for errors or omissions" in apps. CAMS layers (`composition_*`)
-add "Generated using Copernicus Atmosphere Monitoring Service information <year>". The scripts
-print the line and the web map shows it. Don't use the ECMWF logo except as a link to ecmwf.int.
+plus "ECMWF accepts no liability for errors or omissions" in apps. CAMS products — WMS layers
+`composition_*` and CAMS charts (aerosol, ozone, fire, UV index…) — need the Copernicus credit:
+"Generated using Copernicus Atmosphere Monitoring Service information <year>. Neither the
+European Commission nor ECMWF is responsible for any use that may be made of the Copernicus
+information or data it contains." (after the ECMWF line on maps; on its own for CAMS charts).
+The scripts print the line and the web map shows it. Don't use the ECMWF logo except as a link
+to ecmwf.int.
 
 ## When blocked
 

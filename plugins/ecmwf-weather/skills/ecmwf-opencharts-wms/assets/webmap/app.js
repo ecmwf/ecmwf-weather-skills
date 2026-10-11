@@ -41,6 +41,18 @@ function niceValue(v, unit) {
   return (+v).toFixed(1) + ' ' + (unit || '');
 }
 
+// ---- attribution -----------------------------------------------------------------------------
+/** The line under the map: ECMWF's credit, plus the Copernicus credit for CAMS layers. */
+function attributionText(layer, year, credit) {
+  let text = credit + '. ECMWF accepts no liability for errors or omissions.';
+  if (layer.startsWith('composition_')) {
+    text += ' Generated using Copernicus Atmosphere Monitoring Service information ' + year +
+      '. Neither the European Commission nor ECMWF is responsible for any use that may be made' +
+      ' of the Copernicus information or data it contains.';
+  }
+  return text;
+}
+
 // ---- app -------------------------------------------------------------------------------------
 async function init() {
   const cfg = await (await fetch('config.json')).json();
@@ -57,7 +69,7 @@ async function init() {
   const credit = `Forecast data &amp; maps: © ${year} <a href="https://www.ecmwf.int">ECMWF</a>, ` +
     '<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>';
   map.attributionControl.addAttribution(credit);
-  $('attribution').innerHTML = credit + '. ECMWF accepts no liability for errors or omissions.';
+  $('attribution').innerHTML = attributionText(cfg.layers[0], year, credit);
 
   // Capabilities: titles, times, legends for the configured layers.
   const xml = new DOMParser().parseFromString(
@@ -95,8 +107,7 @@ async function init() {
     $('time').max = Math.max(times.length - 1, 0);
     $('legend').src = info[name].legend || '';
     setTime(Math.max(times.indexOf(closestTime(times, new Date())), 0));
-    if (name.startsWith('composition_')) $('attribution').innerHTML +=
-      ' Generated using Copernicus Atmosphere Monitoring Service information.';
+    $('attribution').innerHTML = attributionText(name, year, credit);
   };
   $('layer').onchange = e => selectLayer(e.target.value);
   $('time').oninput = e => setTime(+e.target.value);

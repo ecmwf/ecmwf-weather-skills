@@ -32,11 +32,17 @@ Generated using Copernicus Climate Change Service information <year>. Neither th
 **Adopted:** always emit this sentence + dataset DOI; read licence id per dataset from the catalogue
 (`https://cds.climate.copernicus.eu/api/catalogue/v1/collections/<id>`).
 
-**MARS (M)** — governed by the user's licence. **Adopted:** `© <year> ECMWF` + disclaimer, and warn
-that redistribution may be restricted.
+**Operational data — Polytope, MARS `class=od` (H)** — every product in ECMWF's Real-time Catalogue
+is CC BY 4.0 with no information cost (ECMWF Open Data Roadmap: fully open data on 1 October 2025).
+Beyond the free Open Data subset, what is restricted is access: an entitled account (users at
+Member/Co-operating State national meteorological services) or a Real-time service agreement
+(service and delivery charges). **Adopted:** `© <year> ECMWF, CC BY 4.0` + source; MARS
+observations and research experiments: check their terms.
 
-**Charts / WMS (H OpenCharts, M WMS)** — OpenCharts responses carry `licence: CC-BY-4.0`. WMS has no
-statement; assume same as Open Data. CAMS layers additionally get the CAMS sentence.
+**Charts / WMS (H OpenCharts, M WMS)** — OpenCharts responses carry `licence: CC-BY-4.0` for ECMWF
+products; CAMS products (`template: cams`, drawn from `composition_*` layers) carry no licence
+metadata and get the Copernicus credit (year + disclaimer) instead. WMS has no statement; assume
+same as Open Data. CAMS layers additionally get the Copernicus credit.
 
 Alternatives: (a) only short credit everywhere; (b) full notice everywhere. Rejected — (a) under-
 complies, (b) unusable on maps.
@@ -63,10 +69,11 @@ complies, (b) unusable on maps.
 
 - `polytope.ecmwf.int`, collection `ecmwf-mars` (operational od ~2 days + AIFS-single open-data
   section); DestinE servers with `destination-earth`.
-- **No keyless access.** Any authenticated ECMWF user (same credentials as `~/.ecmwfapirc`); some
-  datasets restricted to Member/Co-operating States, commercial clients and research licences
-  (https://www.ecmwf.int/en/forecasts/datasets); not all datasets on Polytope. Confirmed by
-  ECMWF (2026-10). DestinE needs DESP.
+- **No keyless access.** Any authenticated ECMWF user (same credentials as `~/.ecmwfapirc`); the
+  operational collection `ecmwf-mars` is for users at Member/Co-operating State national
+  meteorological services, other access through a Real-time service agreement
+  (https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements); not all datasets on
+  Polytope. Confirmed by ECMWF (2026-10). DestinE needs DESP.
 - Features: `timeseries`, `verticalprofile`, `polygon`, `boundingbox`, `trajectory`, `circle`,
   `position`; output CoverageJSON.
 - polytope-client 0.7.10: env `POLYTOPE_USER_KEY`, `POLYTOPE_USER_EMAIL`, `POLYTOPE_ADDRESS`

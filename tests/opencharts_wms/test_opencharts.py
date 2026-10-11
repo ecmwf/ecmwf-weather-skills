@@ -5,6 +5,7 @@
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -130,3 +131,72 @@ def test_fetch_product_does_not_hide_other_errors():
 def test_image_link_must_be_https():
     with pytest.raises(RuntimeError, match="https"):
         oc.image_link({"data": {"link": {"href": "http://charts.ecmwf.int/content/x.png"}}})
+
+
+# --- CAMS charts carry the Copernicus credit -----------------------------------------------------
+
+PRODUCT_CAMS = json.loads((FIXTURES / "opencharts-product-cams.json").read_text())
+SCHEMA_CAMS = json.loads((FIXTURES / "opencharts-schema-cams.json").read_text())
+SCHEMA_POINT = json.loads((FIXTURES / "opencharts-schema-point-graph.json").read_text())
+YEAR = datetime.now(timezone.utc).year
+CAMS_CREDIT = (
+    f"Generated using Copernicus Atmosphere Monitoring Service information {YEAR}. Neither the "
+    "European Commission nor ECMWF is responsible for any use that may be made of the Copernicus "
+    "information or data it contains."
+)
+
+
+def test_cams_products_are_recognised_from_their_metadata():
+    assert PRODUCT_CAMS["template"] == "cams" and oc.is_cams("aerosol-forecasts", PRODUCT_CAMS)
+    layers = oc.parse_schema(SCHEMA_CAMS)["layer_names"]
+    assert oc.is_cams("aerosol-forecasts", {"template": "ecmwf"}, layers=layers)
+    assert oc.is_cams("classical_cams_uvindex", {"template": "ecmwf"}, "CAMS uv index graph")
+    assert not oc.is_cams("medium-2t-wind", PRODUCT, "2 m temperature and 10 m wind")
+    assert not oc.is_cams("medium-2t-wind", PRODUCT, layers=["2t", "mx2t", "mn2t"])
+
+
+def test_cams_charts_carry_the_copernicus_credit():
+    assert oc.attribution(cams=True) == CAMS_CREDIT
+    ecmwf = oc.attribution()
+    assert "CC BY 4.0" in ecmwf and "Copernicus" not in ecmwf
+
+
+def test_cli_get_cams_chart_ends_with_the_copernicus_credit(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(
+        oc, "_get_json", lambda url: SCHEMA_CAMS if "/schema/" in url else PRODUCT_CAMS
+    )
+    monkeypatch.setattr(oc, "_get_bytes", lambda url: b"\x89PNG\r\n\x1a\n")
+    args = ["get", "aerosol-forecasts", "--step", "48", "--projection", "classical_europe"]
+    assert oc.main([*args, "-o", str(tmp_path / "aod.png")]) == 0
+    out = capsys.readouterr().out
+    assert f"Attribution: {CAMS_CREDIT}" in out and "CC BY" not in out
+
+
+def test_cli_get_ecmwf_chart_keeps_the_ecmwf_line(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(oc, "_get_json", lambda url: SCHEMA if "/schema/" in url else PRODUCT)
+    monkeypatch.setattr(oc, "_get_bytes", lambda url: b"\x89PNG\r\n\x1a\n")
+    assert oc.main(["get", "medium-2t-wind", "--step", "48", "-o", str(tmp_path / "t.png")]) == 0
+    out = capsys.readouterr().out
+    assert "CC BY 4.0" in out and "Copernicus" not in out
+
+
+def test_options_of_a_chart_without_steps(monkeypatch, capsys):
+    # classical_cams_uvindex is a point graph: base times and a place, no steps or projections.
+    monkeypatch.setattr(oc, "_get_json", lambda url: SCHEMA_POINT)
+    assert oc.main(["options", "classical_cams_uvindex"]) == 0
+    assert "steps      : none" in capsys.readouterr().out
+
+
+@pytest.mark.live
+def test_live_get_cams_chart(tmp_path):
+    png = tmp_path / "aod.png"
+    args = ["get", "aerosol-forecasts", "--projection", "classical_europe", "--step", "24"]
+    out = subprocess.run(
+        [sys.executable, str(SCRIPT), *args, "-o", str(png)],
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    assert out.returncode == 0, out.stderr
+    assert png.read_bytes()[:4] == b"\x89PNG"
+    assert "Generated using Copernicus Atmosphere Monitoring Service information" in out.stdout

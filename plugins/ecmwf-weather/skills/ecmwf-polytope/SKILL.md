@@ -16,20 +16,22 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Polytope
 
 ## Contents
-- Access check (line 38)
-- Point forecast and ensemble workflow (line 63)
-- Other features (line 92)
-- Processing and plots (line 102)
-- Licence and attribution (line 110)
-- When blocked (line 117)
+- Access check (line 40)
+- Point forecast and ensemble workflow (line 65)
+- ECMWF MCP (line 96)
+- Other features (line 118)
+- Processing and plots (line 128)
+- Licence and attribution (line 136)
+- When blocked (line 144)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
 ~10 KB and takes ~2 s, versus ~300 MB from Open Data. Any authenticated ECMWF user can use it,
-with the same credentials as `~/.ecmwfapirc` (key from https://api.ecmwf.int/v1/key/). Some
-datasets are restricted to Member and Co-operating States, ECMWF commercial data clients and
-researchers under a research licence (https://www.ecmwf.int/en/forecasts/datasets), and not all
-datasets are available via Polytope. Operational data covers roughly the last 2 days of runs.
+with the same credentials as `~/.ecmwfapirc` (key from https://api.ecmwf.int/v1/key/), but the
+operational collection `ecmwf-mars` is for users at Member and Co-operating State national
+meteorological services; others use the free Open Data subset or a Real-time service agreement
+(https://www.ecmwf.int/en/forecasts/accessing-forecasts/service-agreements). Not all datasets
+are available via Polytope. Operational data covers roughly the last 2 days of runs.
 Destination Earth data is a separate service: the `ecmwf-destine` skill.
 
 Use ECMWF sources only — never substitute a third-party weather API; if no ECMWF route works,
@@ -76,6 +78,8 @@ files there, never inside the skill directory.
          end with the attribution line from the output
 ```
 
+The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (or the MCP tool `charts_get_meteogram`); `ekplot.py meteogram` draws your own chart from the data, so never call that one the official meteogram.
+
 - Output (UTC, hourly to 90 h, then 3-hourly/6-hourly): `t2m_C`, `precip_mm` (since previous
   step), `wind_speed_ms`, `wind_dir_deg`, `msl_hPa`, `tcc_pct`; ensemble adds `*_p10/_p50/_p90`
   and `members`.
@@ -88,6 +92,28 @@ files there, never inside the skill directory.
   is the right way to state "likely range per day". Don't aggregate yourself.
 - The script picks the latest run covering the range (06/18 UTC runs reach 144 h, 00/12 UTC
   240 h+); `--date YYYYMMDD --time HHMM` pins one.
+
+## ECMWF MCP
+
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). For a quick answer
+in chat, call its tools (such as `forecast_get_point_forecast`) when your client lists them;
+otherwise run the same tools with this standard-library script. If the MCP is unreachable, use
+`ptpoint.py`.
+
+```bash
+python3 scripts/ecmwf_mcp.py call forecast_get_point_forecast '{"collection_id": "operational-data",
+  "latitude": 51.45, "longitude": -0.97, "parameters": ["2t", "tp", "10u", "10v", "tcc"]}'
+```
+
+- It serves IFS HRES at the nearest native gridpoint, 00 UTC runs only. Quick answers in chat
+  only — never files or code built on its output: for the latest run, ensembles, CSV/JSON,
+  local time, daily summaries and feels-like run `ptpoint.py`.
+- `tp` is accumulated from the start of the run: the amount over a period is last minus
+  first, never the sum of the rows (`ecmwf_mcp.py` prints the total and each step). Values
+  come in raw units (K, Pa, wind as u/v components, cloud cover 0–1) and UTC. Name the model
+  run, and end with the source and licence line of the result.
+- Model output is guidance, not a warning: for official warnings name the country's national
+  meteorological service and MeteoAlarm (https://meteoalarm.org).
 
 ## Other features
 
@@ -109,10 +135,11 @@ and time statistics (earthkit-transforms) and meteorological quantities (earthki
 
 ## Licence and attribution
 
-Operational data (`class: od`) is **not** open data: it is used under the user's organisation's
-ECMWF licence. Show `Data: © <year> ECMWF` and warn before redistributing or publishing. The
-Open Data section (`class: ai`, AIFS) is CC BY 4.0. `ptpoint.py` reports which applies in
-`attribution`, and `ekplot.py` stamps that line on figures.
+Every ECMWF real-time product is CC BY 4.0 — operational data (`class: od`) as much as the Open
+Data section (`class: ai`, AIFS): show `Data: © <year> ECMWF, CC BY 4.0` with the source
+(www.ecmwf.int). What is restricted is access, not the licence: operational data needs an
+entitled account (see Access check). `ptpoint.py` prints the line in `attribution`, and
+`ekplot.py` stamps it on figures.
 
 ## When blocked
 
@@ -133,5 +160,5 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 | no credentials | `ptpoint.py --setup` steps; answer with `ecmwf-open-data` meanwhile |
 | key file malformed (wrong layout, not JSON) | rewrite as the report says; names only, never values |
 | 401 / key rejected | renew the key at https://api.ecmwf.int/v1/key/ |
-| 400 "insufficient permissions" | no entitlement to operational data: Computing Representative or licence; `ecmwf-open-data` meanwhile |
-| 403 | dataset restricted (Member/Co-operating States, commercial, research licence) or not on Polytope |
+| 400 "insufficient permissions" | no entitlement to operational data: Computing Representative (Member/Co-operating State national meteorological services) or a Real-time service agreement; `ecmwf-open-data` meanwhile |
+| 403 | access to the dataset is restricted (Member/Co-operating State users, service agreements) or it is not on Polytope |

@@ -11,13 +11,15 @@
   python3 opencharts.py options medium-2t-wind              # base times, steps, projections
   python3 opencharts.py get medium-2t-wind --step 48 --projection opencharts_europe -o chart.png
 
-No account needed. Charts are CC BY 4.0 (© ECMWF); keep the attribution with the image.
+No account needed. ECMWF charts are CC BY 4.0 (© ECMWF); CAMS charts carry the Copernicus
+credit instead. Keep the attribution `get` prints with the image.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -175,9 +177,32 @@ def image_link(resp: dict) -> tuple[str, dict]:
     return href, resp.get("meta", {})
 
 
-def attribution() -> str:
+# OpenCharts gives CAMS (Copernicus Atmosphere Monitoring Service) products the template "cams"
+# and draws them from the composition_* layers; their responses carry no ECMWF licence. A CAMS
+# point graph uses the ECMWF template but names CAMS (classical_cams_uvindex).
+CAMS_WORD = re.compile(r"(?i)(?<![a-z])cams(?![a-z])")
+CAMS_CREDIT = (
+    "Generated using Copernicus Atmosphere Monitoring Service information {year}. Neither the "
+    "European Commission nor ECMWF is responsible for any use that may be made of the Copernicus "
+    "information or data it contains."
+)
+
+
+def is_cams(name: str, resp: dict | None = None, title: str = "", layers=()) -> bool:
+    """Whether an OpenCharts product is a CAMS product, which needs the Copernicus credit."""
     return (
-        f"© {datetime.now(timezone.utc).year} European Centre for Medium-Range Weather Forecasts "
+        (resp or {}).get("template") == "cams"
+        or any(str(n).startswith("composition_") for n in layers)
+        or bool(CAMS_WORD.search(f"{name} {title}"))
+    )
+
+
+def attribution(cams: bool = False) -> str:
+    year = datetime.now(timezone.utc).year
+    if cams:  # Copernicus products: the credit the Copernicus licence asks for
+        return CAMS_CREDIT.format(year=year)
+    return (
+        f"© {year} European Centre for Medium-Range Weather Forecasts "
         "(ECMWF), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)"
     )
 
@@ -232,12 +257,12 @@ def main(argv=None) -> int:
             if a.json:
                 print(json.dumps(opts, indent=2))
             else:
-                base_times = opts["base_times"]
+                base_times, steps = opts["base_times"], opts["steps"]
                 print(f"base times : {', '.join(base_times[:4])} … ({len(base_times)})")
                 print(
-                    f"steps      : {opts['steps'][0]}..{opts['steps'][-1]} ({len(opts['steps'])})"
+                    f"steps      : {f'{steps[0]}..{steps[-1]} ({len(steps)})' if steps else 'none'}"
                 )
-                print(f"projections: {', '.join(opts['projections'])}")
+                print(f"projections: {', '.join(opts['projections']) or 'none'}")
                 if opts["layer_names"]:
                     print(f"layers     : {', '.join(opts['layer_names'])}")
             return 0
@@ -257,8 +282,9 @@ def main(argv=None) -> int:
             )
         link, _meta = image_link(resp)
         Path(a.output).write_bytes(_get_bytes(link))
-        desc = resp["data"].get("attributes", {}).get("description", "")
-        print(f"saved {a.output}\n{desc}\nAttribution: {attribution()}")
+        attrs = resp["data"].get("attributes", {})
+        cams = is_cams(a.product, resp, attrs.get("title", ""), opts["layer_names"])
+        print(f"saved {a.output}\n{attrs.get('description', '')}\nAttribution: {attribution(cams)}")
         return 0
     except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
         if not isinstance(e, urllib.error.HTTPError):

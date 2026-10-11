@@ -1,0 +1,50 @@
+{
+ "selection": {
+  "class": [
+   "d1"
+  ],
+  "dataset": [
+   "climate-dt"
+  ],
+  "activity": [
+   "projections"
+  ],
+  "experiment": [
+   "ssp3-7.0"
+  ],
+  "generation": [
+   "2"
+  ],
+  "model": [
+   "ifs-fesom"
+  ],
+  "realization": [
+   "1"
+  ],
+  "expver": [
+   "0001"
+  ],
+  "stream": [
+   "clmn"
+  ],
+  "resolution": [
+   "standard"
+  ],
+  "type": [
+   "fc"
+  ],
+  "levtype": [
+   "sfc"
+  ],
+  "param": [
+   "167"
+  ],
+  "year": [
+   "2040"
+  ],
+  "month": [
+   "7"
+  ]
+ },
+ "locations": []
+}

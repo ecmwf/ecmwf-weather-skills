@@ -1,0 +1,35 @@
+{
+ "jsonrpc": "2.0",
+ "id": 1,
+ "result": {
+  "_meta": {
+   "ecmwf-mcp-router/provenance": {
+    "institute": "ECMWF",
+    "service": "forecast",
+    "service_title": "ECMWF forecasts",
+    "service_url": "https://edr.mcp.ecmwf.int/mcp",
+    "role": "global-guidance",
+    "status": "model-guidance",
+    "coverage": {
+     "kind": "global"
+    },
+    "router": "ecmwf-mcp-router",
+    "institute_website": "https://www.ecmwf.int",
+    "wis2_centre_id": "int-ecmwf",
+    "licence": "CC-BY-4.0",
+    "attribution": "Source: ECMWF IFS operational forecast"
+   }
+  },
+  "content": [
+   {
+    "text": "Error executing tool get_point_forecast: Run '2026-10-08T00:00:00Z' isn't available for operational-data. Recent runs: 2026-10-10T00:00:00Z, 2026-10-09T00:00:00Z.",
+    "type": "text"
+   },
+   {
+    "text": "Provided by ECMWF forecasts for ECMWF; role: global guidance; status: model guidance; licence: CC-BY-4.0; Source: ECMWF IFS operational forecast. Model guidance, not an official product: say so when you use it.",
+    "type": "text"
+   }
+  ],
+  "isError": true
+ }
+}
