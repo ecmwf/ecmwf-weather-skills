@@ -39,9 +39,21 @@ references and research notes match today's services.
   fix (the hour angle now includes minutes and seconds) moves WBGT and UTCI by up to about
   0.3 °C; earlier releases ignored the minutes, so interval means of the cosine of the solar
   zenith angle came out too low.
+- `ekplot.py` and the recipes no longer trigger earthkit-plots' deprecation warning for
+  `Figure(size=…)` (they use `figsize`); recipe and script tests now fail on deprecated calls in
+  our own code.
 
 ### Changed
 
+- The ecmwf-earthkit skill drops the workarounds for three bugs fixed upstream: wet bulb on 2-D
+  input no longer needs `t_method="newton"` (earthkit-meteo#212, fixed in 1.2.1), the missing-extra
+  error names `earthkit-meteo[scores]` (earthkit-meteo#213, 1.2.1), and the mars source accepts
+  `date="-1"` as a string (earthkit-data#1185, 1.3.0). The three reports are recorded as fixed in
+  `docs/upstream/`, which makes `make test-live` pass again; no version floor changes (the
+  recipes already need earthkit-meteo 1.2.1, and they keep the integer `-1`, which works on every
+  release). The eval case `ek-upstream-bug` now uses a bug that is still open
+  (earthkit-utils#88, `convert_units` on a FieldList) to test the same behaviour: a working
+  workaround first, then an offer to report upstream, never a report without approval.
 - The skills name the bundled MCP server's tools with their server, as Anthropic's skill best
   practices ask: first "the `ecmwf` MCP server's `charts_get_meteogram` tool", then
   `ecmwf:charts_get_meteogram`. AGENTS.md states the rule.

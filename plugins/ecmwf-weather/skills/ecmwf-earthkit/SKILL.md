@@ -138,8 +138,8 @@ needed:
    described in `references/upstream.md`. Never file without approval, never include the user's
    data or credentials, and never accept the ECMWF CLA on the user's behalf.
 
-Known issues with workarounds: `references/pitfalls.md` (e.g. wet bulb needs
-`t_method="newton"` on 2-D input).
+Known issues with workarounds: `references/pitfalls.md` (e.g. `convert_units` on a FieldList
+returns the values unconverted).
 
 ## Fallback without earthkit
 

@@ -22,7 +22,7 @@ import subprocess
 from datetime import datetime
 
 import pytest
-from conftest import FIXTURES, SKILLS, load_script
+from conftest import FIXTURES, SKILLS, load_script, strict_script_env
 
 OD = FIXTURES / "ifs-od-comfort-5deg-20261009-00z.grib2"
 RAD = FIXTURES / "ifs-rad-5deg.grib2"
@@ -35,6 +35,7 @@ def uv(script, *args, timeout=600):
         capture_output=True,
         text=True,
         timeout=timeout,
+        env=strict_script_env(),
     )
 
 

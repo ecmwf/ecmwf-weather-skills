@@ -465,7 +465,7 @@ def plot_ens_stats(
 
     title = f"{long_name}, {n} members" + ("" if step is None else f", T+{step}h")
     if panel:
-        fig = ekp.Figure(rows=1, columns=len(stats), size=(6 * len(stats), 4.5))
+        fig = ekp.Figure(rows=1, columns=len(stats), figsize=(6 * len(stats), 4.5))
         for i, (name, _) in enumerate(stats):
             draw(fig.add_map(0, i, domain=domain), name, fields[name])
         fig.title(title)
@@ -474,7 +474,7 @@ def plot_ens_stats(
         return [output]
     files = []
     for name, target in stat_outputs(output, [n for n, _ in stats]).items():
-        fig = ekp.Figure(rows=1, columns=1, size=(8, 6))
+        fig = ekp.Figure(rows=1, columns=1, figsize=(8, 6))
         draw(fig.add_map(0, 0, domain=domain), name, fields[name])
         fig.title(f"{title} — {STAT_NAMES.get(name, name)}")
         fig.attribution(attribution_text())
@@ -739,7 +739,7 @@ def plot_index(
     style = ekp.styles.Style(
         levels=spec["levels"], colors=spec["colors"], units="celsius", extend="both"
     )
-    fig = ekp.Figure(rows=1, columns=1, size=(8, 6))
+    fig = ekp.Figure(rows=1, columns=1, figsize=(8, 6))
     m = fig.add_map(0, 0, domain=domain)
     m.contourf(
         r["values"],

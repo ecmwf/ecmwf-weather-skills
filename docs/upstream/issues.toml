@@ -4,13 +4,14 @@
 # Upstream issues found while writing the earthkit recipes; filed with the maintainer's approval
 # (AGENTS.md "Upstream contributions"). Filing guide: issues.md.
 # Each entry's reproducer is <script>; tests/tooling/test_upstream_drafts.py checks the files.
-# status: draft | filed (add url) | fixed (add version)
+# status: draft | filed (add url) | fixed (add version: the first release with the fix)
 
 [[issue]]
 script = "meteo-wet-bulb-bisect-2d.py"
 repo = "ecmwf/earthkit-meteo"
 kind = "bug"
-status = "filed"
+status = "fixed"
+version = "1.2.1"
 url = "https://github.com/ecmwf/earthkit-meteo/issues/212"
 title = "thermo.wet_bulb_temperature_from_dewpoint: default t_method='bisect' fails on 2-D input"
 expected = "Same result as t_method='newton' for 2-D/3-D numpy and xarray inputs."
@@ -22,7 +23,8 @@ workaround = "Pass t_method='newton'."
 script = "meteo-scores-extra-name.py"
 repo = "ecmwf/earthkit-meteo"
 kind = "bug"
-status = "filed"
+status = "fixed"
+version = "1.2.1"
 url = "https://github.com/ecmwf/earthkit-meteo/issues/213"
 title = "score: error message names a non-existent 'earthkit-meteo[score]' extra (it is [scores])"
 expected = "The message points to `pip install earthkit-meteo[scores]`."
@@ -118,7 +120,8 @@ workaround = "Convert xarray, or convert at plot time with earthkit-plots units=
 script = "data-mars-relative-date-string.py"
 repo = "ecmwf/earthkit-data"
 kind = "bug"
-status = "filed"
+status = "fixed"
+version = "1.3.0"
 url = "https://github.com/ecmwf/earthkit-data/issues/1185"
 title = "mars source: date=\"-1\" (MARS relative date as a string) raises ValueError: Invalid datetime '-1'"
 expected = "The request goes to MARS, which accepts relative dates such as \"-1\" (yesterday); the integer -1 already works."

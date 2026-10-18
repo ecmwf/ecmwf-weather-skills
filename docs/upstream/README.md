@@ -10,8 +10,8 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 
 | Status | Repository | Title | Reproducer |
 |---|---|---|---|
-| [filed](https://github.com/ecmwf/earthkit-meteo/issues/212) | `ecmwf/earthkit-meteo` | thermo.wet_bulb_temperature_from_dewpoint: default t_method='bisect' fails on 2-D input | [`meteo-wet-bulb-bisect-2d.py`](meteo-wet-bulb-bisect-2d.py) |
-| [filed](https://github.com/ecmwf/earthkit-meteo/issues/213) | `ecmwf/earthkit-meteo` | score: error message names a non-existent 'earthkit-meteo[score]' extra (it is [scores]) | [`meteo-scores-extra-name.py`](meteo-scores-extra-name.py) |
+| [fixed](https://github.com/ecmwf/earthkit-meteo/issues/212) | `ecmwf/earthkit-meteo` | thermo.wet_bulb_temperature_from_dewpoint: default t_method='bisect' fails on 2-D input | [`meteo-wet-bulb-bisect-2d.py`](meteo-wet-bulb-bisect-2d.py) |
+| [fixed](https://github.com/ecmwf/earthkit-meteo/issues/213) | `ecmwf/earthkit-meteo` | score: error message names a non-existent 'earthkit-meteo[score]' extra (it is [scores]) | [`meteo-scores-extra-name.py`](meteo-scores-extra-name.py) |
 | [filed](https://github.com/ecmwf/earthkit-meteo/issues/214) | `ecmwf/earthkit-meteo` | xarray results keep the first input's name and long_name (relative humidity named '2t') | [`meteo-xarray-output-keeps-input-name.py`](meteo-xarray-output-keeps-input-name.py) |
 | [filed](https://github.com/ecmwf/earthkit-plots/issues/260) | `ecmwf/earthkit-plots` | geo.spaghetti rejects an ensemble DataArray despite documenting xarray input; error message unformatted | [`plots-spaghetti-xarray.py`](plots-spaghetti-xarray.py) |
 | [filed](https://github.com/ecmwf/earthkit-plots/issues/261) | `ecmwf/earthkit-plots` | quickplot docstring recommends ekp.plot(), which does not exist | [`plots-quickplot-doc-ekp-plot.py`](plots-quickplot-doc-ekp-plot.py) |
@@ -19,7 +19,7 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/133) | `ecmwf/earthkit-transforms` | spatial.reduce returns NaN for western-hemisphere polygons when longitudes run 0-360 | [`transforms-spatial-reduce-0-360.py`](transforms-spatial-reduce-0-360.py) |
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/134) | `ecmwf/earthkit-transforms` | spatial.reduce(..., return_as='pandas') crashes (return_as passed on to nanmean) | [`transforms-spatial-reduce-return-as-pandas.py`](transforms-spatial-reduce-return-as-pandas.py) |
 | [filed](https://github.com/ecmwf/earthkit-utils/issues/88) | `ecmwf/earthkit-utils` | units.convert_units on a FieldList silently returns the data unconverted | [`utils-convert-units-fieldlist-noop.py`](utils-convert-units-fieldlist-noop.py) |
-| [filed](https://github.com/ecmwf/earthkit-data/issues/1185) | `ecmwf/earthkit-data` | mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1' | [`data-mars-relative-date-string.py`](data-mars-relative-date-string.py) |
+| [fixed](https://github.com/ecmwf/earthkit-data/issues/1185) | `ecmwf/earthkit-data` | mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1' | [`data-mars-relative-date-string.py`](data-mars-relative-date-string.py) |
 | [filed](https://github.com/ecmwf/earthkit-data/issues/1202) | `ecmwf/earthkit-data` | Python aborts at exit (free(): invalid pointer) when pyproj is imported after ecCodes with earthkit-data 1.3.0: eckitlib bundles its own libproj, sqlite3 and curl | [`data-eckit-proj-abort-at-exit.py`](data-eckit-proj-abort-at-exit.py) |
 
 ## Pull requests
@@ -31,7 +31,7 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 
 ## thermo.wet_bulb_temperature_from_dewpoint: default t_method='bisect' fails on 2-D input
 
-Repository: `ecmwf/earthkit-meteo` · bug · [filed](https://github.com/ecmwf/earthkit-meteo/issues/212)
+Repository: `ecmwf/earthkit-meteo` · bug · [fixed](https://github.com/ecmwf/earthkit-meteo/issues/212)
 
 **What happens:** ValueError: operands could not be broadcast together with shapes (3,4) (12,).
 
@@ -65,7 +65,7 @@ Found while writing verified earthkit recipes for the ECMWF agent skills (https:
 
 ## score: error message names a non-existent 'earthkit-meteo[score]' extra (it is [scores])
 
-Repository: `ecmwf/earthkit-meteo` · bug · [filed](https://github.com/ecmwf/earthkit-meteo/issues/213)
+Repository: `ecmwf/earthkit-meteo` · bug · [fixed](https://github.com/ecmwf/earthkit-meteo/issues/213)
 
 **What happens:** 'The earthkit-meteo[score] extra is required ... pip install earthkit-meteo[score]'; pip then installs nothing extra.
 
@@ -375,7 +375,7 @@ Found while writing verified earthkit recipes for the ECMWF agent skills (https:
 
 ## mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1'
 
-Repository: `ecmwf/earthkit-data` · bug · [filed](https://github.com/ecmwf/earthkit-data/issues/1185)
+Repository: `ecmwf/earthkit-data` · bug · [fixed](https://github.com/ecmwf/earthkit-data/issues/1185)
 
 **What happens:** ValueError: Invalid datetime '-1' while normalising the request, before anything is sent.
 

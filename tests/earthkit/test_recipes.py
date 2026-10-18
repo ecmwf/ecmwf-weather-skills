@@ -11,7 +11,7 @@ import shutil
 import subprocess
 
 import pytest
-from conftest import FIXTURES, SKILLS
+from conftest import FIXTURES, SKILLS, strict_script_env
 
 REFERENCES = sorted(SKILLS.glob("*/references/*.md"))
 RECIPES = SKILLS / "ecmwf-earthkit" / "references" / "recipes.md"
@@ -64,5 +64,6 @@ def test_recipe_runs(code, tmp_path):
         capture_output=True,
         text=True,
         timeout=900,
+        env=strict_script_env(),
     )
     assert out.returncode == 0, out.stderr[-3000:]

@@ -92,7 +92,7 @@ da = ekd.from_source("file", "ens.grib2").to_fieldlist().to_xarray()["2t"]  # di
 mean, spread = ensemble.mean(da), ensemble.std(da)
 p90 = ekt.reduce(da, how="percentile", dim="member", q=90)
 
-fig = ekp.Figure(rows=1, columns=2, size=(12, 4.5))
+fig = ekp.Figure(rows=1, columns=2, figsize=(12, 4.5))
 m = fig.add_map(0, 0, domain="Europe")
 m.contourf(mean, units="celsius", style="auto")        # ECMWF temperature style, °C
 m.legend(label="2 m temperature — ensemble mean")
@@ -174,7 +174,7 @@ t = np.arange("2026-10-03T00", "2026-10-05T00", 6, dtype="datetime64[h]").astype
 pt = xr.DataArray(285 + np.random.default_rng(1).normal(0, 1, (10, t.size)),
                   dims=["member", "valid_time"], coords={"valid_time": t}, name="2t",
                   attrs={"units": "K", "long_name": "2 metre temperature"})
-fig = ekp.Figure(rows=1, columns=1, size=(9, 3))
+fig = ekp.Figure(rows=1, columns=1, figsize=(9, 3))
 ts = fig.add_timeseries()
 for m in range(pt.sizes["member"]):               # one line per member (2-D input mislabels)
     ts.line(pt.isel(member=m), units="celsius", color="grey", alpha=0.4)
@@ -278,13 +278,12 @@ direction = wind.direction(u, v, convention="meteo")
 print(speed[0].get("parameter.variable"), float(speed.to_numpy().max()))
 t, td = np.array([[293.15]]), np.array([[283.15]])
 print(thermo.relative_humidity_from_dewpoint(t, td))            # % (52.5)
-print(thermo.wet_bulb_temperature_from_dewpoint(t, td, np.array([[101325.0]]),
-                                                t_method="newton"))
+print(thermo.wet_bulb_temperature_from_dewpoint(t, td, np.array([[101325.0]])))
 print(thermo.potential_temperature(t, np.array([[85000.0]])))
 print(solar.cos_solar_zenith_angle(datetime(2026, 6, 21, 12), np.array(38.7), np.array(-9.1)))
 ```
 
-Wrap scalars in `np.array` (plain floats are rejected); dates are `datetime`, not `np.datetime64`. Scores need the `earthkit-meteo[scores]` extra (the library's own error message says `[score]`, which doesn't exist). xarray results keep the input's name
+Wrap scalars in `np.array` (plain floats are rejected); dates are `datetime`, not `np.datetime64`. Scores need the `earthkit-meteo[scores]` extra. xarray results keep the input's name
 and attributes — rename them before plotting or writing. Thermal-comfort indices (UTCI, heat
 index, wind chill) are in `thermofeel`, not earthkit-meteo — see "Thermal comfort" below.
 
@@ -428,7 +427,7 @@ print(float(mrt.max()), float(utci.max()), float(wbgt.max()))
 
 Fetch those fields (two consecutive steps of one run). Give `grid` as a `"dx/dy"` string —
 MARS and Polytope both accept it; Polytope has rejected a list with equal values ("Duplicate
-values found in list for key 'grid'"). A relative date must be the integer `-1`, not `"-1"`:
+values found in list for key 'grid'"):
 
 ```python
 # /// script
