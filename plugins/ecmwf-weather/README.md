@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # ECMWF Weather Data
 
-Eight skills that let an AI agent find, fetch, decode, map and cite data from the European Centre
+Skills that let an AI agent find, fetch, decode, map and cite data from the European Centre
 for Medium-Range Weather Forecasts (ECMWF): real-time IFS and AIFS forecasts (Open Data), ERA5
 reanalysis and CAMS air quality (Copernicus data stores), the MARS archive and its station
 observations, Polytope point and
@@ -48,7 +48,7 @@ The scripts contact only these services, and only to fetch data, catalogues and 
 | `catalogue-test.lumi.apps.dte.destination-earth.eu` | ECMWF's DestinE data catalogue (public metadata): validates and routes DestinE requests, lists what exists | request keys and values; no token |
 | `aviationweather.gov` (NOAA Aviation Weather, the one non-ECMWF source) | ICAO station metadata; the latest METARs only when you ask for them — labelled non-ECMWF | station ids |
 | `oscar.wmo.int` (WMO OSCAR/Surface) | station metadata for WMO ids missing from the bundled index | WMO station id |
-| `mcp.ecmwf.int`; when it is down, the services behind it: `edr.mcp.ecmwf.int`, `era5.mcp.ecmwf.int`, `charts.mcp.ecmwf.int`, `catalogue-test.lumi.apps.dte.destination-earth.eu` | ECMWF's MCP server, called by `ecmwf_mcp.py` when your agent has no MCP tools | tool arguments (coordinates, dates, chart names); never credentials |
+| `mcp.ecmwf.int`; when it is down, the services behind it: `charts.mcp.ecmwf.int`, `catalogue-test.lumi.apps.dte.destination-earth.eu` | ECMWF's MCP server, called by `ecmwf_mcp.py` when your agent has no MCP tools | tool arguments (coordinates, dates, chart names); never credentials |
 | `apps.ecmwf.int`, `status.ecmwf.int` | ECMWF service status, only after a connection failure | nothing beyond the request |
 | `pypi.org`, `files.pythonhosted.org` (via `uv`), `astral.sh` | Python packages; uv install instructions | package names |
 | `unpkg.com` (in the generated web map page, loaded by your browser) | Leaflet map library | — |
@@ -62,11 +62,11 @@ Links shown to users only (not contacted by the scripts): `www.ecmwf.int`, `supp
 The plugin bundles ECMWF's remote MCP server, `https://mcp.ecmwf.int` (streamable HTTP, no
 account), declared in `.mcp.json` (Claude Code, and Codex through `.codex-plugin/plugin.json`)
 and `mcp.json` (portable Agent Plugins format). Your agent connects to it at start-up. It
-offers ECMWF charts and meteograms (`charts_*`) and the Destination Earth data catalogue
-(`catalogue_*`), plus `find_service`; it has no point forecasts or ERA5 (MCP 0.4.0). The skills
-tell the agent when to use those tools, call them through `scripts/ecmwf_mcp.py` when the
-client has no MCP tools, and work without the server: forecasts, ERA5, files, ensembles and
-every other route use the skills' scripts.
+offers ECMWF charts and meteograms (`ecmwf:charts_*` tools) and the Destination Earth data
+catalogue (`ecmwf:catalogue_*`), plus `ecmwf:find_service`; the current server has no forecast or
+ERA5 tools. The skills tell the agent when to use those tools, call them through
+`scripts/ecmwf_mcp.py` when the client has no MCP tools, and work without the server: forecasts,
+ERA5, files, ensembles and every other route use the skills' scripts.
 
 To turn the server off without removing the plugin:
 

@@ -15,7 +15,7 @@ SPDX-License-Identifier: Apache-2.0
 > [!IMPORTANT]
 > This software is **Emerging** and subject to ECMWF's guidelines on [Software Maturity](https://github.com/ecmwf/codex/raw/refs/heads/main/Project%20Maturity).
 
-Eight [Agent Skills](https://agentskills.io) covering ECMWF's real-time IFS and AIFS forecasts,
+[Agent Skills](https://agentskills.io) covering ECMWF's real-time IFS and AIFS forecasts,
 ERA5 reanalysis, CAMS air quality, the MARS archive, station observations, Polytope feature
 extraction, Destination Earth Digital Twins and the
 ecCharts/OpenCharts map services. Install them and your agent knows which service to use, how
@@ -26,9 +26,9 @@ Agent Skills is an open standard: the skills work in Claude Code, OpenAI Codex, 
 Copilot, VS Code, Gemini CLI and other skills-compatible agents. The repository also packages
 them as plugins for Claude Code and Codex/ChatGPT.
 
-**No credentials needed to start.** Without keys the skills use free ECMWF Open Data and public
-map services. With CDS, ADS, MARS or Polytope access they switch to the faster or richer route —
-and say once what a key would add.
+**No credentials needed to start.** Without keys the skills use free ECMWF Open Data, public
+map services and keyless ERA5 point series. With CDS, ADS, MARS or Polytope access they switch to
+the faster or richer route — and say once what a key would add.
 
 **NOTE** This project is developed through agentic engineering: humans working in tandem with
 AI coding agents, with every skill tested by fresh agents (see [Testing](#build-and-test)).
@@ -46,8 +46,10 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
 - **Maps** — ecCharts WMS layers (pressure, geopotential, temperature and wind aloft, ensemble
   mean/spread, tropical cyclones, CAMS air quality), official OpenCharts charts, and a
   ready-made Leaflet web map with time slider and click-for-meteogram.
-- **History and climate** — ERA5 / ERA5-Land and CAMS requests validated and costed against the
-  Copernicus Data Stores *before* you have a key; downloads once you do.
+- **History and climate** — ERA5 hourly point series in seconds without a key (`cds.py
+  era5-point`: ECMWF's EDR service, falling back to the CDS); ERA5 / ERA5-Land areas, NetCDF and
+  CAMS requests validated and costed against the Copernicus Data Stores *before* you have a key;
+  downloads once you do.
 - **MARS archive** — request lint, size estimate, tape-friendly monthly splitting, server cost.
 - **earthkit first** — agents are steered to ECMWF's earthkit components (data, plots,
   transforms, meteo, geo, hydro, utils, time) instead of hand-written numpy, matplotlib or
@@ -99,7 +101,7 @@ codex plugin add ecmwf-weather@ecmwf
 ```bash
 npx skills add ecmwf/ecmwf-weather-skills -g -a opencode --skill '*' -y   # all projects
 npx skills add ecmwf/ecmwf-weather-skills -a opencode --skill '*' -y      # this project only
-opencode debug skill        # lists the eight ecmwf-* skills
+opencode debug skill        # lists the ecmwf-* skills
 ```
 
 opencode also reads `~/.claude/skills`, `~/.agents/skills` and `~/.config/opencode/skills`, so
@@ -136,16 +138,17 @@ Use whichever skills directory your client documents — see <https://agentskill
 ### Requirements
 
 - [uv](https://docs.astral.sh/uv/) — scripts declare their earthkit components inline (PEP 723)
-  and `uv run` installs them on first use (~64 MB to read GRIB, ~150 MB for point forecasts).
+  and `uv run` installs only those components on first use.
 - Linux or macOS (earthkit ships eccodes as binary wheels); on Windows use WSL.
-- Python 3 alone runs the catalogue, WMS, OpenCharts, CDS/ADS and MARS helpers.
+- Python ≥ 3.12 for the scripts run with uv. Python 3 alone runs the catalogue, WMS, OpenCharts,
+  CDS/ADS and MARS helpers.
 
 ### ECMWF MCP server
 
 The Claude Code and Codex plugins bundle ECMWF's remote MCP server, `https://mcp.ecmwf.int`
 (no account). It offers ECMWF charts and meteograms and the Destination Earth data catalogue
-(MCP 0.4.0 has no point forecasts or ERA5): agents use its tools in chat, and the skills call
-the same tools through `scripts/ecmwf_mcp.py` when the client has none. Forecasts, ERA5,
+(the current server has no forecast or ERA5 tools): agents use its tools in chat, and the
+skills call the same tools through `scripts/ecmwf_mcp.py` when the client has none. Forecasts, ERA5,
 files, ensembles and everything else go through the skills' scripts, so the skills work
 without it.
 
@@ -180,7 +183,7 @@ uv run  ecmwf-open-data/scripts/odpoint.py --lat 38.72 --lon -9.14 --steps 0-48
 uv run  ecmwf-earthkit/scripts/ekplot.py meteogram point.json -o meteogram.png
 python3 ecmwf-opencharts-wms/scripts/wms.py layers --public            # keyless map layers
 python3 ecmwf-cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
-        --start 1991-01-01 --end 2020-12-31 --dry-run            # validate + cost, no key
+        --start 1991-01-01 --end 2020-12-31 --dry-run            # plan + cost; no key to download
 ```
 
 ## How the skills are tested
@@ -207,7 +210,8 @@ python3 ecmwf-cds-ads/scripts/cds.py era5-point --lat 38.72 --lon -9.14 \
 | Service | Environment | File |
 |---|---|---|
 | Open Data, public WMS, OpenCharts | — | — |
-| CDS (ERA5) | `CDSAPI_URL`, `CDSAPI_KEY` | `~/.cdsapirc` |
+| ERA5 hourly point series (`cds.py era5-point`) | — | — |
+| CDS (ERA5 areas, NetCDF, recent days, wave parameters) | `CDSAPI_URL`, `CDSAPI_KEY` | `~/.cdsapirc` |
 | ADS (CAMS) | — | `~/.adsapirc` (earthkit; ADS's own docs use `~/.cdsapirc`) |
 | MARS (ECMWF Web API) | `ECMWF_API_URL`, `ECMWF_API_KEY`, `ECMWF_API_EMAIL` | `~/.ecmwfapirc` |
 | Polytope | `POLYTOPE_USER_KEY`, `POLYTOPE_USER_EMAIL` | `~/.polytopeapirc` (falls back to `~/.ecmwfapirc`) |
@@ -260,7 +264,7 @@ make test-live      # against live ECMWF services
 make evals AGENT=codex   # fresh agents with only this plugin loaded must solve real tasks
 make docs           # regenerate docs/skills.md
 make check-endpoints      # ECMWF endpoints the skills rely on still exist
-make release-prepare VERSION=0.2.0   # maintainers: see AGENTS.md "Releasing"
+make release-prepare VERSION=X.Y.Z   # maintainers: see AGENTS.md "Releasing"
 ```
 
 How the three test layers and the agent evals work: [`AGENTS.md`](AGENTS.md#testing-tdd).
@@ -286,7 +290,7 @@ Agreement.
 
 ## Repository layout
 
-- **`plugins/ecmwf-weather/skills/`** — the eight skills (the portable payload): `SKILL.md`,
+- **`plugins/ecmwf-weather/skills/`** — the skills (the portable payload): `SKILL.md`,
   `references/`, `scripts/`, `assets/`.
 - **`plugins/ecmwf-weather/.claude-plugin/`, `.codex-plugin/`** — plugin manifests;
   **`plugins/ecmwf-weather/.mcp.json`, `mcp.json`** — the bundled ECMWF MCP server;

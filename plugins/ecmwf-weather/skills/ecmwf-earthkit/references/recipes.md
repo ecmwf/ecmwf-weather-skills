@@ -82,6 +82,7 @@ Ready-made: `uv run scripts/ekplot.py ens-stats ens.grib2 --param 2t --units cel
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-transforms[all]>=1.0", "earthkit-plots>=1.0"]
 # ///
+import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 import earthkit.transforms as ekt
@@ -113,6 +114,7 @@ temperature offset and palette would be applied to a difference.
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0"]
 # ///
+import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 
@@ -145,6 +147,7 @@ Domains: named regions (`Europe`, `North Atlantic`, `Mediterranean`), any countr
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0"]
 # ///
+import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 
@@ -162,6 +165,7 @@ plumes from xarray (`member` × `valid_time`):
 # /// script
 # dependencies = ["earthkit-plots>=1.0", "numpy", "xarray"]
 # ///
+import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.plots as ekp
 import numpy as np
 import xarray as xr
@@ -235,6 +239,7 @@ ERA5 point series from the `ecmwf-cds-ads` skill (`cds.py era5-point`) go straig
 # dependencies = ["earthkit-data>=1.2", "earthkit-geo>=1.1", "earthkit-transforms[all]>=1.0"]
 # ///
 # needs network (country shapes from GISCO)
+import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 from earthkit.geo import gisco
 from earthkit.transforms import spatial
@@ -257,7 +262,7 @@ NUTS regions: `gisco.nuts_regions(level=1, resolution="60M")`.
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2", "numpy"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "numpy"]
 # ///
 from datetime import datetime
 
@@ -389,7 +394,7 @@ averages since the run start, night included); there is no interval at step 0.
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2", "earthkit-transforms[all]>=1.0",
+# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "earthkit-transforms[all]>=1.0",
 #                 "thermofeel>=2.3"]
 # ///
 from datetime import timedelta
@@ -446,7 +451,7 @@ surface pressure). **Demonstration grade** — say so on every figure and answer
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2", "earthkit-transforms[all]>=1.0",
+# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "earthkit-transforms[all]>=1.0",
 #                 "earthkit-utils>=1.0", "thermofeel>=2.3"]
 # ///
 import earthkit.data as ekd
@@ -486,9 +491,10 @@ interval means stand in for its instantaneous inputs — use hourly steps where 
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2", "earthkit-transforms[all]>=1.0",
+# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "earthkit-transforms[all]>=1.0",
 #                 "earthkit-utils>=1.0", "earthkit-geo>=1.1", "thermofeel>=2.3", "numpy"]
 # ///
+import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import numpy as np
 import thermofeel as tf
@@ -567,6 +573,7 @@ would read from GRIB, so `units="celsius"` converts and the legend is right:
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0", "thermofeel>=2.3"]
 # ///
+import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 import thermofeel as tf

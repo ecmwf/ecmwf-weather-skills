@@ -110,9 +110,9 @@ take `--lat --lon` too; `options NAME` lists their kinds and steps.
 ## ECMWF MCP
 
 The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int, no account). Its chart tools
-answer with an image: `charts_find_charts` then `charts_get_chart` (official charts),
-`charts_get_meteogram` (the ensemble meteogram for a place) and `charts_get_map` (public map
-layers over a bounding box). When your client lists them, the image shows in chat. To save a
+answer with an image: the `ecmwf` MCP server's `charts_find_charts` tool, then
+`ecmwf:charts_get_chart` (official charts), `ecmwf:charts_get_meteogram` (the ensemble
+meteogram for a place) and `ecmwf:charts_get_map` (public map layers over a bounding box). When your client lists them, the image shows in chat. To save a
 file — or when your client has no ECMWF MCP tools — run this standard-library script; it
 writes the image to the file and never prints it:
 

@@ -17,13 +17,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Before you write code (line 37)
-- Components (line 59)
-- Bundled scripts (line 79)
-- Writing your own code (line 107)
-- Bugs and missing features — upstream, with approval only (line 121)
-- Fallback without earthkit (line 138)
-- Attribution (line 144)
-- When blocked (line 152)
+- Components (line 65)
+- Bundled scripts (line 85)
+- Writing your own code (line 113)
+- Bugs and missing features — upstream, with approval only (line 127)
+- Fallback without earthkit (line 144)
+- Attribution (line 150)
+- When blocked (line 158)
 - References — `references/recipes.md` (verified code for every job), `references/pitfalls.md` (1.x breakages and known bugs), `references/upstream.md` (reporting bugs, contributing features), `references/versions.md` (generated: latest versions)
 
 **earthkit first.** For weather and climate data, the code an agent would write by hand already
@@ -56,6 +56,12 @@ say so.
 
 Code for each: `references/recipes.md` — every block there runs in this repository's tests.
 
+**Import order.** When your own code reads GRIB with earthkit-data (ecCodes) and also draws
+maps (earthkit-plots, cartopy) or uses earthkit-transforms, put `import pyproj` before
+`import earthkit.data`. Otherwise the process finishes its work and then aborts at exit
+(status 134, sometimes 139) with earthkit-data 1.3, because the ecCodes wheels and pyproj each
+bring their own libproj. The bundled scripts already do this.
+
 ## Components
 
 | Component | For | Install spec |
@@ -63,7 +69,7 @@ Code for each: `references/recipes.md` — every block there runs in this reposi
 | earthkit-data | read, fetch, select, convert, write | `earthkit-data>=1.2` (+ `[ecmwf-opendata]`, `[cds]`, `[mars]`, `[polytope]`) |
 | earthkit-plots | maps, figures, time series in ECMWF styles | `earthkit-plots>=1.0` |
 | earthkit-transforms | ensemble, temporal, climatology, spatial statistics | `earthkit-transforms[all]>=1.0` (plain install fails on import) |
-| earthkit-meteo | meteorological quantities, extremes, scores | `earthkit-meteo>=1.2` (scores: `[scores]`) |
+| earthkit-meteo | meteorological quantities, extremes, scores | `earthkit-meteo>=1.2.1` (scores: `[scores]`) |
 | earthkit-geo | regrid, nearest point, distances, country/NUTS shapes | `earthkit-geo>=1.1` |
 | earthkit-hydro | river networks, upstream/downstream, catchments | `earthkit-hydro>=1.4` |
 | earthkit-utils | unit conversion, array namespaces | `earthkit-utils>=1.0` |
@@ -92,7 +98,7 @@ uv run scripts/ekplot.py indices fc.grib2 --index utci --step 12 --domain Europe
       # heat-index|humidex|apparent-temperature|wind-chill (2t 2d 10u 10v) or utci|wbgt|mrt
 ```
 
-The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the MCP tool `charts_get_meteogram`); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
+The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the `ecmwf` MCP server's `charts_get_meteogram` tool); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
 
 Meteograms share one time axis (local time with `--tz` data), show precipitation as mm/h per
 interval and ensembles as median plus 10-90 % range; `--indices` point data adds a feels-like
@@ -108,7 +114,7 @@ consecutive steps (step 0 has none). Pitfalls: `references/pitfalls.md`.
 
 ```
 - [ ] 1. Find each step in "Before you write code"; copy the recipe from references/recipes.md
-- [ ] 2. Declare only those components in PEP 723 metadata; run with uv run
+- [ ] 2. Declare only those components in PEP 723 metadata; run with uv run; maps or transforms: `import pyproj` first
 - [ ] 3. Plot with earthkit-plots (style="auto", units=...); label derived fields yourself
 - [ ] 4. Only for a step earthkit lacks: minimal numpy/xarray code, commented as such
 - [ ] 5. If earthkit failed or lacked something, offer the upstream report (below) once

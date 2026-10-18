@@ -24,7 +24,7 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 - [ ] Confirm with ECMWF: public WMS token policy and public surface layers (2t, tp)
 - [ ] CI secret `ANTHROPIC_API_KEY` for the evals workflow
 
-- [ ] Run the 21 eval cases on pi (`make evals AGENT=pi MODEL=…`) once pi has a login or API key
+- [ ] Run the eval cases on pi (`make evals AGENT=pi MODEL=…`) once pi has a login or API key
       on the eval machine; full opencode runs across models
 
 ## ECMWF MCP
@@ -33,12 +33,12 @@ Accepted, open work only — remove items when done. Finished work is recorded i
       backend (still used directly by `cds.py era5-point`) and the DestinE data catalogue —
       once their owners confirm the access terms: each route must follow the same requirements
       as the official route for the same data (DestinE upgraded access for Digital Twin data;
-      an entitled account or service agreement for real-time data beyond Open Data). MCP 0.4.0
-      withdrew its forecast and ERA5 services; if they return, decide whether scripts may use
-      them beyond quick answers in chat.
+      an entitled account or service agreement for real-time data beyond Open Data). The
+      current MCP server has no forecast or ERA5 tools; if they return, decide whether scripts
+      may use them beyond quick answers in chat.
 - [ ] **Feedback for the MCP developers** — open issues or pull requests once the repository is
-      available. The forecast and ERA5 items apply if those services return (0.4.0 withdrew
-      them):
+      available. The forecast and ERA5 items apply if those services return (the current server
+      has none):
   - Forecast `tp` is accumulated since the start of the run but each row reads "Total
     precipitation (mm)": summing the column overstates rain (Bologna, 48 h: 1.5 mm, summed 20.9
     mm). De-accumulate, or label it and return the amount over the requested window.
@@ -73,7 +73,7 @@ Accepted, open work only — remove items when done. Finished work is recorded i
     charts service (images, not amounts), and for "how hot was August 2003 in Paris" says the
     institute's services don't cover it — ECMWF does, through ERA5 on the Climate Data Store.
   - With a working router that has no forecast tool, Claude Haiku answered ordinary forecast
-    questions from national weather websites (0/3; it used the skills when the router was down):
+    questions from national weather websites (it used the skills when the router was down):
     the instructions' "name the authority for an official forecast" reads as "send forecast
     questions to the national service".
   - `charts_get_meteogram` returns no base time in its structured answer (the run is only in

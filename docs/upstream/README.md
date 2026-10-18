@@ -20,6 +20,7 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/134) | `ecmwf/earthkit-transforms` | spatial.reduce(..., return_as='pandas') crashes (return_as passed on to nanmean) | [`transforms-spatial-reduce-return-as-pandas.py`](transforms-spatial-reduce-return-as-pandas.py) |
 | [filed](https://github.com/ecmwf/earthkit-utils/issues/88) | `ecmwf/earthkit-utils` | units.convert_units on a FieldList silently returns the data unconverted | [`utils-convert-units-fieldlist-noop.py`](utils-convert-units-fieldlist-noop.py) |
 | [filed](https://github.com/ecmwf/earthkit-data/issues/1185) | `ecmwf/earthkit-data` | mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1' | [`data-mars-relative-date-string.py`](data-mars-relative-date-string.py) |
+| [filed](https://github.com/ecmwf/earthkit-data/issues/1202) | `ecmwf/earthkit-data` | Python aborts at exit (free(): invalid pointer) when pyproj is imported after ecCodes with earthkit-data 1.3.0: eckitlib bundles its own libproj, sqlite3 and curl | [`data-eckit-proj-abort-at-exit.py`](data-eckit-proj-abort-at-exit.py) |
 
 ## Pull requests
 
@@ -411,5 +412,56 @@ except ValueError as e:
 **Suggested fix:** Accept negative integers given as strings in the date normaliser (as for int), or pass them through unchanged.
 
 **Workaround:** Give the integer -1 or an ISO date.
+
+Found while writing verified earthkit recipes for the ECMWF agent skills (https://github.com/ecmwf/ecmwf-weather-skills).
+
+## Python aborts at exit (free(): invalid pointer) when pyproj is imported after ecCodes with earthkit-data 1.3.0: eckitlib bundles its own libproj, sqlite3 and curl
+
+Repository: `ecmwf/earthkit-data` · bug · [filed](https://github.com/ecmwf/earthkit-data/issues/1202)
+
+**What happens:** The script finishes its work and prints its output, then the process aborts at interpreter exit with status 134 (free(): invalid pointer, munmap_chunk(): invalid pointer or double free or corruption; now and then a segmentation fault instead). The loaded libraries include two copies of libproj, sqlite3 and curl: those in eckitlib.libs and those in pyproj.libs. It happens whenever pyproj (for example through cartopy in earthkit-plots, or geopandas in earthkit-transforms) is imported after ecCodes has been loaded; importing pyproj first avoids it. The eckit wheels from 2.3.0.30 to 2.5.0.33 abort next to pyproj, and the same happens with only eccodes 2.50.0 and eccodeslib 2.50.0.33 installed, without earthkit-data. Seen with earthkit-data 1.3.0, eckitlib 2.5.0.33, pyproj 3.8.0, Python 3.14.5, x86_64 Linux (glibc 2.41).
+
+**Expected:** Exit status 0, as with earthkit-data 1.2.5 (eccodeslib 2.47.3.21) and with the eckit 2.2.0.27 wheel, neither of which aborts.
+
+**Reproducer** (self-contained; `uv run --script repro.py`):
+
+```python
+# /// script
+# dependencies = ["earthkit-data==1.3.0", "pyproj==3.8.0"]
+# ///
+"""With earthkit-data 1.3.0 the process aborts at interpreter exit once pyproj is imported after a
+GRIB field has been read: eckitlib and pyproj each bundle their own libproj, sqlite3 and curl, and
+glibc stops on a bad free() while the process shuts down. The work and its output are complete.
+
+The work runs in a child process so that this script can report the child's exit status."""
+
+import subprocess
+import sys
+
+if len(sys.argv) > 1:  # child: read a field, then import pyproj (as cartopy does)
+    import earthkit.data as ekd
+
+    field = ekd.from_source("sample", "test.grib").to_fieldlist()[0]
+    print("values:", field.to_numpy().shape, flush=True)
+
+    import pyproj
+
+    print("crs:", pyproj.CRS("EPSG:4326").name, flush=True)
+    sys.exit(0)
+
+run = subprocess.run([sys.executable, __file__, "child"], capture_output=True, text=True)
+print(run.stdout, end="")
+status = run.returncode if run.returncode >= 0 else 128 - run.returncode  # shell's 134 for SIGABRT
+finished = "crs: WGS 84" in run.stdout  # all the work was done before the abort
+if finished and status != 0:
+    message = [line for line in run.stderr.splitlines() if line.strip()][-1:]
+    print("REPRODUCED: exit status", status, *message)
+else:
+    print("NOT REPRODUCED: exit status", status)
+```
+
+**Suggested fix:** Looks like two copies of libproj, sqlite3 and curl live in one process, so something freed at exit belongs to the other copy. Maybe the eckitlib wheel could stop bundling its own libproj and friends, or keep their symbols private so that they cannot meet pyproj's copies. I have not looked at how the eckitlib wheels are built, so this may belong in that repository; I am reporting it here because earthkit-data 1.3.0 is the release that now requires eckit and eccodeslib 2.50.
+
+**Workaround:** Pin earthkit-data<1.3 (1.2.5 works), or import pyproj before earthkit.data and eccodes are imported; in the recipes I tried, that gave exit status 0 on every run.
 
 Found while writing verified earthkit recipes for the ECMWF agent skills (https://github.com/ecmwf/ecmwf-weather-skills).

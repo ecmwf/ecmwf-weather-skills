@@ -49,6 +49,7 @@ import argparse
 import contextlib
 import csv
 import importlib
+import importlib.util
 import io
 import json
 import math
@@ -1411,7 +1412,21 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
+def load_pyproj_first() -> None:
+    """Load pyproj (when installed) before pdbufr loads ecCodes.
+
+    The ecCodes wheels (eccodeslib 2.50) bundle their own libproj. When pyproj (pulled in by
+    earthkit-geo) is loaded after them, two copies of that library share the process and it
+    aborts at exit (status 134) once the work is done. Loading pyproj first avoids it. This is a
+    workaround for the report "ecCodes wheels bundling libproj abort at exit when pyproj is
+    imported after them" filed with earthkit-data; remove it once the wheels stop clashing with
+    pyproj."""
+    if importlib.util.find_spec("pyproj") is not None:
+        importlib.import_module("pyproj")
+
+
 def main(argv=None, now: datetime | None = None) -> int:
+    load_pyproj_first()  # before the first pdbufr or earthkit import on any command
     a = build_parser().parse_args(argv)
     now = now or datetime.now(UTC)
     as_json = getattr(a, "json", False)

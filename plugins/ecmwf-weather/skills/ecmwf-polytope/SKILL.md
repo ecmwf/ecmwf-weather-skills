@@ -78,7 +78,7 @@ files there, never inside the skill directory.
          ensemble ranges as "most likely X, range Y-Z"; end with the attribution line
 ```
 
-The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the MCP tool `charts_get_meteogram`); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
+The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the `ecmwf` MCP server's `charts_get_meteogram` tool); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
 
 - Output (UTC, hourly to 90 h, then 3-hourly/6-hourly): `t2m_C`, `precip_mm` (since previous
   step), `wind_speed_ms`, `wind_dir_deg`, `msl_hPa`, `tcc_pct`; ensemble adds `*_p10/_p50/_p90`
@@ -99,7 +99,7 @@ The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). It offers ECMWF c
 Destination Earth data catalogue — no point forecasts: answer forecast questions with
 `ptpoint.py`, also when the MCP is connected.
 
-- The official ECMWF ENS meteogram image for a place: its `charts_get_meteogram` tool (the
+- The official ECMWF ENS meteogram image for a place: the `ecmwf:charts_get_meteogram` tool (the
   `ecmwf-opencharts-wms` skill), or `python3 scripts/ecmwf_mcp.py call charts_get_meteogram
   '{"latitude": 51.45, "longitude": -0.97, "place_name": "Reading"}' -o meteogram.png` when your
   client lists no MCP tools.

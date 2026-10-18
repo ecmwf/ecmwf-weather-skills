@@ -126,6 +126,18 @@ actual = "ValueError: Invalid datetime '-1' while normalising the request, befor
 suggestion = "Accept negative integers given as strings in the date normaliser (as for int), or pass them through unchanged."
 workaround = "Give the integer -1 or an ISO date."
 
+[[issue]]
+script = "data-eckit-proj-abort-at-exit.py"
+repo = "ecmwf/earthkit-data"
+kind = "bug"
+status = "filed"
+url = "https://github.com/ecmwf/earthkit-data/issues/1202"
+title = "Python aborts at exit (free(): invalid pointer) when pyproj is imported after ecCodes with earthkit-data 1.3.0: eckitlib bundles its own libproj, sqlite3 and curl"
+expected = "Exit status 0, as with earthkit-data 1.2.5 (eccodeslib 2.47.3.21) and with the eckit 2.2.0.27 wheel, neither of which aborts."
+actual = "The script finishes its work and prints its output, then the process aborts at interpreter exit with status 134 (free(): invalid pointer, munmap_chunk(): invalid pointer or double free or corruption; now and then a segmentation fault instead). The loaded libraries include two copies of libproj, sqlite3 and curl: those in eckitlib.libs and those in pyproj.libs. It happens whenever pyproj (for example through cartopy in earthkit-plots, or geopandas in earthkit-transforms) is imported after ecCodes has been loaded; importing pyproj first avoids it. The eckit wheels from 2.3.0.30 to 2.5.0.33 abort next to pyproj, and the same happens with only eccodes 2.50.0 and eccodeslib 2.50.0.33 installed, without earthkit-data. Seen with earthkit-data 1.3.0, eckitlib 2.5.0.33, pyproj 3.8.0, Python 3.14.5, x86_64 Linux (glibc 2.41)."
+suggestion = "Looks like two copies of libproj, sqlite3 and curl live in one process, so something freed at exit belongs to the other copy. Maybe the eckitlib wheel could stop bundling its own libproj and friends, or keep their symbols private so that they cannot meet pyproj's copies. I have not looked at how the eckitlib wheels are built, so this may belong in that repository; I am reporting it here because earthkit-data 1.3.0 is the release that now requires eckit and eccodeslib 2.50."
+workaround = "Pin earthkit-data<1.3 (1.2.5 works), or import pyproj before earthkit.data and eccodes are imported; in the recipes I tried, that gave exit status 0 on every run."
+
 # Pull requests contributed upstream (no reproducer script: the fix carries its own test).
 [[pr]]
 repo = "ecmwf/earthkit-data"
