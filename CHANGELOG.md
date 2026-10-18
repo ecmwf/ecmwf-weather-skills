@@ -11,6 +11,53 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+**Fresher facts, MCP tools named with their server, opencode 2 evals.** `odcatalog.py` offers
+the right streams and steps for archived IFS 06/18 UTC runs, and the documentation, generated
+references and research notes match today's services.
+
+### Fixed
+
+- `odcatalog.py` asked for the archived IFS 06/18 UTC runs of 2026-05-12 in the old stream
+  (`scda`/`scwv`); the new stream (`oper`/`wave`) starts with that day's runs, a day before the
+  IFS Cycle 50r1 date. It also offered steps only to 90 h for archived 06/18 UTC runs from
+  2024-11-12 up to the rename; they reach 144 h, and only older runs stop at 90 h.
+- ecmwf-open-data: data.ecmwf.int keeps runs for about 3–4 days (not 2–3), and the portal
+  allows 750 simultaneous connections (not 500), in `SKILL.md`, `references/catalog.md` and the
+  script's comments.
+- The eval harness works with opencode 2.x: it starts opencode in the case directory with `PWD`
+  set (opencode 2 has no `--dir`; before, a case could work in the repository), uses
+  `--standalone` so a shared background service does not reach the agent, and recognises its
+  `shell` commands and `skill` activations (`id`). `summary.json` keeps the commands each case
+  ran.
+- Scripts and recipes no longer abort at exit with earthkit-data 1.3. Its ecCodes wheels bundle
+  their own libproj, and pyproj imported after them ended the process with status 134 (sometimes
+  139) once the work was done. `ekplot.py`, `odpoint.py` and `obs.py` load pyproj first (when it
+  is installed), the recipes that draw maps or use earthkit-transforms with GRIB start with
+  `import pyproj`, and the ecmwf-earthkit skill tells agents to do the same in their own code.
+  The report is filed with earthkit-data; the workaround goes once the wheels stop clashing.
+- The recipes and `ekplot.py` that use the solar zenith angle require earthkit-meteo 1.2.1. Its
+  fix (the hour angle now includes minutes and seconds) moves WBGT and UTCI by up to about
+  0.3 °C; earlier releases ignored the minutes, so interval means of the cosine of the solar
+  zenith angle came out too low.
+
+### Changed
+
+- The skills name the bundled MCP server's tools with their server, as Anthropic's skill best
+  practices ask: first "the `ecmwf` MCP server's `charts_get_meteogram` tool", then
+  `ecmwf:charts_get_meteogram`. AGENTS.md states the rule.
+- Generated references: the ecCharts WMS layer catalogue lists its groups without counts and now
+  includes the AIFS-COMPO (`aifs-composition_*`) layers; `versions.md` records the newer earthkit
+  releases.
+- README: ERA5 hourly point series need no key (`cds.py era5-point`, ECMWF's EDR service with
+  the CDS as fallback) and Python ≥ 3.12 is needed for the scripts run with uv. The README and
+  the plugin README give no counts of skills or eval cases and describe the MCP server without
+  a version number. The plugin README's list of hosts behind the MCP drops two the server no
+  longer has (`edr.mcp.ecmwf.int`, `era5.mcp.ecmwf.int`).
+- Research notes (`docs/research/`) refreshed from live checks of the services and the earthkit
+  packages. AGENTS.md: "don't hardcode counts" covers every count that goes stale (catalogue
+  sizes, skills, tests, eval cases), the opencode 2 eval setup is described, and the
+  best-practices review date is updated.
+
 ## [0.8.0] - 2026-10-11
 
 **A minor release for the options added in 0.7.1.** 0.7.1 gave `opencharts.py get` new options

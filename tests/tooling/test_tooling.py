@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import re
 import shutil
 import zipfile
 
@@ -187,6 +188,8 @@ def test_render_layers_md():
     assert "| `msl_public` | Mean sea level pressure (Public) | yes | `ct_blk_i5_t2` |" in md
     assert "| `background` | Background | no |" in md
     assert "2026-" not in md  # no volatile valid times
+    assert "- Public met layers\n" in md
+    assert not re.search(r"^- .*\(\d+\)$", md, re.MULTILINE)  # group lines carry no counts
 
 
 def test_render_versions_md():

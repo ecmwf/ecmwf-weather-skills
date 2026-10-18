@@ -353,14 +353,72 @@ def test_parse_pi_error():
 def test_opencode_and_pi_commands(tmp_path):
     oc = re_.agent_command("opencode", "hi", tmp_path, {}, model="anthropic/claude-opus-4-8")
     assert oc[:2] == ["opencode", "run"] and "--auto" in oc and "--format" in oc
-    assert (
-        oc[oc.index("--dir") + 1] == str(tmp_path)
-        and oc[oc.index("-m") + 1] == "anthropic/claude-opus-4-8"
-    )
+    assert oc[oc.index("--format") + 1] == "json"
+    assert oc[oc.index("-m") + 1] == "anthropic/claude-opus-4-8"
+    assert oc[-1] == "hi"
     pi = re_.agent_command("pi", "hi", tmp_path, {}, plugin=tmp_path / "plug", model="x/y")
     assert pi[0] == "pi" and pi[pi.index("--mode") + 1] == "json" and "--no-session" in pi
     assert pi[pi.index("--skill") + 1] == str(tmp_path / "plug" / "skills")
     assert pi[pi.index("--model") + 1] == "x/y"
+
+
+def test_opencode_command_has_only_flags_opencode_2_accepts(tmp_path):
+    # opencode 2 rejects --dir ("Unrecognized flag"); it works in the directory it starts in.
+    oc = re_.agent_command("opencode", "hi", tmp_path, {}, model="a/b")
+    assert "--dir" not in oc
+    # a private server: nothing of a shared background service reaches the case
+    assert "--standalone" in oc
+    assert {a for a in oc if a.startswith("--")} == {"--format", "--auto", "--standalone"}
+
+
+def test_opencode_runs_in_the_case_workdir(tmp_path, monkeypatch):
+    seen = {}
+    stdout = (ROOT / "tests" / "fixtures" / "opencode-2-run.jsonl").read_text()
+
+    def fake_run(cmd, **kw):
+        seen["cwd"] = kw["cwd"]
+        seen["pwd"] = kw["env"].get("PWD")
+        return re_.subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(re_.subprocess, "run", fake_run)
+    out = tmp_path / "out"
+    out.mkdir()
+    res = re_.run_case("opencode", {"id": "c", "prompt": "hi", "expect": []}, out, None, 1)
+    assert str(seen["cwd"]).startswith("/") and "ecmwf-eval-c-" in str(seen["cwd"])
+    assert res["workdir"] == str(seen["cwd"])
+    # opencode takes its directory from $PWD, which the launching shell leaves at the repository
+    assert seen["pwd"] == str(seen["cwd"])
+    # the summary keeps what the agent ran and which skills it used
+    assert any("opencharts.py get" in c for c in res["commands"])
+    assert "ecmwf-opencharts-wms" in res["skills"]
+
+
+def test_parse_opencode_2_stream_records_shell_commands_skills_and_mcp_calls():
+    raw = (ROOT / "tests" / "fixtures" / "opencode-2-run.jsonl").read_text()
+    t = re_.parse_transcript("opencode", raw, mcp_servers=("ecmwf",))
+    assert t["commands"] == [
+        "cd /tmp/ecmwf-eval-x && python3 .agents/skills/ecmwf-opencharts-wms/scripts/"
+        "opencharts.py get medium-2t-wind --step 48 -o chart.png"
+    ]
+    assert t["skills"] == {"ecmwf-opencharts-wms", "ecmwf-destine"}  # skill tool id + SKILL.md read
+    assert t["mcp"] == ["ecmwf:charts_get_meteogram"]
+    assert t["final"].startswith("The chart is saved") and t["error"] is None
+    ok = re_.grade(
+        t,
+        [
+            {"kind": "skill", "name": "ecmwf-opencharts-wms"},
+            {"kind": "command", "pattern": r"opencharts\.py\s+get"},
+            {"kind": "mcp", "pattern": r"^ecmwf:charts_get_meteogram$"},
+        ],
+    )
+    assert all(r["ok"] for r in ok)
+
+
+def test_opencode_skill_tool_without_a_name_records_no_empty_skill():
+    raw = json.dumps(
+        {"type": "tool_use", "part": {"type": "tool", "tool": "skill", "state": {"input": {}}}}
+    )
+    assert re_.parse_transcript("opencode", raw)["skills"] == set()
 
 
 def test_opencode_workdir_gets_project_skills(tmp_path):

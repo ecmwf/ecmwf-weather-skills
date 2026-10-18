@@ -648,16 +648,16 @@ wheels = [
 
 [[package]]
 name = "earthkit-meteo"
-version = "1.2.0"
+version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
     { name = "earthkit-utils" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/a9/f76cd1ecfb5d445dfdcf7805df0be647d11d8d25f471271475a7bae86f01/earthkit_meteo-1.2.0.tar.gz", hash = "sha256:239c89dbf30ee3d64f7e2df700b5e20077ca1cd35db9a66ba0fb79ddcd871d11", size = 3292425, upload-time = "2026-09-30T12:04:29.417Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/6e/5d236ad510198adccd01779983a3b66f11ab4226b762798d27653869a2a9/earthkit_meteo-1.2.1.tar.gz", hash = "sha256:c546ddfc85df82bfb13d91740b9bf7e6627ffca0e1b2fd7332e0f03dfcabcbfd", size = 3293679, upload-time = "2026-10-15T14:41:17.639Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f2/82/e614a8988d503d0f7ec8b32ce4ca2f990903785fbdac9ac9db37b00e837a/earthkit_meteo-1.2.0-py3-none-any.whl", hash = "sha256:7f749d89a14f9bc8fc51e8e21340a9d68f1b337023f8c1ecc0e81086929d4bbf", size = 186409, upload-time = "2026-09-30T12:04:27.882Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/f6/3df0ab1ebfa4eed74a6daccd0d86b6d1e5bf8353940452f654f205d0c8f5/earthkit_meteo-1.2.1-py3-none-any.whl", hash = "sha256:04bfcb7702107a54db3411c2a784fc2dd1bc0d6061a072ea0571f33e3aa1d830", size = 186421, upload-time = "2026-10-15T14:41:15.986Z" },
 ]
 
 [package.optional-dependencies]
@@ -857,8 +857,8 @@ dev = [{ name = "pytest", specifier = ">=8" }]
 earthkit = [
     { name = "earthkit-data", extras = ["ecmwf-opendata"], specifier = ">=1.2" },
     { name = "earthkit-geo", specifier = ">=1.1" },
-    { name = "earthkit-meteo", specifier = ">=1.2" },
-    { name = "earthkit-meteo", extras = ["scores"], specifier = ">=1.2" },
+    { name = "earthkit-meteo", specifier = ">=1.2.1" },
+    { name = "earthkit-meteo", extras = ["scores"], specifier = ">=1.2.1" },
     { name = "earthkit-plots", specifier = ">=1.0" },
     { name = "earthkit-transforms", extras = ["all"], specifier = ">=1.0" },
     { name = "earthkit-utils", specifier = ">=1.0" },

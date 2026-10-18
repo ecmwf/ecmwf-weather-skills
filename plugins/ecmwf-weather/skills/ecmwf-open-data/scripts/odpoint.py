@@ -43,6 +43,7 @@ import argparse
 import atexit
 import contextlib
 import importlib
+import importlib.util
 import json
 import os
 import sys
@@ -424,7 +425,21 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def load_pyproj_first() -> None:
+    """Load pyproj (when installed) before earthkit loads ecCodes.
+
+    earthkit-data 1.3 needs ecCodes wheels that bundle their own libproj. When pyproj (pulled in
+    by earthkit-geo and earthkit-transforms) is loaded after them, two copies of that library
+    share the process and it aborts at exit (status 134) once the work is done. Loading pyproj
+    first avoids it. This is a workaround for the report "ecCodes wheels bundling libproj abort
+    at exit when pyproj is imported after them" filed with earthkit-data; remove it once the
+    wheels stop clashing with pyproj."""
+    if importlib.util.find_spec("pyproj") is not None:
+        importlib.import_module("pyproj")
+
+
 def main(argv=None) -> int:
+    load_pyproj_first()  # before the first earthkit import on any path
     p = build_parser()
     a = p.parse_args(argv)
     params = request_params(a.params, a.indices)

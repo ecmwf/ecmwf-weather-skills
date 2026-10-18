@@ -162,13 +162,14 @@ def parse_transcript(agent: str, raw: str, mcp_servers=("ecmwf",)) -> dict:
                     t["mcp"].append(f"{server}:{tool[len(server) + 1 :]}")
                 elif tool in WEB_TOOLS["opencode"]:
                     t["web"].append(f"{tool}: {inp.get('query') or inp.get('url', '')}")
-                if part.get("tool") == "skill":
-                    t["skills"].add(str(inp.get("name", "")))
-                elif part.get("tool") in ("write", "edit", "apply_patch"):
+                if tool == "skill":  # the skill is `id` (opencode 2), `name` (earlier versions)
+                    if name := str(inp.get("id") or inp.get("name") or ""):
+                        t["skills"].add(name)
+                elif tool in ("write", "edit", "apply_patch"):
                     t["code"] += "\n" + str(
                         inp.get("content") or inp.get("newString") or inp.get("patchText") or ""
                     )
-                elif part.get("tool") == "bash":
+                elif tool in ("shell", "bash"):  # `shell` in opencode 2, `bash` before
                     # opencode passes the directory separately; keep it with the command
                     wd = inp.get("workdir")
                     cmd = inp.get("command", "")
@@ -438,8 +439,11 @@ def agent_command(
     elif agent == "gemini":
         cmd = ["gemini", "-p", prompt, "-o", "json", "--approval-mode", "yolo"]
     elif agent == "opencode":
+        # opencode 2 has no --dir: it works in the directory it starts in (run_case sets it to
+        # the workdir). --standalone gives each case a private server, so nothing of a shared
+        # background service (its sessions, configuration) reaches the agent under test.
         # Skills come from <workdir>/.agents/skills (prepare_workdir); --auto approves tools.
-        cmd = ["opencode", "run", "--format", "json", "--auto", "--dir", str(workdir)]
+        cmd = ["opencode", "run", "--standalone", "--format", "json", "--auto"]
         cmd += ["-m", model] if model else []
         return [*cmd, prompt]
     elif agent == "pi":
@@ -513,7 +517,9 @@ def run_case(
             capture_output=True,
             text=True,
             timeout=case.get("timeout", 900),
-            env=case_env(case),
+            # subprocess does not update $PWD when it changes directory; opencode 2 starts in
+            # $PWD, so left alone it would work in (and write into) the repository.
+            env={**case_env(case), "PWD": str(wd)},
         )
         raw, err, rc = p.stdout, p.stderr, p.returncode
     except subprocess.TimeoutExpired as e:
@@ -539,6 +545,7 @@ def run_case(
         "seconds": round(time.time() - t0),
         "cost_usd": t["cost_usd"],
         "skills": sorted(t["skills"]),
+        "commands": t["commands"],
         "mcp_server": bool(servers),
         "mcp_server_status": t["mcp_servers"],
         "mcp_calls": mcp_calls(t),

@@ -15,7 +15,7 @@ dev = ["pytest>=8"]
 earthkit = [
     "earthkit-data[ecmwf-opendata]>=1.2",
     "earthkit-geo>=1.1",
-    "earthkit-meteo>=1.2",
+    "earthkit-meteo>=1.2.1",
     "earthkit-utils>=1.0",
     "earthkit-transforms[all]>=1.0",
     "earthkit-plots>=1.0",
@@ -25,7 +25,7 @@ earthkit = [
     "ecmwf-api-client>=1.6",
     "pyodc>=1.6",
     "pdbufr>=0.15",
-    "earthkit-meteo[scores]>=1.2",
+    "earthkit-meteo[scores]>=1.2.1",
 ]
 
 [tool.uv]

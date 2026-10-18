@@ -13,7 +13,7 @@ lists exactly what a run contains. (The generated companion `fields.md` is refre
 
 | `--source` | URL | Notes |
 |---|---|---|
-| `ecmwf` (default) | https://data.ecmwf.int/forecasts | ~2–3 days retained; 500 simultaneous connections |
+| `ecmwf` (default) | https://data.ecmwf.int/forecasts | about 3–4 days retained; 750 simultaneous connections |
 | `aws` | https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com | archive starts 2023-01-18, anonymous |
 | `google` | https://storage.googleapis.com/ecmwf-open-data | mirror |
 | azure | https://ai4edataeuwest.blob.core.windows.net/ecmwf | needs a Planetary Computer SAS token; not supported by the stdlib script |
@@ -36,9 +36,10 @@ Tropical-cyclone tracks: `…-{step}h-{stream}-tf.bufr`.
 | `aifs-single` | 00, 06, 12, 18 | `oper-fc`, `wave-fc` | 0–360 by 6 |
 | `aifs-ens` | 00, 06, 12, 18 | `enfo-cf`, `enfo-pf`, `waef-cf`, `waef-pf`, `enfo-ep` | 0–360 by 6 |
 
-`ef` files hold the 50 IFS ENS perturbed members (select with `--number`). Before 50r1, 06/18z IFS
-used streams `scda`/`scwv` to 90 h and ENS had a `cf` control member — the scripts handle the
-naming for dates before the cutover.
+`ef` files hold the 50 IFS ENS perturbed members (select with `--number`). Archived 06/18z IFS runs
+use streams `scda`/`scwv` (to 90 h in the oldest, 144 h in later ones) and archived ENS runs have a
+`cf` control member — the scripts handle the naming and steps from the run date (dates in the
+`## Old patterns` section of `SKILL.md`).
 
 ## .index format
 

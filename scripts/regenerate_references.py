@@ -159,7 +159,7 @@ def render_layers(layers: list[dict]) -> str:
             "",
             "## Contents",
         ]
-        + [f"- {g} ({len(v)})" for g, v in groups.items()]
+        + [f"- {g}" for g in groups]
         + [""]
     )
     for g, ls in groups.items():

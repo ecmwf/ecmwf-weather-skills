@@ -30,10 +30,34 @@ def test_ifs_06z_post_50r1_goes_to_144_in_oper():
     assert od.stream_for("ifs", "oper", 6, date(2026, 10, 1)) == "oper"
 
 
-def test_ifs_06z_pre_50r1_uses_scda_to_90():
-    assert od.stream_for("ifs", "oper", 18, date(2026, 5, 1)) == "scda"
-    assert od.stream_for("ifs", "wave", 6, date(2026, 5, 1)) == "scwv"
-    assert od.steps_for("ifs", "oper", 6, run_date=date(2026, 5, 1))[-1] == 90
+def test_ifs_06z_scda_runs_stop_on_the_day_before_the_first_oper_run():
+    # AWS archive: 06z/18z scda up to 2026-05-11 18z, oper from 2026-05-12 (06z and 18z included).
+    assert od.stream_for("ifs", "oper", 6, date(2026, 5, 11)) == "scda"
+    assert od.stream_for("ifs", "oper", 18, date(2026, 5, 11)) == "scda"
+    assert od.stream_for("ifs", "wave", 6, date(2026, 5, 11)) == "scwv"
+    assert od.stream_for("ifs", "oper", 6, date(2026, 5, 12)) == "oper"
+    assert od.stream_for("ifs", "oper", 18, date(2026, 5, 12)) == "oper"
+    assert od.stream_for("ifs", "wave", 6, date(2026, 5, 12)) == "wave"
+    # 00z and 12z were never renamed.
+    assert od.stream_for("ifs", "oper", 0, date(2026, 5, 1)) == "oper"
+
+
+def test_ifs_06z_scda_runs_reach_144_before_the_rename():
+    # AWS archive: the 06z scda run of 2025-06-01 and the last ones in May 2026 carry steps to 144.
+    for day in (date(2025, 6, 1), date(2026, 5, 1), date(2026, 5, 11)):
+        for stream in ("oper", "wave"):
+            assert od.steps_for("ifs", stream, 6, run_date=day)[-1] == 144
+
+
+def test_ifs_06z_scda_runs_stop_at_90_before_they_gained_144():
+    # AWS archive: 2024-11-11 06z scda has -90h but no -93h; 2024-11-12 has -93h and -144h.
+    for stream in ("oper", "wave"):
+        for hour in (6, 18):
+            assert od.steps_for("ifs", stream, hour, run_date=date(2024, 11, 11))[-1] == 90
+            assert od.steps_for("ifs", stream, hour, run_date=date(2024, 11, 12))[-1] == 144
+    assert od.steps_for("ifs", "oper", 6, run_date=date(2024, 6, 1))[-1] == 90
+    # 00z and 12z kept their 360 h range throughout.
+    assert od.steps_for("ifs", "oper", 0, run_date=date(2024, 6, 1))[-1] == 360
 
 
 def test_aifs_single_6h_to_360_every_run():
@@ -69,7 +93,7 @@ def test_file_url_index_and_mirror_and_types():
     assert "/aifs-single/0p25/oper/" in od.file_url(run, "aifs-single", "oper", 6)
 
 
-def test_file_url_pre_50r1_06z_rewrites_stream():
+def test_file_url_scda_06z_rewrites_stream():
     run = datetime(2026, 5, 1, 6, tzinfo=UTC)
     assert "/06z/ifs/0p25/scda/20260501060000-3h-scda-fc.grib2" in od.file_url(
         run, "ifs", "oper", 3

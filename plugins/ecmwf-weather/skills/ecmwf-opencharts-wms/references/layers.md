@@ -39,7 +39,7 @@ images (`opencharts.py search "2 m temperature"`) or render Open Data with the `
 
 ## CAMS composition layers
 
-~90 layers prefixed `composition_` (Copernicus Atmosphere Monitoring Service): `composition_pm2p5`,
+Layers prefixed `composition_` come from the Copernicus Atmosphere Monitoring Service: `composition_pm2p5`,
 `composition_pm10`, `composition_aod550`, `composition_uvindex`, `composition_o3sfc`,
 `composition_europe_pol_birch_forecast_surface` (pollen), `composition_co2_totalcolumn`, … Some
 are only produced from the 00 UTC run up to +120 h (see each layer's abstract with

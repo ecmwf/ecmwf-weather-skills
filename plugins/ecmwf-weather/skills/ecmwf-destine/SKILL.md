@@ -21,9 +21,9 @@ SPDX-License-Identifier: Apache-2.0
 - Request workflow (line 65)
 - Which server holds the data (line 101)
 - ECMWF MCP (line 113)
-- Processing and plots (line 135)
-- Licence and attribution (line 143)
-- When blocked (line 158)
+- Processing and plots (line 136)
+- Licence and attribution (line 144)
+- When blocked (line 159)
 - References — `references/requests.md` (the catalogue, keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -112,7 +112,8 @@ catalogue it falls back to this table:
 
 ## ECMWF MCP
 
-The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). Its `catalogue_*` tools browse
+The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). The `ecmwf` MCP server's
+`catalogue_*` tools (`ecmwf:catalogue_*`) browse
 the Destination Earth catalogue that `destine.py` checks requests against: datasets, their
 axes and valid values for a selection, and the MARS requests plus the server that holds the
 data — no account needed. Call them when your client lists them; otherwise run them with this
@@ -126,9 +127,9 @@ python3 scripts/ecmwf_mcp.py call catalogue_build_mars_requests '{"dataset_id": 
   "year": "2040", "month": "7"}}'
 ```
 
-- Use only values the tools list (`catalogue_get_axes` answers are large: narrow the
+- Use only values the tools list (`ecmwf:catalogue_get_axes` answers are large: narrow the
   selection first).
-- Never pass a DestinE token to an MCP tool (`catalogue_retrieve_data` accepts one): it would
+- Never pass a DestinE token to an MCP tool (`ecmwf:catalogue_retrieve_data` accepts one): it would
   pass through the chat. Download with `destine.py retrieve`, which reads the token itself;
   upgraded access and the licence terms below still apply.
 

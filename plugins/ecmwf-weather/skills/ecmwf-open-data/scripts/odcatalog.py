@@ -46,8 +46,13 @@ ROOTS = {
     "aws": "https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com",
     "google": "https://storage.googleapis.com/ecmwf-open-data",
 }
-# IFS Cycle 50r1: scda/scwv discontinued, 06/18z moved to oper/wave out to 144 h.
-CUTOVER_50R1 = date(2026, 5, 13)
+# First date whose IFS 06/18z runs are published as oper/wave. The AWS archive holds scda/scwv up
+# to 2026-05-11 18z and oper/wave from 2026-05-12 00z (ECMWF's notice names IFS Cycle 50r1 of
+# 13 May 2026, a day later than the first run in the new stream).
+FIRST_OPER_06_18Z_DATE = date(2026, 5, 12)
+# First date whose IFS 06/18z scda/scwv runs carry steps beyond 90 h (out to 144 h). On AWS the
+# 06z run of 2024-11-11 ends at 90 h and that of 2024-11-12 reaches 144 h (18z and scwv alike).
+FIRST_144H_06_18Z_DATE = date(2024, 11, 12)
 
 MODELS = {
     # model: {stream: default type}
@@ -66,7 +71,7 @@ RANGE_TIMEOUT_S = 120
 RANGE_RETRIES = 3
 # Measured: 1 connection ~2 MB/s, 8 ~10 MB/s, 16 ~7.5 MB/s (server-side throttling) -> 8.
 DEFAULT_WORKERS = 8
-# data.ecmwf.int keeps ~12-14 runs (2-3 days); 72 h covers the whole window.
+# data.ecmwf.int keeps ~14 runs (3-4 days); the newest run is always well inside 72 h.
 MAX_BACK_HOURS = 72
 
 
@@ -84,10 +89,10 @@ def _check(model: str, stream: str) -> None:
 
 
 def stream_for(model: str, stream: str, hour: int, run_date: date | None = None) -> str:
-    """Server-side stream name (pre-50r1 06/18z IFS used scda/scwv)."""
+    """Server-side stream name (06/18z IFS runs before the rename used scda/scwv)."""
     _check(model, stream)
     run_date = run_date or datetime.now(UTC).date()
-    if model == "ifs" and hour in (6, 18) and run_date < CUTOVER_50R1:
+    if model == "ifs" and hour in (6, 18) and run_date < FIRST_OPER_06_18Z_DATE:
         return {"oper": "scda", "wave": "scwv"}.get(stream, stream)
     return stream
 
@@ -99,7 +104,7 @@ def steps_for(model: str, stream: str, hour: int, run_date: date | None = None) 
         return list(range(0, 361, 6))
     if hour in (0, 12):
         return list(range(0, 145, 3)) + list(range(150, 361, 6))
-    if run_date < CUTOVER_50R1 and stream in ("oper", "wave"):
+    if run_date < FIRST_144H_06_18Z_DATE and stream in ("oper", "wave"):
         return list(range(0, 91, 3))
     return list(range(0, 145, 3))
 
@@ -243,7 +248,7 @@ def fetch_text(url: str) -> str:
         return r.read().decode()
 
 
-# Above 16 throughput drops (throttling) and it eats into the portal-wide 500-connection limit.
+# Above 16 throughput drops (throttling) and it eats into the portal-wide 750-connection limit.
 MAX_WORKERS = 16
 
 
@@ -268,7 +273,7 @@ def fetch_range(url: str, start: int, end: int, retries: int = RANGE_RETRIES) ->
 
 
 # Open Data files never change once published (each run has its own URL), so a byte range can
-# be cached safely; data.ecmwf.int keeps a run ~2-3 days, so entries older than that are pruned.
+# be cached safely; data.ecmwf.int keeps a run 3-4 days, so entries older than 3 days are pruned.
 CACHE_ENV = "ECMWF_SKILLS_CACHE"
 CACHE_MAX_AGE_S = 3 * 86400
 

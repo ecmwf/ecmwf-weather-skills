@@ -77,7 +77,7 @@ say so.
   several minutes. Don't thin steps to go faster — it ruins meteograms.
 - On download errors retry once with `--source google`. The AWS mirror may answer `503 Slow Down`.
 - Meteogram image: pass `point.json` to the `ecmwf-earthkit` skill's `ekplot.py meteogram`.
-  The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the MCP tool `charts_get_meteogram`); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
+  The official ECMWF ENS meteogram — the chart on charts.ecmwf.int — comes from the `ecmwf-opencharts-wms` skill (`opencharts.py get opencharts_meteogram --lat LAT --lon LON`, or the `ecmwf` MCP server's `charts_get_meteogram` tool); its layouts are fixed (10 or 15 days, plume, wave). For a chosen period or variables, draw it with `ekplot.py meteogram` from the point data — never call that one the official meteogram.
 
 ## Facts to get right
 
@@ -87,9 +87,9 @@ say so.
   06/18z reach 144 h. AIFS reaches 360 h in 6 h steps at every run. The scripts pick a run long
   enough for the requested steps.
 - **Streams**: `oper` (HRES), `enfo` (ENS, 50 perturbed members), `wave`, `waef`.
-- **Availability**: a run appears ~6–8 h after base time; ~2–3 days are kept on data.ecmwf.int.
-  Older runs: `--source aws` (archive starts 2023-01-18). Portal limit: 500 simultaneous
-  connections.
+- **Availability**: a run appears ~6–8 h after base time; about 3–4 days are kept on
+  data.ecmwf.int. Older runs: `--source aws` (archive starts 2023-01-18). Portal limit: 750
+  simultaneous connections.
 - **Parameters**: `2t`, `2d`, `tp` (m, accumulated from step 0), `10u`/`10v`, `10fg`, `msl` (Pa),
   `tcc` (0–1), `ptype`, `sf`, `mucape`; pressure levels (`--levtype pl`) `t`, `u`, `v`, `gh`, `r`,
   `q`. Exact list for a run: `odcatalog.py fields --step 24`. Table and file layout:
@@ -101,7 +101,7 @@ The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). It offers ECMWF c
 Destination Earth data catalogue — no point forecasts: answer forecast questions with
 `odpoint.py`, also when the MCP is connected.
 
-- The official ECMWF ENS meteogram image for a place: its `charts_get_meteogram` tool (the
+- The official ECMWF ENS meteogram image for a place: the `ecmwf:charts_get_meteogram` tool (the
   `ecmwf-opencharts-wms` skill), or `python3 scripts/ecmwf_mcp.py call charts_get_meteogram
   '{"latitude": 51.45, "longitude": -0.97, "place_name": "Reading"}' -o meteogram.png` when your
   client lists no MCP tools.
@@ -177,6 +177,7 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 
 ## Old patterns
 
-IFS Cycle 50r1 (13 May 2026) changed the streams. Archived files from before that date (e.g. on
-the AWS mirror) use `scda`/`scwv` for 06/18z IFS runs, which then reached only 90 h, and IFS ENS
-had a control member `cf`. The scripts map stream names automatically from the run date.
+IFS Cycle 50r1 (13 May 2026) changed the streams. Archived files from before 12 May 2026 (e.g. on
+the AWS mirror) use `scda`/`scwv` for 06/18z IFS runs, which reached only 90 h before 12 November
+2024 and 144 h from then on, and IFS ENS had a control member `cf`. The scripts map stream names
+and steps automatically from the run date.

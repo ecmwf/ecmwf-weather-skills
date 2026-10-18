@@ -46,7 +46,7 @@ Agent Skills for ECMWF data. Open work: `TODO.md`. Done work: `CHANGELOG.md`. Re
   `~/.polytopeapirc*`, `~/.destineapirc` or similar; describe them by key names and value
   shapes only. Never ask users to paste a secret into chat or onto a command line.
 - `tests/tooling/test_no_secrets.py` blocks credential-shaped values in tracked files.
-- Never pass a credential as an MCP tool argument (e.g. `catalogue_retrieve_data`'s
+- Never pass a credential as an MCP tool argument (e.g. `ecmwf:catalogue_retrieve_data`'s
   `destine_token`): it would enter the transcript. `ecmwf_mcp.py` refuses credential-named
   arguments; downloads that need a token go through the skill's own script.
 
@@ -130,10 +130,14 @@ remove the workaround from the skills.
   client's MCP tools, or `scripts/ecmwf_mcp.py` when the client has none, it gives charts,
   meteograms and DestinE catalogue answers in chat; forecasts, ERA5, files, ensembles and every
   other route stay on the skills' scripts, and an unreachable MCP sends agents to those
-  scripts. Skill text describes only the tools the MCP offers now (`ecmwf_mcp.py tools`; MCP
-  0.4.0 withdrew its forecast and ERA5 services). If point forecasts return, they are quick
+  scripts. Skill text describes only the tools the MCP offers now (`ecmwf_mcp.py tools`; the
+  current server has no forecast or ERA5 tools). If point forecasts return, they are quick
   answers only — no script, file or fallback builds on that output (maintainer decision: its
   access terms are not settled).
+- **Name MCP tools with their server** in skill text, as Anthropic's best practices ask: first
+  "the `ecmwf` MCP server's `<tool>` tool", then `ecmwf:<tool>` (`ecmwf` is the server key in
+  `.mcp.json` and `mcp.json`). Never write one agent's tool syntax (`mcp__…`). `ecmwf_mcp.py
+  call` commands keep the bare tool name — it is the script's argument.
 - **Default model is IFS HRES** unless the user asks otherwise.
 - **ECMWF sources only** — skills and scripts never fetch weather data from third parties, and
   every SKILL.md says so. One scoped exception, approved by the maintainer: `ecmwf-observations`
@@ -164,7 +168,10 @@ remove the workaround from the skills.
   Windows, or the user declines installs) and must say what the fallback cannot do.
 - **Never print secrets**; redact keys in any echoed URL or request.
 - **Generated references are never hand-edited** — regenerate them (`make references`).
-- **Don't hardcode catalog counts** in prose (parameters, layers, streams change upstream).
+- **Don't hardcode counts** in prose — catalogue sizes (parameters, layers, streams, products), the
+  number of skills, tests, eval cases or fixtures, package sizes, eval tallies. They go stale; say
+  what the thing is and point to the generated file or the command that lists it. Generated
+  references carry no counts either. `CHANGELOG.md` release sections are history and stay as written.
 - **Trust live services over docs** — ECMWF docs lag (e.g. post-50r1 streams). Re-run the research
   step (below) before each minor release.
 
@@ -209,7 +216,7 @@ Makefile wraps the scripts below, so there is one source of truth for each comma
 ## Skill authoring — follow Anthropic's best practices
 
 Always follow https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
-(last reviewed **2026-10-02**). **Re-read it before each minor release and at least monthly**;
+(last reviewed **2026-10-11**). **Re-read it before each minor release and at least monthly**;
 when it changes, update this section, `scripts/check_skills.py`, and the skills, then bump the
 date above.
 
@@ -314,10 +321,14 @@ How it isolates the agent:
   `ANTHROPIC_API_KEY`; use it in CI.)
 - **Codex**: skills copied into `<tmp>/.agents/skills/` (not symlinked: `find` does not descend into symlinked directories), then `codex exec --skip-git-repo-check
   -C <tmp> --json "<prompt>"`.
-- **opencode**: skills copied into `<tmp>/.agents/skills/`, then `opencode run --format json
-  --auto --dir <tmp> -m provider/model "<prompt>"` (`make evals AGENT=opencode MODEL=…`).
-  opencode also loads the user's `~/.claude/skills` and `~/.agents/skills` (realistic
-  competition). Bash commands are recorded with their `workdir`.
+- **opencode** (2.x): skills copied into `<tmp>/.agents/skills/`, then `opencode run
+  --standalone --format json --auto -m provider/model "<prompt>"` started in `<tmp>` with
+  `PWD=<tmp>` (opencode 2 has no `--dir` and takes its directory from `$PWD`; `--standalone`
+  keeps a shared background service out) (`make evals AGENT=opencode MODEL=…`). opencode also
+  loads the user's `~/.claude/skills` and `~/.agents/skills` (realistic competition). Shell
+  commands (tool `shell`; `bash` in earlier versions) are recorded with their `workdir`; a
+  skill activation is a `skill` tool call (`input.id`; `name` earlier) or a read of the
+  `SKILL.md`. `summary.json` keeps the commands.
 - **pi**: `pi --mode json --no-session --skill <plugin>/skills --model … "<prompt>"`; needs a pi
   login or provider API key (`pi auth`); without one the run is reported as ERROR.
 - **Gemini CLI**: skills copied into `<tmp>/.gemini/skills/` (verify path at agentskills.io/clients),
