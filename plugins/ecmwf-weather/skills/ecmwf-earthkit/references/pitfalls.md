@@ -5,8 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 # earthkit 1.x pitfalls and known issues
 
-Verified against earthkit-data 1.2.4, earthkit-plots 1.0.4, earthkit-meteo 1.2.0,
-earthkit-geo 1.1.2, earthkit-transforms 1.0.0, earthkit-utils 1.0.2.
+Checked against earthkit-data 1.3.0, earthkit-plots 1.0.4, earthkit-meteo 1.2.1,
+earthkit-geo 1.2.0, earthkit-transforms 1.0.0, earthkit-utils 1.0.3: the recipes run and the
+open upstream reports still reproduce on these releases.
 
 ## Contents
 - 0.x habits that break on 1.x
@@ -57,13 +58,10 @@ earthkit-geo 1.1.2, earthkit-transforms 1.0.0, earthkit-utils 1.0.2.
 
 ## Meteorology
 
-- `thermo.wet_bulb_temperature_from_dewpoint` with the default `t_method="bisect"` fails on 2-D
-  or 3-D input — use `t_method="newton"`.
 - xarray results keep the input's name and attributes (relative humidity named `2t`); rename.
 - Plain Python floats are rejected; wrap in `np.array`. Dates are `datetime`, not
   `np.datetime64`.
-- Scores need `earthkit-meteo[scores]`; the library's error message says `[score]`, which does
-  not exist.
+- Scores need `earthkit-meteo[scores]`.
 - EFI/SOT on xarray need `clim_dim=` and `ens_dim=`.
 
 ## Thermal comfort (thermofeel)
@@ -87,8 +85,7 @@ earthkit-geo 1.1.2, earthkit-transforms 1.0.0, earthkit-utils 1.0.2.
 - Writing GRIB: set `metadata.edition: 2` **before** a GRIB2 paramId (GRIB1 templates from
   MARS raise "Concept no match"); indices without a code go in local-use octets (192–254).
 - Requests: give `grid` as a `"dx/dy"` string (Polytope has rejected equal-valued lists:
-  "Duplicate values found in list for key 'grid'"); the mars source rejects `date="-1"` —
-  use the integer `-1` or an ISO date.
+  "Duplicate values found in list for key 'grid'").
 
 ## Regional grids (CARRA, CERRA)
 

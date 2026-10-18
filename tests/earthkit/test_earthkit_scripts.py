@@ -6,7 +6,7 @@ import json
 import subprocess
 
 import pytest
-from conftest import FIXTURES, SKILLS, load_script
+from conftest import FIXTURES, SKILLS, load_script, strict_script_env
 
 GRIB = FIXTURES / "ifs-sfc-5deg-20261002-00z.grib2"
 SCRIPTS = SKILLS / "ecmwf-earthkit" / "scripts"
@@ -54,6 +54,7 @@ def uv(script, *args, timeout=600):
         capture_output=True,
         text=True,
         timeout=timeout,
+        env=strict_script_env(),
     )
 
 

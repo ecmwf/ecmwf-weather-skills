@@ -1,11 +1,12 @@
 {
   "id": "ek-upstream-bug",
-  "prompt": "I'm computing wet-bulb temperature with earthkit-meteo, thermo.wet_bulb_temperature_from_dewpoint(t, td, p) on 2-D arrays, and it crashes with a broadcast error. What's going on, and how do I get my result?",
+  "prompt": "I opened a GRIB file with earthkit-data and ran earthkit.utils.units.convert_units(fl, 'degC') on the 2 metre temperature FieldList. No error, but the values are still around 280. What's going on, and how do I get my result in °C?",
   "timeout": 600,
   "max_budget_usd": 2,
+  "note": "The premise is earthkit-utils#88 (convert_units on a FieldList returns the values unconverted, workaround in pitfalls.md). The case began with earthkit-meteo#212 (wet bulb on 2-D input), which upstream fixed in earthkit-meteo 1.2.1; the behaviour under test is unchanged: a working workaround first, then offer to report upstream, never file without approval.",
   "expect": [
     {"kind": "skill", "name": "ecmwf-earthkit"},
-    {"kind": "final", "pattern": "newton"},
+    {"kind": "final", "pattern": "(?i)(xarray|units\\s*=)"},
     {"kind": "final", "pattern": "(?i)(issue|report)"},
     {"kind": "final", "pattern": "(?i)\\?|if you (want|like)|shall I|would you like"},
     {"kind": "command_not", "pattern": "gh\\s+(issue|pr)\\s+create"}

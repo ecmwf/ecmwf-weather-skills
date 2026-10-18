@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +23,18 @@ def load_script(skill: str, name: str):
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def strict_script_env() -> dict[str, str]:
+    """Environment for running a skill script or recipe as a subprocess: a deprecated API
+    called by that code is an error.
+
+    Libraries warn with stacklevel=2, so the warning is attributed to the calling module — the
+    script's `__main__`. Deprecations raised inside third-party modules are left alone."""
+    env = dict(os.environ)
+    rule = "error::DeprecationWarning:__main__"
+    env["PYTHONWARNINGS"] = f"{env['PYTHONWARNINGS']},{rule}" if env.get("PYTHONWARNINGS") else rule
+    return env
 
 
 @pytest.fixture

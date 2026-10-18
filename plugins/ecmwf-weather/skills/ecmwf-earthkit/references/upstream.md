@@ -32,12 +32,12 @@ non-public data.
 Draft, show it, and on approval file it:
 
 ```bash
-gh issue create -R ecmwf/earthkit-meteo --title "wet_bulb_temperature_from_dewpoint: default bisect fails on 2-D input" --body-file issue.md
+gh issue create -R ecmwf/earthkit-X --title "<function>: <what goes wrong, on which input>" --body-file issue.md
 ```
 
 Without `gh` (or not logged in), give the user the prefilled URL
-`https://github.com/ecmwf/earthkit-meteo/issues/new?title=...&body=...` (URL-encoded) or the
-`issue.md` text to paste at `https://github.com/ecmwf/earthkit-meteo/issues/new/choose`.
+`https://github.com/ecmwf/earthkit-X/issues/new?title=...&body=...` (URL-encoded) or the
+`issue.md` text to paste at `https://github.com/ecmwf/earthkit-X/issues/new/choose`.
 
 `issue.md` contents (ECMWF's bug-report form asks for these):
 
