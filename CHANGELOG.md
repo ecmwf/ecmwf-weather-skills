@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-18
+
 **Fresher facts, MCP tools named with their server, opencode 2 evals.** `odcatalog.py` offers
 the right streams and steps for archived IFS 06/18 UTC runs, and the documentation, generated
 references and research notes match today's services.
@@ -672,7 +674,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.1...HEAD
+[0.8.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.6.0...0.7.0
