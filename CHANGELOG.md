@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-25
+
 **Known earthkit issues linked, `figsize` hint, green weekly link check.** Agents point to an
 upstream report that already exists instead of drafting a duplicate, and write `figsize` for
 earthkit-plots figures.
@@ -726,7 +728,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.1...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.2...HEAD
+[0.8.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.1...0.8.2
 [0.8.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.1...0.8.0
 [0.7.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.0...0.7.1
