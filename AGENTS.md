@@ -498,7 +498,7 @@ Agents run them only when the maintainer asks for a release.
    the changelog section, deletes the local release branch.
 
 If a step fails, fix the cause in a normal PR and start again from step 2 — never skip a gate.
-`check-endpoints` treats optional services (the bundled ECMWF MCP; the skills work without it) differently: an outage (HTTP 5xx, timeout) is a warning, while drift — a host that no longer resolves, HTTP 404, a changed status document — still fails. A network error or a rate-limited answer (HTTP 429) is asked again before it counts. Endpoint drift (`check-endpoints`) means ECMWF moved or renamed something: update
+`check-endpoints` treats optional services (the bundled ECMWF MCP and its two backends; NOAA Aviation Weather for station metadata; the skills work without them) differently: an outage (HTTP 5xx, timeout) is a warning, while drift — a host that no longer resolves, HTTP 404, a changed status document — still fails. A network error or a rate-limited answer (HTTP 429) is asked again before it counts. Endpoint drift (`check-endpoints`) means ECMWF moved or renamed something: update
 `ecmwf_status.SERVICES`, `check_endpoints.PROBES` or the script URLs first. Agents must not
 change git config, force-push or delete remote tags.
 

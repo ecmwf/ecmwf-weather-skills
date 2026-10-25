@@ -29,15 +29,17 @@ non-public data.
 
 ## Bug report
 
-Draft, show it, and on approval file it:
+Draft, show it, and on approval file it (the example files against earthkit-data; use the
+repository of the component with the bug):
 
 ```bash
-gh issue create -R ecmwf/earthkit-X --title "<function>: <what goes wrong, on which input>" --body-file issue.md
+gh issue create -R ecmwf/earthkit-data --title "<function>: <what goes wrong, on which input>" --body-file issue.md
 ```
 
-Without `gh` (or not logged in), give the user the prefilled URL
-`https://github.com/ecmwf/earthkit-X/issues/new?title=...&body=...` (URL-encoded) or the
-`issue.md` text to paste at `https://github.com/ecmwf/earthkit-X/issues/new/choose`.
+Without `gh` (or not logged in), give the user the `issue.md` text to paste into the
+repository's new-issue page, for example `https://github.com/ecmwf/earthkit-data/issues/new/choose`,
+or a prefilled link: `https://github.com/ecmwf/earthkit-data/issues/new` with URL-encoded
+`title` and `body` query parameters.
 
 `issue.md` contents (ECMWF's bug-report form asks for these):
 

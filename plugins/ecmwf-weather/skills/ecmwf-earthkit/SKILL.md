@@ -17,13 +17,13 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Before you write code (line 37)
-- Components (line 65)
-- Bundled scripts (line 85)
-- Writing your own code (line 113)
-- Bugs and missing features — upstream, with approval only (line 127)
-- Fallback without earthkit (line 144)
-- Attribution (line 150)
-- When blocked (line 158)
+- Components (line 66)
+- Bundled scripts (line 86)
+- Writing your own code (line 114)
+- Bugs and missing features — upstream, with approval only (line 128)
+- Fallback without earthkit (line 147)
+- Attribution (line 153)
+- When blocked (line 161)
 - References — `references/recipes.md` (verified code for every job), `references/pitfalls.md` (1.x breakages and known bugs), `references/upstream.md` (reporting bugs, contributing features), `references/versions.md` (generated: latest versions)
 
 **earthkit first.** For weather and climate data, the code an agent would write by hand already
@@ -38,7 +38,7 @@ say so.
 
 | If you are about to… | Use instead |
 |---|---|
-| draw a map with cartopy/matplotlib (`ax.contourf`, `add_feature`, colormaps, colorbars) | earthkit-plots: `ekp.geo.plot`, `ekp.Map`/`ekp.Figure` with `style="auto"` (ECMWF styles) |
+| draw a map with cartopy/matplotlib (`ax.contourf`, `add_feature`, colormaps, colorbars) | earthkit-plots: `ekp.geo.plot`, `ekp.Map`/`ekp.Figure` with `style="auto"` (ECMWF styles); figure size is `figsize=`, e.g. `ekp.Figure(rows=1, columns=2, figsize=(12, 4.5))` (`size=` is deprecated) |
 | convert K→°C, Pa→hPa, m→mm for a plot (`- 273.15`, `/ 100`) | `units="celsius"` / `"hPa"` / `"mm"` in the earthkit-plots call |
 | average or spread over members (`.mean("number")`, `np.std`) | earthkit-transforms `ensemble.mean / std`, `ekt.reduce(..., how="percentile", dim="member", q=90)` — or `ekplot.py ens-stats` |
 | difference accumulated precipitation, compute rates | earthkit-transforms `temporal.deaccumulate`, `accumulation_to_rate` |
@@ -60,7 +60,8 @@ Code for each: `references/recipes.md` — every block there runs in this reposi
 maps (earthkit-plots, cartopy) or uses earthkit-transforms, put `import pyproj` before
 `import earthkit.data`. Otherwise the process finishes its work and then aborts at exit
 (status 134, sometimes 139) with earthkit-data 1.3, because the ecCodes wheels and pyproj each
-bring their own libproj. The bundled scripts already do this.
+bring their own libproj (earthkit-data#1202, see `references/pitfalls.md`). The bundled scripts
+already do this.
 
 ## Components
 
@@ -132,14 +133,16 @@ needed:
 1. Solve the user's task first (workaround or minimal own code).
 2. Then **end your answer with the question** — always, even when the workaround fully solves
    it: "This looks like a bug in earthkit-X — shall I report it upstream?" or "earthkit-X has no
-   function for this — would you like me to propose it upstream as a pull request?"
+   function for this — would you like me to propose it upstream as a pull request?" If
+   `references/pitfalls.md` links an issue for the problem, say it is already reported (give
+   the link) and ask "shall I add a comment with your case?" instead of offering a new report.
 3. Only after an explicit yes: draft the issue (versions, minimal reproducer, expected vs
    actual) or the draft PR (use case, code, test, example data), show it, and file it as
    described in `references/upstream.md`. Never file without approval, never include the user's
    data or credentials, and never accept the ECMWF CLA on the user's behalf.
 
-Known issues with workarounds: `references/pitfalls.md` (e.g. `convert_units` on a FieldList
-returns the values unconverted).
+Known issues with workarounds and links to their reports: `references/pitfalls.md` (e.g.
+`convert_units` on a FieldList returns the values unconverted: earthkit-utils#88).
 
 ## Fallback without earthkit
 

@@ -11,6 +11,53 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+**Known earthkit issues linked, `figsize` hint, green weekly link check.** Agents point to an
+upstream report that already exists instead of drafting a duplicate, and write `figsize` for
+earthkit-plots figures.
+
+### Fixed
+
+- Agents wrote `ekp.Figure(size=…)` from memory, which earthkit-plots ≥ 1.0 deprecates. The
+  ecmwf-earthkit skill's table row for drawing a map now shows `ekp.Figure(figsize=…)` and says
+  `size=` is deprecated.
+- `references/pitfalls.md` had no entry for the earthkit-data 1.3 abort at exit (status 134 or
+  139 once the work is done). It now has one (earthkit-data#1202): import pyproj before
+  earthkit, as the bundled scripts and recipes already do; a fix candidate is open in findlibs.
+  The skill's Import order rule links to it.
+- `make links` (and so the weekly CI) reported service endpoints as dead links: the two MCP
+  backends answered a plain GET with 406 and the NOAA Aviation Weather API base with 404, and the
+  `https://github.com/ecmwf/earthkit-X/issues/new…` placeholders in `references/upstream.md`
+  were fetched as real URLs. `references/upstream.md` now gives real earthkit-data examples
+  (a `gh issue create` command and the new-issue page), the link check skips URLs cut short by
+  a placeholder, and it leaves the service endpoints to `make check-endpoints`.
+
+### Changed
+
+- When a bug the user hits is already linked in `references/pitfalls.md`, the ecmwf-earthkit
+  skill tells agents to say it is already reported (with the link) and offer to add a comment
+  with the user's case, instead of drafting a new report. Reporting upstream still needs the
+  user's explicit approval.
+- `references/pitfalls.md` links every open upstream report with its workaround: earthkit-meteo#214;
+  earthkit-plots#260 (fixed upstream, not yet in a release), #261 and #262; earthkit-transforms#133
+  and #134; earthkit-utils#88. `TODO.md` has a new "Upstream fixes" section: one item per report,
+  naming where its workaround lives, to remove once a release with the fix is out. The weekly
+  live test flags a report that no longer reproduces.
+- `make check-endpoints` now probes the two MCP backends (an MCP `initialize` request) and the
+  NOAA Aviation Weather API (`stationinfo`) as optional services: an outage (5xx, timeout) is a
+  warning, while a host that no longer resolves, a 404 or a changed answer fails. `AGENTS.md`
+  names NOAA next to the MCP among the optional services.
+- Eval cases: `ek-upstream-bug` also requires naming the existing report and offering to comment
+  on it; `ek-humidity` and the new `ek-multi-panel` (two maps side by side in one figure) reject
+  `Figure(size=…)`, and `ek-multi-panel` requires a multi-panel `ekp.Figure`. The patterns are
+  pinned by unit tests.
+- uv.lock refresh: certifi 2026.10.23.
+- Generated references regenerated from the live catalogues: the IFS `sfc` field list in
+  `ecmwf-open-data/references/fields.md` gains convective precipitation (`cp`), low, medium and
+  high cloud cover (`lcc`, `mcc`, `hcc`) and the total column cloud ice water, cloud liquid water
+  and rain water (`tciw`, `tclw`, `tcrw`); in `ecmwf-observations/references/stations.csv`
+  WMO 63125 is now named "AWS DJIBOUTI AERODROME" and 87148 (Presidencia Roque Saenz Peña)
+  has a new elevation.
+
 ## [0.8.1] - 2026-10-18
 
 **Fresher facts, MCP tools named with their server, opencode 2 evals.** `odcatalog.py` offers

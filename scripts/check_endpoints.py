@@ -11,7 +11,10 @@ Run by `make check-endpoints`, which `make release-prepare` and the weekly CI ca
 - each data store's /api/catalogue/v1/messages still answers with a message list;
 - the ECMWF MCP router's /status still lists exactly the services ecmwf_mcp.BACKENDS calls
   directly when the router is down;
-- every service host still answers HTTP (401/403 count as present: authentication is expected).
+- every service host still answers HTTP (401/403 count as present: authentication is expected);
+- the optional services the scripts call as APIs answer the request the scripts make: both MCP
+  backends an `initialize` message, NOAA Aviation Weather (non-ECMWF; station metadata for
+  `ecmwf-observations`) a station list. An outage warns; drift fails.
 
 A network error or a rate-limited answer (HTTP 429) is asked again before it counts.
 """
@@ -29,17 +32,19 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "plugins/ecmwf-weather/skills/ecmwf-open-data/scripts"
 
 
-def _load(name: str):
-    spec = importlib.util.spec_from_file_location(name, SCRIPTS / f"{name}.py")
+def _load(name: str, directory: Path = SCRIPTS):
+    spec = importlib.util.spec_from_file_location(name, directory / f"{name}.py")
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
-    sys.modules.setdefault(name, module)  # ecmwf_mcp imports its sibling ecmwf_status by name
+    # ecmwf_mcp and obs import their sibling ecmwf_status by name
+    sys.modules.setdefault(name, module)
     spec.loader.exec_module(module)
     return module
 
 
 st = _load("ecmwf_status")
 mcp = _load("ecmwf_mcp")
+obs = _load("obs", ROOT / "plugins/ecmwf-weather/skills/ecmwf-observations/scripts")
 
 # One cheap URL per service that must answer (any HTTP status below 404, or 401/403/405).
 PROBES = {
@@ -74,11 +79,75 @@ PRESENT = {401, 403, 405}
 # connection) is a warning; drift — a host that no longer resolves, HTTP 404/410, a changed
 # status document — still fails the release.
 OPTIONAL = {"mcp"}
+
+# Optional services the scripts call as APIs, each probed with the request the scripts make
+# (a plain GET of them says nothing: the MCP endpoints answer 406, the NOAA API base 404).
+# The same policy as OPTIONAL: an outage warns; drift fails.
+MCP_PROBES = {f"mcp-{name}": url for name, url in sorted(mcp.BACKENDS.items())}
+# A station every METAR network lists; the path, query and headers are those of
+# obs.noaa_station_info, the one function that asks NOAA Aviation Weather for station metadata.
+NOAA_STATION = "LPPT"
+NOAA_PROBE = f"{obs.NOAA_API}/stationinfo?ids={NOAA_STATION}&format=json"
+NOAA_HEADERS = {"User-Agent": obs.UA, "Accept": "application/json"}
+# URLs the skills name as API bases or endpoints rather than as pages to read:
+# `check_links.py` leaves them out because this script probes them.
+SERVICE_ENDPOINTS = (*mcp.BACKENDS.values(), obs.NOAA_API)
 TIMEOUT_S = 30
 
 
-def _fetch(url: str) -> tuple[int, str]:
-    req = urllib.request.Request(url, headers={"User-Agent": "ecmwf-weather-skills-endpoints/0.1"})
+def probed_urls() -> list[str]:
+    """Every URL this script requests, apart from the ones read from the status feeds."""
+    return [*PROBES.values(), *MCP_PROBES.values(), NOAA_PROBE]
+
+
+def _mcp_initialize_request() -> dict:
+    """The first message of an MCP session, as ecmwf_mcp.Client sends it."""
+    message = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {"protocolVersion": mcp.PROTOCOL, "capabilities": {}, "clientInfo": mcp.CLIENT},
+    }
+    return {
+        "data": json.dumps(message).encode(),
+        "headers": {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        },
+    }
+
+
+def _mcp_problem(body: str) -> str | None:
+    """Why `body` is not an MCP initialise result (JSON or event stream), or None."""
+    kind = "application/json" if body.lstrip().startswith(("{", "[")) else "text/event-stream"
+    try:
+        messages = mcp.parse_messages(kind, body.encode())
+    except ValueError:
+        return "answers HTTP 200, but not with an MCP initialize result"
+    for m in messages:
+        result = m.get("result") if isinstance(m, dict) else None
+        if isinstance(result, dict) and m.get("id") == 1 and result.get("protocolVersion"):
+            return None
+    return "answers HTTP 200, but not with an MCP initialize result"
+
+
+def _noaa_problem(body: str) -> str | None:
+    """Why `body` is not the station list obs.noaa_station_info reads, or None."""
+    try:
+        stations = json.loads(body)
+    except ValueError:
+        return "answers HTTP 200, but not with JSON any more"
+    if isinstance(stations, list) and any(
+        isinstance(s, dict) and str(s.get("icaoId", "")).upper() == NOAA_STATION for s in stations
+    ):
+        return None
+    return f"changed shape (expected a JSON list of stations with icaoId {NOAA_STATION})"
+
+
+def _fetch(url: str, data: bytes | None = None, headers: dict | None = None) -> tuple[int, str]:
+    """GET `url`, or POST `data` to it; returns the HTTP status and the body."""
+    all_headers = {"User-Agent": "ecmwf-weather-skills-endpoints/0.1", **(headers or {})}
+    req = urllib.request.Request(url, data=data, headers=all_headers)
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
             return r.status, r.read(2_000_000).decode(errors="replace")
@@ -96,11 +165,11 @@ RETRY_STATUS = {429}
 def retrying(fetch, retries: int = RETRIES, delay: float = 2.0):
     import time
 
-    def get(url):
+    def get(url, **request):
         for attempt in range(retries):
             last = attempt == retries - 1
             try:
-                code, body = fetch(url)
+                code, body = fetch(url, **request)
             except Exception:
                 if last:
                     raise
@@ -211,6 +280,28 @@ def check(fetch=None, warnings: list[str] | None = None) -> list[str]:
                 warnings.append(f"{name}: {url} answers HTTP {code} — optional, not blocking")
             else:
                 problems.append(f"{name}: {url} answers HTTP {code}")
+
+    requests = {
+        **{
+            name: (url, _mcp_initialize_request(), _mcp_problem) for name, url in MCP_PROBES.items()
+        },
+        "noaa": (NOAA_PROBE, {"headers": NOAA_HEADERS}, _noaa_problem),
+    }
+    for name, (url, request, answer_problem) in requests.items():
+        try:
+            code, body = fetch(url, **request)
+        except Exception as e:
+            if _unresolvable(e):
+                problems.append(f"{name}: {url} no longer resolves ({e})")
+            else:
+                warnings.append(f"{name}: {url} unreachable ({type(e).__name__}: {e}) — optional")
+            continue
+        if code >= 500:
+            warnings.append(f"{name}: {url} answers HTTP {code} — optional, not blocking")
+        elif code != 200:
+            problems.append(f"{name}: {url} answers HTTP {code}")
+        elif (why := answer_problem(body)) is not None:
+            problems.append(f"{name}: {url} {why}")
     return sorted(set(problems))
 
 
