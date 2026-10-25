@@ -339,15 +339,55 @@ def _query(selection: dict) -> str:
         del sel[max(sel, key=lambda k: len(sel[k]))]
 
 
+def _date_runs(values: list[str]) -> list[str] | None:
+    """Days (YYYYMMDD) as `first/to/last` runs of consecutive days, a single day as `D/to/D`;
+    None when a value is not a day (a relative date such as -1 is resolved elsewhere)."""
+    if not values or not all(len(v) == 8 and v.isdigit() for v in values):
+        return None
+    runs = []
+    for run in ranges(values):
+        first, _, last = run.partition("-")
+        runs.append(f"{first}/to/{last or first}")
+    return runs
+
+
 class Catalogue:
     """The read-only catalogue endpoints `request` and `options` use. Selections map each MARS
-    key to a list of values (strings)."""
+    key to a list of values (strings).
+
+    The catalogue matches the `date` axis either as plain values (`20261024`, `A/B`) or only as
+    `to` ranges (`20261024/to/20261024`), and it has switched between the two; dates are sent
+    as ranges, and as plain values when ranges match nothing and plain values do. The form that
+    worked is kept, so every later call makes one request."""
 
     def __init__(self, base: str | None = None, fetch=None):
         self.base = (base or catalogue_url()).rstrip("/")
         self._fetch = fetch or _catalogue_fetch
         self._config: dict | None = None
         self._labels: dict = {}
+        self._date_form: str | None = None  # "ranges" or "plain", once an answer showed which
+
+    def _dated(self, selection: dict, ask, empty, sent=lambda sel: True):
+        """`ask(selection)` with the dates in the form the catalogue matches. `empty(answer)`
+        tells a miss; `sent(selection)` is False when the dates never reach the catalogue (a
+        query cut short), so the answer says nothing about the form."""
+        runs = _date_runs(selection.get("date") or [])
+        if runs is None or self._date_form == "plain":
+            return ask(selection)
+        ranged = {**selection, "date": runs}
+        answer = ask(ranged)
+        if not sent(ranged):
+            return answer
+        if not empty(answer):
+            self._date_form = "ranges"
+            return answer
+        if self._date_form == "ranges" or not sent(selection):
+            return answer  # the catalogue reads ranges: the dates really match nothing
+        plain = ask(selection)
+        if empty(plain):
+            return answer
+        self._date_form = "plain"
+        return plain
 
     def config(self) -> dict:
         """Axis order per dataset, and labels for every MARS value (its "language")."""
@@ -377,27 +417,43 @@ class Catalogue:
     def axes(self, selection: dict) -> dict:
         """Every axis's values under a selection; {} when nothing matches. Keys that are not
         axes of the matched data are ignored by the catalogue."""
-        q = _query(selection)
-        d = self._fetch(f"{self.base}/api/v2/axes/" + (f"?{q}" if q else ""))
-        if not isinstance(d, dict):
-            raise CatalogueUnavailable("unexpected answer from /api/v2/axes/")
+
+        def ask(sel: dict):
+            q = _query(sel)
+            d = self._fetch(f"{self.base}/api/v2/axes/" + (f"?{q}" if q else ""))
+            if not isinstance(d, dict):
+                raise CatalogueUnavailable("unexpected answer from /api/v2/axes/")
+            return d
+
+        def sent(sel: dict) -> bool:
+            return "date" in urllib.parse.parse_qs(_query(sel))
+
+        d = self._dated(selection, ask, lambda answer: not answer, sent)
         return {str(k): _axis_values(str(k), v) for k, v in d.items()}
 
     def locations(self, selection: dict) -> list[dict]:
         """The minimal MARS requests for a selection, per data location:
         [{"name", "url", "requests"}]; [] when nothing matches."""
-        d = self._fetch(f"{self.base}/catalogue/locations", selection)
-        locs = d.get("locations") if isinstance(d, dict) else None
-        if not isinstance(locs, list):
-            raise CatalogueUnavailable("unexpected answer from /catalogue/locations")
-        return [x for x in locs if isinstance(x, dict) and x.get("requests")]
+
+        def ask(sel: dict) -> list[dict]:
+            d = self._fetch(f"{self.base}/catalogue/locations", sel)
+            locs = d.get("locations") if isinstance(d, dict) else None
+            if not isinstance(locs, list):
+                raise CatalogueUnavailable("unexpected answer from /catalogue/locations")
+            return [x for x in locs if isinstance(x, dict) and x.get("requests")]
+
+        return self._dated(selection, ask, lambda answer: not answer)
 
     def count(self, selection: dict) -> int:
         """How many MARS requests a (possibly partial) selection matches; 0: no data."""
-        d = self._fetch(f"{self.base}/catalogue/mars-requests", selection)
-        if not isinstance(d, dict):
-            raise CatalogueUnavailable("unexpected answer from /catalogue/mars-requests")
-        return len(d.get("requests") or [])
+
+        def ask(sel: dict) -> int:
+            d = self._fetch(f"{self.base}/catalogue/mars-requests", sel)
+            if not isinstance(d, dict):
+                raise CatalogueUnavailable("unexpected answer from /catalogue/mars-requests")
+            return len(d.get("requests") or [])
+
+        return self._dated(selection, ask, lambda answer: answer == 0)
 
 
 def address_from_url(url) -> str | None:
@@ -676,8 +732,8 @@ def _expand(key: str, value, names: bool = False) -> list[str]:
 
 
 def selection(req: dict) -> dict:
-    """The catalogue selection for a request: MARS keys only, each value listed (the catalogue
-    matches values one by one and does not read to/by ranges)."""
+    """The catalogue selection for a request: MARS keys only, each value listed (to/by ranges
+    are expanded here; `Catalogue` writes the dates as ranges again when it asks)."""
     return {k: _expand(k, v) for k, v in req.items() if k not in POSTPROCESSING}
 
 

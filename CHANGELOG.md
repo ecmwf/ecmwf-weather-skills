@@ -17,6 +17,11 @@ earthkit-plots figures.
 
 ### Fixed
 
+- `destine.py` could not validate dated requests (every Extremes DT and hourly Climate DT
+  `request` reported its date as unavailable) after the DestinE catalogue changed how it
+  matches dates: plain dates and lists match nothing, `to` ranges match. It now sends dates as
+  `first/to/last` runs of consecutive days, falls back to plain dates when only those match,
+  and keeps the form that worked for the rest of the run.
 - Agents wrote `ekp.Figure(size=…)` from memory, which earthkit-plots ≥ 1.0 deprecates. The
   ecmwf-earthkit skill's table row for drawing a map now shows `ekp.Figure(figsize=…)` and says
   `size=` is deprecated.
