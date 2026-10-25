@@ -41,8 +41,12 @@ Parameters published at step 24, by model and level type. Regenerated weekly.
 | `2d` | 2 metre dewpoint temperature | K |
 | `2t` | 2 metre temperature | K |
 | `asn` | Snow albedo | (0 - 1) |
+| `cp` | Convective precipitation | m |
 | `ewss` | Time-integrated eastward turbulent surface stress | N m**-2 s |
+| `hcc` | High cloud cover | (0 - 1) |
+| `lcc` | Low cloud cover | (0 - 1) |
 | `lsm` | Land-sea mask | (0 - 1) |
+| `mcc` | Medium cloud cover | (0 - 1) |
 | `mn2t3` | Minimum temperature at 2 metres in the last 3 hours | K |
 | `msl` | Mean sea level pressure | Pa |
 | `mucape` | Most-unstable CAPE | J kg**-1 |
@@ -63,6 +67,9 @@ Parameters published at step 24, by model and level type. Regenerated weekly.
 | `sve` | Eastward surface sea water velocity | m s**-1 |
 | `svn` | Northward surface sea water velocity | m s**-1 |
 | `tcc` | Total cloud cover | (0 - 1) |
+| `tciw` | Total column cloud ice water | kg m**-2 |
+| `tclw` | Total column cloud liquid water | kg m**-2 |
+| `tcrw` | Total column rain water | kg m**-2 |
 | `tcw` | Total column water | kg m**-2 |
 | `tcwv` | Total column vertically-integrated water vapour | kg m**-2 |
 | `tp` | Total precipitation | m |

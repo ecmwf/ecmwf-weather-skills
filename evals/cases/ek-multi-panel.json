@@ -1,0 +1,34 @@
+{
+  "id": "ek-multi-panel",
+  "prompt": "forecast.grib2 has ECMWF 2 m temperature and mean sea level pressure. Put both on one image, as two maps side by side over Europe, and save it as panels.png.",
+  "setup": {
+    "copy": {
+      "tests/fixtures/ifs-sfc-5deg-20261002-00z.grib2": "forecast.grib2"
+    }
+  },
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "note": "A figure with several maps needs ekp.Figure. earthkit-plots 1.x takes figsize; the size argument is deprecated, so a figure built with size= fails the case.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-earthkit"
+    },
+    {
+      "kind": "command",
+      "pattern": "\\bFigure\\("
+    },
+    {
+      "kind": "command_not",
+      "pattern": "\\bFigure\\((?:[^()]|\\([^()]*\\))*?\\bsize\\s*="
+    },
+    {
+      "kind": "command_not",
+      "pattern": "plt\\.subplots|plt\\.contourf|(?<![\\w])ax\\.contourf|(?<![\\w])ax\\.pcolormesh|add_feature\\(|pip3? install"
+    },
+    {
+      "kind": "file",
+      "pattern": "panels.png"
+    }
+  ]
+}

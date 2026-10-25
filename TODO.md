@@ -113,6 +113,34 @@ Accepted, open work only — remove items when done. Finished work is recorded i
 - [ ] earthkit-data parallel Range downloads in the `ecmwf-open-data` source; drop the custom
       fetcher once available
 
+## Upstream fixes
+
+Each open report in `docs/upstream/issues.toml` has a workaround in the earthkit skill. When a
+release carries the fix, remove the workaround and mark the report fixed there. The weekly live
+test (`tests/tooling/test_upstream_drafts.py`) fails when a filed report stops reproducing:
+that is the signal to do the item.
+
+- [ ] earthkit-data#1202 (pyproj after ecCodes aborts the process at exit; fix candidate
+      ecmwf/findlibs#30) — remove `load_pyproj_first()` in
+      `plugins/ecmwf-weather/skills/ecmwf-earthkit/scripts/ekplot.py`,
+      `ecmwf-open-data/scripts/odpoint.py` and `ecmwf-observations/scripts/obs.py`, the
+      `import pyproj  # first` lines in the earthkit `references/recipes.md`, the "Import order"
+      rule in the earthkit `SKILL.md` and the `pitfalls.md` entry
+- [ ] earthkit-plots#260 (`spaghetti` rejects xarray; fixed upstream, not released) — drop the
+      "pass a FieldList" advice in `pitfalls.md`
+- [ ] earthkit-plots#261 (`quickplot` docstring names `ekp.plot`) — drop the `pitfalls.md` entry
+- [ ] earthkit-plots#262 (`TimeSeries.quantiles` fails on xarray) — drop the `fill_between` /
+      `envelope` advice in `pitfalls.md`
+- [ ] earthkit-transforms#133 (`spatial.reduce` NaN on 0–360 grids) — drop the longitude shift
+      in `references/recipes.md` and `pitfalls.md`
+- [ ] earthkit-transforms#134 (`return_as="pandas"` crashes) — drop the `.to_dataframe()`
+      advice in `pitfalls.md`
+- [ ] earthkit-utils#88 (`convert_units` on a FieldList does nothing) — drop the xarray and
+      `units=` advice in `pitfalls.md`, `references/recipes.md` and the earthkit `SKILL.md`
+      "Known issues" example
+- [ ] earthkit-meteo#214 (xarray results keep the input's name) — drop the rename step in
+      `references/recipes.md` and `pitfalls.md`
+
 ## Later
 
 - [ ] Generated CDS/ADS dataset catalogue (weekly CI)

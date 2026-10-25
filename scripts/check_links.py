@@ -8,7 +8,10 @@
 
   python3 scripts/check_links.py          # exit 1 if any URL is dead
 
-URL templates (containing {…}) and truncated examples (…) are skipped. Third-party outages
+URL templates (containing {…}), truncated examples (… or ...) and URLs cut short by a
+placeholder (`https://host/<name>/…`) are skipped; examples in the skills name real
+repositories instead. Service endpoints (the MCP backends, the NOAA API base) are left to
+`check_endpoints.py`, which probes them with the request the scripts make. Third-party outages
 should not block pull requests, so this runs on a schedule, not on every change.
 """
 
@@ -21,6 +24,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import check_endpoints
+
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "plugins" / "ecmwf-weather" / "skills"
 URL = re.compile(r"https?://[^\s<>\"'`)\]|\\]+")
@@ -32,6 +37,11 @@ IGNORE = {
         "Azure mirror needs a SAS token (documented)"
     ),
 }
+# API endpoints the scripts call: a plain GET answers 406 (MCP) or 404 (API base), so each is
+# checked by check_endpoints.py with a real request instead.
+SERVICE_ENDPOINTS = {
+    url: "service endpoint, probed by check_endpoints" for url in check_endpoints.SERVICE_ENDPOINTS
+}
 IGNORE_HOSTS = ("http://127.0.0.1", "http://localhost")
 # Hosts that need credentials or only accept API calls; reachability (any HTTP answer) is enough.
 AUTH_OK = {401, 403, 405}
@@ -40,14 +50,18 @@ TIMEOUT_S = 30
 
 def extract_urls(text: str) -> list[str]:
     out = []
-    for u in URL.findall(text):
-        u = u.rstrip(".,;:")
+    for m in URL.finditer(text):
+        raw = m.group()
+        u = raw.rstrip(".,;:")
         if (
             "{" in u
             or "}" in u
-            or "…" in u
+            or "…" in raw
+            or "..." in raw  # judged before the strip: `…?body=...` is a truncated example
+            or text[m.end() : m.end() + 1] == "<"  # the pattern stops at a placeholder
             or "<" in u
             or u in IGNORE
+            or u in SERVICE_ENDPOINTS
             or u.startswith(IGNORE_HOSTS)
         ):
             continue

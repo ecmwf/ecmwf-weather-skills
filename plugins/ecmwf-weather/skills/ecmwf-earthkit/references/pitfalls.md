@@ -7,7 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 
 Checked against earthkit-data 1.3.0, earthkit-plots 1.0.4, earthkit-meteo 1.2.1,
 earthkit-geo 1.2.0, earthkit-transforms 1.0.0, earthkit-utils 1.0.3: the recipes run and the
-open upstream reports still reproduce on these releases.
+open upstream reports still reproduce on these releases. Each bug below links its report: say
+it is already reported and offer to add a comment with the user's case, not a new report.
 
 ## Contents
 - 0.x habits that break on 1.x
@@ -34,7 +35,11 @@ open upstream reports still reproduce on these releases.
 
 ## Plotting
 
-- `ekp.plot` does not exist; use `ekp.geo.plot` or `ekp.quickplot`.
+- Figure size is `figsize=`: `ekp.Figure(rows=1, columns=2, figsize=(12, 4.5))`; `size=` is
+  deprecated.
+- `ekp.plot` does not exist (the `quickplot` docstring says it does,
+  [earthkit-plots#261](https://github.com/ecmwf/earthkit-plots/issues/261)); use `ekp.geo.plot`
+  or `ekp.quickplot`.
 - `style="auto"` is the default for `ekp.geo.plot`/`quickplot`, **not** for `Map.contourf` —
   pass it, or you get a generic palette.
 - Derived fields keep the source metadata: never `style="auto"` or `units="celsius"` on a spread
@@ -42,23 +47,35 @@ open upstream reports still reproduce on these releases.
 - Pass a FieldList (`.to_fieldlist()`, `.sel()`); a raw `from_source` object plots only its
   first field.
 - Multi-member time series: one `line` per member; a 2-D member × time array picks the wrong
-  x-axis. `TimeSeries.quantiles` fails on xarray — use `fill_between` / `envelope`.
-- `spaghetti` accepts FieldLists only (not xarray).
+  x-axis. `TimeSeries.quantiles` fails on xarray
+  ([earthkit-plots#262](https://github.com/ecmwf/earthkit-plots/issues/262)) — compute the
+  quantiles with earthkit-transforms and use `fill_between` / `envelope`.
+- `spaghetti` accepts FieldLists only, not xarray
+  ([earthkit-plots#260](https://github.com/ecmwf/earthkit-plots/issues/260)): pass a FieldList.
+  Fixed upstream, but not in a release yet (1.0.4 is the latest checked) — keep the workaround
+  until a release carries the fix.
 
 ## Statistics and transforms
 
 - `earthkit-transforms` temporal functions need a datetime dimension (`time_dims=["valid_time"]`).
 - `accumulation_to_rate` defaults to `start_of_step`; IFS `tp` is `start_of_forecast`.
 - `ekt.reduce(..., how="percentile", q=...)` takes one `q` at a time.
-- `spatial.reduce` returns NaN for western-hemisphere polygons on 0–360 grids: shift longitudes
-  to −180…180 first. `return_as="pandas"` crashes.
+- `spatial.reduce` returns NaN for western-hemisphere polygons on 0–360 grids
+  ([earthkit-transforms#133](https://github.com/ecmwf/earthkit-transforms/issues/133)): shift
+  longitudes to −180…180 first.
+- `spatial.reduce(..., return_as="pandas")` crashes
+  ([earthkit-transforms#134](https://github.com/ecmwf/earthkit-transforms/issues/134)): reduce
+  to xarray, then `.to_dataframe()`.
 - `climatology_range` must be strings: `("1991", "2020")`.
-- `earthkit.utils.units.convert_units` on a FieldList does nothing; convert xarray, or use
-  `units=` when plotting.
+- `earthkit.utils.units.convert_units` on a FieldList does nothing
+  ([earthkit-utils#88](https://github.com/ecmwf/earthkit-utils/issues/88)); convert xarray, or
+  use `units=` when plotting.
 
 ## Meteorology
 
-- xarray results keep the input's name and attributes (relative humidity named `2t`); rename.
+- xarray results keep the input's name and attributes (relative humidity named `2t`,
+  [earthkit-meteo#214](https://github.com/ecmwf/earthkit-meteo/issues/214)); rename the result
+  and reset its attributes.
 - Plain Python floats are rejected; wrap in `np.array`. Dates are `datetime`, not
   `np.datetime64`.
 - Scores need `earthkit-meteo[scores]`.
@@ -99,6 +116,14 @@ open upstream reports still reproduce on these releases.
 
 - eccodes, eckit and MIR ship as wheels (Linux, macOS). **No Windows wheels**: pip quietly
   resolves earthkit-data 0.x — pin `>=1`; use WSL.
+- **`import pyproj` before `import earthkit.data` or `eccodes`** whenever the process also uses
+  earthkit-plots (cartopy) or earthkit-transforms (geopandas). With earthkit-data 1.3 and the
+  ecCodes 2.50 wheels, a process that imports pyproj *after* ecCodes finishes its work, prints
+  its output and then aborts at exit (status 134, sometimes 139: `free(): invalid pointer`),
+  because the ecCodes wheels and pyproj each bundle libproj, sqlite3 and curl
+  ([earthkit-data#1202](https://github.com/ecmwf/earthkit-data/issues/1202); a fix candidate is
+  [findlibs#30](https://github.com/ecmwf/findlibs/pull/30)). Pinning earthkit-data<1.3 also
+  avoids it. The bundled scripts already import pyproj first.
 - Licence banners print to stdout — `contextlib.redirect_stdout(sys.stderr)` when emitting JSON.
 - CDS/ADS/MARS sources prompt for missing credentials — check credentials first.
 - MIR caches interpolation weights — set `MIR_CACHE_PATH` to a writable directory.
