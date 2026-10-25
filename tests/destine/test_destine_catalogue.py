@@ -94,12 +94,30 @@ def _key(v):
 
 
 class FakeOmnicat:
-    """The four read-only endpoints destine.py calls, answering in the live formats."""
+    """The four read-only endpoints destine.py calls, answering in the live formats.
 
-    def __init__(self, cubes=CUBES, urls=None):
+    The live catalogue has matched the `date` axis in two ways: `dates="plain"` matches plain
+    values and lists (`20261010`, `A/B`) and nothing written with `to`; `dates="ranges"` matches
+    only `to` ranges (`A/to/B`, `D/to/D`) and nothing else. Other axes match plain values."""
+
+    def __init__(self, cubes=CUBES, urls=None, dates="ranges"):
+        assert dates in ("plain", "ranges")
         self.cubes = cubes
         self.urls = urls or {"lumi": LUMI_URL, "mn5": MN5_URL}
+        self.dates = dates
         self.calls = []
+
+    def dated_calls(self):
+        """(date form, body or query) of each call that filters on date; the form is
+        "ranges" when the date is written with `to`, else "plain"."""
+        out = []
+        for url, body in self.calls:
+            query = url.partition("?")[2]
+            sel = body if body is not None else urllib.parse.parse_qs(query)
+            if "date" in sel:
+                text = "/".join(sel["date"] if isinstance(sel["date"], list) else [sel["date"]])
+                out.append(("ranges" if "/to/" in text else "plain", text))
+        return out
 
     def __call__(self, url, body=None):
         self.calls.append((url, body))
@@ -123,9 +141,27 @@ class FakeOmnicat:
             for k, v in body.items()
         }
 
+    def _matched_dates(self, have, wanted):
+        tokens = "/".join(wanted).split("/")
+        if "to" not in tokens:
+            return [] if self.dates == "ranges" else [h for h in have if h in tokens]
+        if self.dates == "plain":
+            return []
+        out, i = [], 0
+        while i < len(tokens):
+            if i + 2 < len(tokens) and tokens[i + 1] == "to":
+                out += [h for h in have if tokens[i] <= h <= tokens[i + 2]]
+                i += 3
+            else:  # a lone day beside a range, as the live catalogue reads it
+                out += [h for h in have if h == tokens[i]]
+                i += 1
+        return sorted(set(out))
+
     def _matched(self, cube, k, wanted):
         have = cube[k]
         wanted = [str(w) for w in wanted]
+        if k == "date":
+            return self._matched_dates(have, wanted)
         if k in MIXED:  # one storage group only: the one holding the first matching value
             groups = [[h for h in have if h < "1000"], [h for h in have if h >= "1000"]]
             first = next((w for w in wanted if w in have), None)
@@ -255,7 +291,7 @@ def test_mixed_type_axes_are_decoded_to_one_sorted_list():
     )
     assert axes["time"] == HOURS
     assert axes["generation"] == ["2"] and axes["param"] == ["167"] and axes["date"] == ["20140101"]
-    assert urls == ["https://c.test/api/v2/axes/?date=20140101&param=167"]
+    assert urls == ["https://c.test/api/v2/axes/?date=20140101/to/20140101&param=167"]
 
 
 def test_recorded_axes_answer_lists_monthly_time_mean_params():
@@ -276,12 +312,13 @@ def test_axes_queries_stay_short():
         return {}
 
     cat = dt.Catalogue("https://c.test", fetch=fetch)
-    cat.axes({"stream": ["clte"], "date": _days("1990-01-01", "2014-12-31")})
+    every_other_day = _days("1990-01-01", "2014-12-31")[::2]  # runs of consecutive days stay short
+    cat.axes({"stream": ["clte"], "date": every_other_day})
     assert urls == ["https://c.test/api/v2/axes/?stream=clte"]
 
 
 def test_selection_expands_mars_ranges():
-    # The catalogue matches each listed value; it does not understand to/by.
+    # Ranges are expanded to listed values here; Catalogue writes dates as ranges when it asks.
     sel = dt.selection(
         {
             "date": "20140130/to/20140202",
@@ -473,6 +510,115 @@ def test_extremes_dt_takes_the_latest_catalogue_date(monkeypatch, capsys):
     assert r["step"] == "0" and d["address"] == dt.LUMI
     notes = "\n".join(d["notes"])
     assert "20261010" in notes and "2t -> 167" in notes
+
+
+# --- dates: the catalogue matches plain values or only `to` ranges; both validate ------------
+
+DATE_MODES = ["plain", "ranges"]
+EXTREMES_GAP = {
+    "class": "d1",
+    "dataset": "extremes-dt",
+    "expver": "0001",
+    "stream": "oper",
+    "type": "fc",
+    "levtype": "sfc",
+    "date": "20261007/20261009/20261010",  # the catalogue lists no run on 20261008
+    "time": "0000",
+    "step": "0",
+    "param": "167",
+}
+
+
+@pytest.mark.parametrize("mode", DATE_MODES)
+def test_relative_extremes_date_validates(monkeypatch, capsys, mode):
+    fake = FakeOmnicat(dates=mode)
+    code, d, err = run(monkeypatch, capsys, "request", "extremes-dt", "--param", "2t", fake=fake)
+    assert code == 0, err
+    assert d["validated"] is True and d["request"]["date"] == "20261010"
+    assert "20261010" in "\n".join(d["notes"])
+
+
+@pytest.mark.parametrize("mode", DATE_MODES)
+def test_hourly_request_over_one_day_validates(monkeypatch, capsys, mode):
+    args = ["request", "climate-dt", "--model", "ifs-nemo", "--start", "2014-01-01"]
+    code, d, err = run(
+        monkeypatch, capsys, *args, "--end", "2014-01-01", fake=FakeOmnicat(dates=mode)
+    )
+    assert code == 0, err
+    assert d["request"]["date"] == "20140101" and d["request"]["time"] == "/".join(HOURS)
+    assert len(d["requests"]) == 1
+
+
+@pytest.mark.parametrize("mode", DATE_MODES)
+def test_days_with_a_gap_validate_and_keep_their_form(mode):
+    fake = FakeOmnicat(dates=mode)
+    res = dt.validate(dict(EXTREMES_GAP), dt.Catalogue("https://c.test", fetch=fake))
+    assert res["errors"] == [], res["errors"]
+    assert res["request"]["date"] == "20261007/20261009/20261010"
+    if mode == "ranges":  # one run per stretch of consecutive days
+        assert {t for f, t in fake.dated_calls() if f == "ranges"} == {
+            "20261007/to/20261007/20261009/to/20261010"
+        }
+
+
+@pytest.mark.parametrize("mode", DATE_MODES)
+def test_a_day_the_catalogue_lacks_is_named_not_swallowed(monkeypatch, capsys, mode):
+    args = ["request", "extremes-dt", "--start", "2026-10-07", "--end", "2026-10-10"]
+    code, d, _ = run(monkeypatch, capsys, *args, fake=FakeOmnicat(dates=mode))
+    assert code == 2 and d["requests"] == []
+    [e] = d["errors"]
+    assert e["axis"] == "date" and e["values"] == ["20261008"]
+    assert e["ranges"] == ["20261007", "20261009-20261010"]
+
+
+@pytest.mark.parametrize("mode", DATE_MODES)
+def test_a_date_outside_the_catalogue_is_unavailable(monkeypatch, capsys, mode):
+    args = ["request", "extremes-dt", "--start", "2026-10-20", "--end", "2026-10-20"]
+    code, d, _ = run(monkeypatch, capsys, *args, fake=FakeOmnicat(dates=mode))
+    assert code == 2 and d["requests"] == []
+    [e] = d["errors"]
+    assert e["axis"] == "date" and e["values"] == ["20261020"]
+
+
+def test_ranges_are_the_first_form_and_the_only_one_when_they_match(monkeypatch, capsys):
+    fake = FakeOmnicat(dates="ranges")
+    run(monkeypatch, capsys, "request", "extremes-dt", "--param", "2t", fake=fake)
+    assert fake.dated_calls() and {f for f, _ in fake.dated_calls()} == {"ranges"}
+
+
+def test_plain_dates_cost_one_extra_request_and_are_remembered(monkeypatch, capsys):
+    fake = FakeOmnicat(dates="plain")
+    args = ["request", "climate-dt", "--model", "ifs-nemo", "--start", "2014-01-01"]
+    code, _, err = run(monkeypatch, capsys, *args, "--end", "2014-01-01", fake=fake)
+    assert code == 0, err
+    forms = [f for f, _ in fake.dated_calls()]
+    # the hours the first answer dropped are asked again: more than one dated call, one miss
+    assert len(forms) > 2 and forms[:2] == ["ranges", "plain"] and forms.count("ranges") == 1
+
+
+def test_a_miss_after_ranges_matched_is_not_asked_again_as_plain_dates():
+    fake = FakeOmnicat(dates="ranges")
+    cat = dt.Catalogue("https://c.test", fetch=fake)
+    base = {"class": ["d1"], "dataset": ["extremes-dt"], "stream": ["oper"]}
+    assert cat.count({**base, "date": ["20261010"]}) == 1
+    before = len(fake.calls)
+    assert cat.count({**base, "date": ["20261020"]}) == 0
+    assert len(fake.calls) == before + 1
+
+
+def test_a_date_that_matches_in_neither_form_costs_two_requests_once():
+    fake = FakeOmnicat(dates="ranges")
+    cat = dt.Catalogue("https://c.test", fetch=fake)
+    base = {"class": ["d1"], "dataset": ["extremes-dt"], "stream": ["oper"]}
+    assert cat.count({**base, "date": ["20261020"]}) == 0
+    assert [f for f, _ in fake.dated_calls()] == ["ranges", "plain"]
+
+
+def test_relative_dates_are_never_written_as_ranges():
+    fake = FakeOmnicat(dates="plain")
+    cat = dt.Catalogue("https://c.test", fetch=fake)
+    cat.count({"class": ["d1"], "dataset": ["extremes-dt"], "date": ["-1"]})
+    assert [f for f, _ in fake.dated_calls()] == ["plain"]
 
 
 def test_extremes_dt_point_series_keeps_its_feature(monkeypatch, capsys):

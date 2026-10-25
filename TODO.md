@@ -83,7 +83,13 @@ Accepted, open work only — remove items when done. Finished work is recorded i
     report the offending axis and its valid values.
   - Unavailable values in a list are dropped silently, and keys that are not axes of the
     selected branch (e.g. `date` under `clmn`) are ignored.
-  - MARS ranges (`a/to/b`) match only the two endpoints.
+  - MARS ranges (`a/to/b`) matched only the two endpoints; checked on 2026-10-25, a `date`
+    range now returns every listed day in between (other axes not re-checked).
+  - The `date` filter changed: plain dates and `,`/`/` lists (`date=20261024`,
+    `date=20261023/20261024`) now match nothing in `/api/v2/axes/` and in the `mars-requests`
+    and `locations` bodies, while `to` ranges (`20261024/to/20261024`) match. The openapi text
+    still documents values "joined with `,` or `/`". Is this intended? `destine.py` sends
+    ranges and falls back to plain dates.
   - Hours are stored with mixed types (`0000`–`0900` as text, `1000`–`2300` as numbers), so
     one selection matches only one group.
   - The AI-catalogue endpoints hide the storyline experiments and realizations 2–5.
