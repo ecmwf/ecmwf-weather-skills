@@ -34,7 +34,7 @@ data.
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2"]
+# dependencies = ["earthkit-data>=1.2", "findlibs>=0.1.4"]
 # ///
 import earthkit.data as ekd
 
@@ -56,7 +56,7 @@ Concatenate FieldLists with `ekd.concat(a, b)` (`a + b` is arithmetic). Slice wi
 
 ```python
 # /// script
-# dependencies = ["earthkit-data[ecmwf-opendata]>=1.2"]
+# dependencies = ["earthkit-data[ecmwf-opendata]>=1.2", "findlibs>=0.1.4"]
 # ///
 # needs network
 import earthkit.data as ekd
@@ -80,9 +80,9 @@ Ready-made: `uv run scripts/ekplot.py ens-stats ens.grib2 --param 2t --units cel
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-transforms[all]>=1.0", "earthkit-plots>=1.0"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-transforms[all]>=1.0", "earthkit-plots>=1.0",
+#                 "findlibs>=0.1.4"]
 # ///
-import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 import earthkit.transforms as ekt
@@ -112,9 +112,8 @@ temperature offset and palette would be applied to a difference.
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0", "findlibs>=0.1.4"]
 # ///
-import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 
@@ -145,9 +144,8 @@ Domains: named regions (`Europe`, `North Atlantic`, `Mediterranean`), any countr
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0", "findlibs>=0.1.4"]
 # ///
-import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 
@@ -165,7 +163,6 @@ plumes from xarray (`member` × `valid_time`):
 # /// script
 # dependencies = ["earthkit-plots>=1.0", "numpy", "xarray"]
 # ///
-import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.plots as ekp
 import numpy as np
 import xarray as xr
@@ -190,7 +187,7 @@ Stacked panels: `ekp.Figure(rows=2, columns=1)` with `fig.add_timeseries(0, 0).l
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-transforms[all]>=1.0"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-transforms[all]>=1.0", "findlibs>=0.1.4"]
 # ///
 import earthkit.data as ekd
 from earthkit.transforms import temporal
@@ -236,10 +233,10 @@ ERA5 point series from the `ecmwf-cds-ads` skill (`cds.py era5-point`) go straig
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-geo>=1.1", "earthkit-transforms[all]>=1.0"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-geo>=1.1", "earthkit-transforms[all]>=1.0",
+#                 "findlibs>=0.1.4"]
 # ///
 # needs network (country shapes from GISCO)
-import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 from earthkit.geo import gisco
 from earthkit.transforms import spatial
@@ -262,7 +259,7 @@ NUTS regions: `gisco.nuts_regions(level=1, resolution="60M")`.
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "numpy"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "numpy", "findlibs>=0.1.4"]
 # ///
 from datetime import datetime
 
@@ -310,7 +307,7 @@ print(score.crps_from_ensemble(ens, obs, over="member").values)
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-geo>=1.1"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-geo>=1.1", "findlibs>=0.1.4"]
 # ///
 import earthkit.data as ekd
 from earthkit.geo import regrid
@@ -347,7 +344,7 @@ Not on FieldLists (silently does nothing) — convert at plot time with `units=`
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2"]
+# dependencies = ["earthkit-data>=1.2", "findlibs>=0.1.4"]
 # ///
 import earthkit.data as ekd
 
@@ -367,7 +364,8 @@ every field:
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2", "thermofeel>=2.3"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2", "thermofeel>=2.3",
+#                 "findlibs>=0.1.4"]
 # ///
 import earthkit.data as ekd
 import thermofeel as tf
@@ -394,7 +392,7 @@ averages since the run start, night included); there is no interval at step 0.
 ```python
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "earthkit-transforms[all]>=1.0",
-#                 "thermofeel>=2.3"]
+#                 "thermofeel>=2.3", "findlibs>=0.1.4"]
 # ///
 from datetime import timedelta
 
@@ -431,7 +429,7 @@ values found in list for key 'grid'"):
 
 ```python
 # /// script
-# dependencies = ["earthkit-data[mars,polytope]>=1.2"]
+# dependencies = ["earthkit-data[mars,polytope]>=1.2", "findlibs>=0.1.4"]
 # ///
 # needs credentials
 import earthkit.data as ekd
@@ -451,7 +449,7 @@ surface pressure). **Demonstration grade** — say so on every figure and answer
 ```python
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "earthkit-transforms[all]>=1.0",
-#                 "earthkit-utils>=1.0", "thermofeel>=2.3"]
+#                 "earthkit-utils>=1.0", "thermofeel>=2.3", "findlibs>=0.1.4"]
 # ///
 import earthkit.data as ekd
 import thermofeel as tf
@@ -491,9 +489,9 @@ interval means stand in for its instantaneous inputs — use hourly steps where 
 ```python
 # /// script
 # dependencies = ["earthkit-data>=1.2", "earthkit-meteo>=1.2.1", "earthkit-transforms[all]>=1.0",
-#                 "earthkit-utils>=1.0", "earthkit-geo>=1.1", "thermofeel>=2.3", "numpy"]
+#                 "earthkit-utils>=1.0", "earthkit-geo>=1.1", "thermofeel>=2.3", "numpy",
+#                 "findlibs>=0.1.4"]
 # ///
-import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import numpy as np
 import thermofeel as tf
@@ -535,7 +533,7 @@ grids (CARRA, CERRA Lambert) alike:
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "thermofeel>=2.3", "xarray"]
+# dependencies = ["earthkit-data>=1.2", "thermofeel>=2.3", "xarray", "findlibs>=0.1.4"]
 # ///
 import earthkit.data as ekd
 import thermofeel as tf
@@ -570,9 +568,9 @@ would read from GRIB, so `units="celsius"` converts and the legend is right:
 
 ```python
 # /// script
-# dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0", "thermofeel>=2.3"]
+# dependencies = ["earthkit-data>=1.2", "earthkit-plots>=1.0", "thermofeel>=2.3",
+#                 "findlibs>=0.1.4"]
 # ///
-import pyproj  # first: after ecCodes (earthkit-data 1.3) it aborts the process at exit
 import earthkit.data as ekd
 import earthkit.plots as ekp
 import thermofeel as tf

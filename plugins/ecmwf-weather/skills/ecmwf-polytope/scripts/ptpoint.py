@@ -13,6 +13,7 @@
 #   "earthkit-transforms[all]>=1.0",
 #   "scipy>=1.16",
 #   "thermofeel>=2.3",
+#   "findlibs>=0.1.4",
 # ]
 # ///
 """Point forecast via ECMWF Polytope — server-side extraction, a few KB instead of global fields.

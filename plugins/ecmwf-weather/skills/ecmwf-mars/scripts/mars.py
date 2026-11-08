@@ -6,7 +6,7 @@
 
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["earthkit-data[mars]>=1.2"]
+# dependencies = ["earthkit-data[mars]>=1.2", "findlibs>=0.1.4"]
 # ///
 """MARS archive helper — lint, estimate, plan, cost and retrieve MARS requests.
 

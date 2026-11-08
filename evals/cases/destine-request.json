@@ -3,7 +3,7 @@
   "prompt": "Prepare (don't run) the DestinE Polytope request for Climate DT 2 m temperature from the IFS-NEMO historical simulation for January 2014, and tell me which Polytope server to send it to.",
   "timeout": 600,
   "max_budget_usd": 2,
-  "note": "The attribution required by the DestinE upgraded-access terms (section 3.4) credits data of the European Union.",
+  "note": "The attribution required by the DestinE upgraded-access terms (section 3.4) credits data of the European Union. The default catalogue is production, which lists IFS-NEMO (generation 2, held on MN5): `request` validates it and routes to polytope.mn5; the fallback table in SKILL.md gives the same server when the catalogue is unreachable.",
   "expect": [
     {
       "kind": "skill",

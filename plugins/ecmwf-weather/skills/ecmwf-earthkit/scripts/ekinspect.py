@@ -6,7 +6,7 @@
 
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["earthkit-data>=1.2"]
+# dependencies = ["earthkit-data>=1.2", "findlibs>=0.1.4"]
 # ///
 """Summarise a GRIB or NetCDF file with earthkit-data (only component needed, ~64 MB).
 
@@ -119,7 +119,7 @@ def main(argv=None) -> int:
                     "1. Install uv: https://docs.astral.sh/uv/getting-started/installation/ "
                     "(curl -LsSf https://astral.sh/uv/install.sh | sh), then re-run with "
                     "`uv run ekinspect.py …` — it installs exactly what is needed.",
-                    "2. Without uv: pip install 'earthkit-data>=1.2'",
+                    "2. Without uv: pip install 'earthkit-data>=1.2' 'findlibs>=0.1.4'",
                     "3. On Windows use WSL (earthkit has no Windows wheels).",
                 ],
                 "agent": "Run the script with `uv run`; if uv cannot be installed, give these "

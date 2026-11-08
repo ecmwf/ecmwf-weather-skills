@@ -144,6 +144,18 @@ def test_destine_catalogue_probe_is_the_one_the_skill_uses():
 
     destine = load_script("ecmwf-destine", "destine")
     assert ce.PROBES["destine-catalogue"] == f"{destine.CATALOGUE_URL}/health"
+    assert ce.PROBES["destine-catalogue"] == (
+        "https://catalogue.lumi.apps.dte.destination-earth.eu/health"
+    )
+
+
+def test_mcp_catalogue_backend_is_probed_on_its_own_host():
+    # The bundled MCP keeps its backend (a different deployment from destine.py's catalogue):
+    # the MCP's own probe checks it, and the destine-catalogue probe does not.
+    assert ce.MCP_PROBES["mcp-catalogue"] == ce.mcp.BACKENDS["catalogue"]
+    assert ce.MCP_PROBES["mcp-catalogue"].endswith("/mcp")
+    assert ce.MCP_PROBES["mcp-catalogue"] not in ce.PROBES.values()
+    assert ce.PROBES["destine-catalogue"].split("/health")[0] not in ce.mcp.BACKENDS["catalogue"]
 
 
 # --- optional services probed with their own request: the MCP backends, NOAA and JIRA -----------

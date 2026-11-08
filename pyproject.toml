@@ -21,6 +21,8 @@ earthkit = [
     "earthkit-plots>=1.0",
     "scipy>=1.16",
     "thermofeel>=2.3",
+    # findlibs 0.1.4 loads the ecCodes libraries without RTLD_GLOBAL, so pyproj can share the process
+    "findlibs>=0.1.4",
     # ecmwf-observations obs.py: MARS observations (ODB feedback, BUFR) and thermal indices
     "ecmwf-api-client>=1.6",
     "pyodc>=1.6",

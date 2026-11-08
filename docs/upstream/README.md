@@ -20,7 +20,7 @@ Not filed. Each needs the maintainer's approval; then: `python3 scripts/upstream
 | [filed](https://github.com/ecmwf/earthkit-transforms/issues/134) | `ecmwf/earthkit-transforms` | spatial.reduce(..., return_as='pandas') crashes (return_as passed on to nanmean) | [`transforms-spatial-reduce-return-as-pandas.py`](transforms-spatial-reduce-return-as-pandas.py) |
 | [filed](https://github.com/ecmwf/earthkit-utils/issues/88) | `ecmwf/earthkit-utils` | units.convert_units on a FieldList silently returns the data unconverted | [`utils-convert-units-fieldlist-noop.py`](utils-convert-units-fieldlist-noop.py) |
 | [fixed](https://github.com/ecmwf/earthkit-data/issues/1185) | `ecmwf/earthkit-data` | mars source: date="-1" (MARS relative date as a string) raises ValueError: Invalid datetime '-1' | [`data-mars-relative-date-string.py`](data-mars-relative-date-string.py) |
-| [filed](https://github.com/ecmwf/earthkit-data/issues/1202) | `ecmwf/earthkit-data` | Python aborts at exit (free(): invalid pointer) when pyproj is imported after ecCodes with earthkit-data 1.3.0: eckitlib bundles its own libproj, sqlite3 and curl | [`data-eckit-proj-abort-at-exit.py`](data-eckit-proj-abort-at-exit.py) |
+| [fixed](https://github.com/ecmwf/earthkit-data/issues/1202) | `ecmwf/earthkit-data` | Python aborts at exit (free(): invalid pointer) when pyproj is imported after ecCodes with earthkit-data 1.3.0: eckitlib bundles its own libproj, sqlite3 and curl | [`data-eckit-proj-abort-at-exit.py`](data-eckit-proj-abort-at-exit.py) |
 
 ## Pull requests
 
@@ -417,7 +417,7 @@ Found while writing verified earthkit recipes for the ECMWF agent skills (https:
 
 ## Python aborts at exit (free(): invalid pointer) when pyproj is imported after ecCodes with earthkit-data 1.3.0: eckitlib bundles its own libproj, sqlite3 and curl
 
-Repository: `ecmwf/earthkit-data` · bug · [filed](https://github.com/ecmwf/earthkit-data/issues/1202)
+Repository: `ecmwf/earthkit-data` · bug · [fixed](https://github.com/ecmwf/earthkit-data/issues/1202)
 
 **What happens:** The script finishes its work and prints its output, then the process aborts at interpreter exit with status 134 (free(): invalid pointer, munmap_chunk(): invalid pointer or double free or corruption; now and then a segmentation fault instead). The loaded libraries include two copies of libproj, sqlite3 and curl: those in eckitlib.libs and those in pyproj.libs. It happens whenever pyproj (for example through cartopy in earthkit-plots, or geopandas in earthkit-transforms) is imported after ecCodes has been loaded; importing pyproj first avoids it. The eckit wheels from 2.3.0.30 to 2.5.0.33 abort next to pyproj, and the same happens with only eccodes 2.50.0 and eccodeslib 2.50.0.33 installed, without earthkit-data. Seen with earthkit-data 1.3.0, eckitlib 2.5.0.33, pyproj 3.8.0, Python 3.14.5, x86_64 Linux (glibc 2.41).
 

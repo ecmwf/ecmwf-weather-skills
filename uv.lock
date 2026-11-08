@@ -844,6 +844,7 @@ earthkit = [
     { name = "earthkit-transforms", extra = ["all"] },
     { name = "earthkit-utils" },
     { name = "ecmwf-api-client" },
+    { name = "findlibs" },
     { name = "pdbufr" },
     { name = "pyodc" },
     { name = "scipy" },
@@ -863,6 +864,7 @@ earthkit = [
     { name = "earthkit-transforms", extras = ["all"], specifier = ">=1.0" },
     { name = "earthkit-utils", specifier = ">=1.0" },
     { name = "ecmwf-api-client", specifier = ">=1.6" },
+    { name = "findlibs", specifier = ">=0.1.4" },
     { name = "pdbufr", specifier = ">=0.15" },
     { name = "pyodc", specifier = ">=1.6" },
     { name = "scipy", specifier = ">=1.16" },
@@ -889,11 +891,11 @@ wheels = [
 
 [[package]]
 name = "findlibs"
-version = "0.1.3"
+version = "0.1.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/91/21/235e81c0e29a5aa84e5374d469723d508de63692049e80654b1b56d1c57e/findlibs-0.1.3.tar.gz", hash = "sha256:49bbe509c8b439ecd9c0d021c301aa9db643a2e6ab4e189a40b505ee4a49db62", size = 11335, upload-time = "2026-07-14T10:52:47.795Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/60/3199cd48cd54a7cefd0a501654021ac8e8a82f2e6daebe990e8a1d9a8896/findlibs-0.1.5.tar.gz", hash = "sha256:68bc98d26cbd73ea2a20ee11920f60d8ad29c504e2ce82191aafd8ef734cb865", size = 11559, upload-time = "2026-11-04T16:30:22.886Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/13/63305a756cb6e9408828961d4ff8542f3625d7cfb62289b19016216a9fa2/findlibs-0.1.3-py3-none-any.whl", hash = "sha256:9c14f8506cdcd37e38369259f8cd9aa3c002d58cd7c2beff4852bd205495c555", size = 10714, upload-time = "2026-07-14T10:52:46.902Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/de/2c0e2b1dfbcbf745f58652c4b67da9a7b57fe5d1b7ac684703c8a3848d4a/findlibs-0.1.5-py3-none-any.whl", hash = "sha256:48088b276ea3699422fb3921934db05f9eddfb3cd3fb689c39f5127a97350661", size = 10859, upload-time = "2026-11-04T16:30:21.303Z" },
 ]
 
 [[package]]

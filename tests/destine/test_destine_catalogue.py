@@ -243,6 +243,12 @@ MONTHLY_JULY_2040 = (
 # --- the client and the recorded answers -----------------------------------------------------
 
 
+def test_default_catalogue_is_the_production_deployment():
+    assert dt.CATALOGUE_URL == "https://catalogue.lumi.apps.dte.destination-earth.eu"
+    assert dt.catalogue_url({}) == "https://catalogue.lumi.apps.dte.destination-earth.eu"
+    assert dt.Catalogue().base == dt.CATALOGUE_URL
+
+
 def test_catalogue_address_can_be_overridden():
     assert dt.catalogue_url({}) == dt.CATALOGUE_URL
     assert dt.CATALOGUE_URL.startswith("https://")
@@ -758,6 +764,55 @@ def test_options_without_the_catalogue_is_blocked(monkeypatch, capsys, quiet_sta
     assert "BLOCKED: cannot reach the ECMWF destine-catalogue service" in err
 
 
+def no_config(url, body=None):
+    """A host that is up but is not the catalogue API: it has no /ai-catalogue/config."""
+    raise dt.CatalogueUnavailable(f"HTTP 404 from {url.split('?')[0]}", status=404)
+
+
+def test_http_error_keeps_its_status(monkeypatch):
+    import io
+    import urllib.error
+
+    def urlopen(req, timeout=None):
+        raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, io.BytesIO(b""))
+
+    monkeypatch.setattr(dt.urllib.request, "urlopen", urlopen)
+    with pytest.raises(dt.CatalogueUnavailable) as e:
+        dt._catalogue_fetch("https://c.test/ai-catalogue/config")
+    assert e.value.status == 404
+
+
+def test_options_on_a_host_without_the_catalogue_api_is_a_wrong_address(
+    monkeypatch, capsys, quiet_status
+):
+    monkeypatch.setattr(dt, "_catalogue_fetch", no_config)
+    monkeypatch.setenv("DESTINE_CATALOGUE_URL", "https://other.test")
+    code = dt.main(["options", "climate-dt", "--axis", "param", "--json"])
+    cap = capsys.readouterr()
+    assert code == 4
+    assert "BLOCKED: the host https://other.test does not offer the catalogue API" in cap.err
+    assert "/ai-catalogue/config" in cap.err and "DESTINE_CATALOGUE_URL" in cap.err
+    assert "cannot reach" not in cap.err and "ECMWF status" not in cap.err
+    assert json.loads(cap.out)["blocked"]["blocked"].startswith("the host https://other.test")
+
+
+def test_options_still_reports_an_outage_for_other_failures(monkeypatch, capsys, quiet_status):
+    def fetch(url, body=None):
+        raise dt.CatalogueUnavailable("HTTP 503 from x", status=503)
+
+    monkeypatch.setattr(dt, "_catalogue_fetch", fetch)
+    assert dt.main(["options", "climate-dt", "--axis", "param"]) == 2
+    assert "BLOCKED: cannot reach the ECMWF destine-catalogue service" in capsys.readouterr().err
+
+
+def test_request_on_a_host_without_the_catalogue_api_says_so(monkeypatch, capsys, quiet_status):
+    code, d, _ = run(monkeypatch, capsys, *MONTHLY_JULY_2040, fake=no_config)
+    assert code == 0 and d["validated"] is False
+    text = "\n".join(d["warnings"])
+    assert "NOT validated" in text and "does not offer the catalogue API" in text
+    assert "could not be reached" not in text
+
+
 # --- live: the real catalogue (metadata only) ------------------------------------------------
 
 
@@ -793,6 +848,7 @@ def test_live_hourly_request_keeps_every_hour(capsys):
     d = json.loads(capsys.readouterr().out)
     assert code == 0, d["errors"]
     assert d["request"]["time"] == "/".join(HOURS) and len(d["requests"]) == 1
+    assert d["validated"] is True and d["address"] == dt.MN5  # IFS-NEMO is held on MN5
 
 
 @pytest.mark.live

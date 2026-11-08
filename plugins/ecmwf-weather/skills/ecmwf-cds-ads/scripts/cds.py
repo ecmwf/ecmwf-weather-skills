@@ -6,7 +6,7 @@
 
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["earthkit-data[cds]>=1.2"]
+# dependencies = ["earthkit-data[cds]>=1.2", "findlibs>=0.1.4"]
 # ///
 """Copernicus Climate (CDS) and Atmosphere (ADS) Data Stores — discover, validate, retrieve.
 

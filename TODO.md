@@ -100,6 +100,10 @@ machine on the user's computer, with network access limited by the organisation'
   - `find_service` routes "how much rain will fall in Bologna over the next three days" to the
     charts service (images, not amounts), and for "how hot was August 2003 in Paris" says the
     institute's services don't cover it — ECMWF does, through ERA5 on the Climate Data Store.
+  - The router's `catalogue` backend is the DestinE catalogue test deployment, while
+    `destine.py` uses production: the test one lacks IFS-NEMO and the generation 2
+    storylines, and its Extremes DT stops months behind. Chat answers and the script differ
+    until the router is repointed.
   - With a working router that has no forecast tool, Claude Haiku answered ordinary forecast
     questions from national weather websites (it used the skills when the router was down):
     the instructions' "name the authority for an official forecast" reads as "send forecast
@@ -121,7 +125,14 @@ machine on the user's computer, with network access limited by the organisation'
   - Hours are stored with mixed types (`0000`–`0900` as text, `1000`–`2300` as numbers), so
     one selection matches only one group.
   - The AI-catalogue endpoints hide the storyline experiments and realizations 2–5.
-  - The service runs on a test deployment (`catalogue-test`); publish the production URL.
+  - `destine.py` uses the production catalogue (`catalogue.lumi…`), which lists IFS-NEMO,
+    the generation 2 storylines and the current Extremes DT; the MCP's `catalogue_*` tools
+    still sit on the test deployment (`catalogue-test.lumi…`). Ask the MCP developers to
+    repoint the router (then update `BACKENDS` in `ecmwf_mcp.py` and the MCP row of the
+    README hosts table). Document which hosts are meant for tools. The MN5 catalogue
+    (`catalogue.mn5…`) has no `/ai-catalogue/config`, `/catalogue/locations` or
+    `/catalogue/mars-requests`; the production AI configuration does not list
+    `on-demand-extremes-dt`, which `/api/v2` and STAC list.
 
 ## Data sources
 
@@ -154,12 +165,6 @@ release carries the fix, remove the workaround and mark the report fixed there. 
 test (`tests/tooling/test_upstream_drafts.py`) fails when a filed report stops reproducing:
 that is the signal to do the item.
 
-- [ ] earthkit-data#1202 (pyproj after ecCodes aborts the process at exit; fix candidate
-      ecmwf/findlibs#30) — remove `load_pyproj_first()` in
-      `plugins/ecmwf-weather/skills/ecmwf-earthkit/scripts/ekplot.py`,
-      `ecmwf-open-data/scripts/odpoint.py` and `ecmwf-observations/scripts/obs.py`, the
-      `import pyproj  # first` lines in the earthkit `references/recipes.md`, the "Import order"
-      rule in the earthkit `SKILL.md` and the `pitfalls.md` entry
 - [ ] earthkit-plots#260 (`spaghetti` rejects xarray; fixed upstream, not released) — drop the
       "pass a FieldList" advice in `pitfalls.md`
 - [ ] earthkit-plots#261 (`quickplot` docstring names `ekp.plot`) — drop the `pitfalls.md` entry

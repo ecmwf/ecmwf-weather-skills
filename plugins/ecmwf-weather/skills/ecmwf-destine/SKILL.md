@@ -19,12 +19,12 @@ SPDX-License-Identifier: Apache-2.0
 - Access check (line 36)
 - No access yet (line 50)
 - Request workflow (line 66)
-- Which server holds the data (line 102)
-- ECMWF MCP (line 114)
-- Processing and plots (line 137)
-- Licence and attribution (line 145)
-- Feedback (line 160)
-- When blocked (line 167)
+- Which server holds the data (line 104)
+- ECMWF MCP (line 116)
+- Processing and plots (line 140)
+- Licence and attribution (line 148)
+- Feedback (line 163)
+- When blocked (line 170)
 - References — `references/requests.md` (the catalogue, keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -91,7 +91,9 @@ finds no token, and give its output.
   clmn, time-mean parameters, `--year`/`--month` or derived from `--start`/`--end`).
   `--resolution standard` (longer availability); `high` only on request (limited availability).
   Experiments: `hist`, `cont`; `ssp3-7.0` projections; `tplus2.0k` storylines — the activity
-  follows the experiment.
+  follows the experiment. Coverage is roughly 1990–2014 (`hist`) and 2015–2049 (`ssp3-7.0`;
+  the catalogue lists the ICON run to 2039-08-31): `options --axis date|year` gives the dates
+  per model.
 - If asked not to download, stop after step 4. **Run `request` yourself and paste its JSON**
   in the answer with the server address, its notes and one line on the licence terms (below)
   — not just the command.
@@ -115,9 +117,10 @@ catalogue it falls back to this table:
 
 The plugin bundles ECMWF's MCP server (https://mcp.ecmwf.int). The `ecmwf` MCP server's
 `catalogue_*` tools (`ecmwf:catalogue_*`) browse
-the Destination Earth catalogue that `destine.py` checks requests against: datasets, their
-axes and valid values for a selection, and the MARS requests plus the server that holds the
-data — no account needed. Call them when your client lists them; otherwise run them with this
+a Destination Earth catalogue: datasets, their axes and valid values for a selection, and the
+MARS requests plus the server that holds the data — no account needed. Their catalogue can be a
+different deployment from the production one `destine.py` checks requests against and list less
+(for example no IFS-NEMO): for a request to send, trust `destine.py request`. Call them when your client lists them; otherwise run them with this
 standard-library script. If the MCP is unreachable, use `destine.py request`.
 
 ```bash
@@ -184,3 +187,4 @@ reports an outage or maintenance, or that the problem is likely local (network, 
 | 401 / malformed token file | re-run `desp-authentication.py -u <user> -o ~/.polytopeapirc-destine` |
 | 403 | upgraded access not (yet) granted: `access-policy-upgrade` steps |
 | DestinE catalogue unreachable | `request`: "NOT validated" warning, offline checks only; `options`: BLOCKED report with ECMWF status |
+| `DESTINE_CATALOGUE_URL` points at a host without the catalogue API (HTTP 404) | `request`: "NOT validated" warning naming the wrong address; `options`: BLOCKED report (exit 4) with the steps to fix the address |

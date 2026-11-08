@@ -116,14 +116,15 @@ it is already reported and offer to add a comment with the user's case, not a ne
 
 - eccodes, eckit and MIR ship as wheels (Linux, macOS). **No Windows wheels**: pip quietly
   resolves earthkit-data 0.x — pin `>=1`; use WSL.
-- **`import pyproj` before `import earthkit.data` or `eccodes`** whenever the process also uses
-  earthkit-plots (cartopy) or earthkit-transforms (geopandas). With earthkit-data 1.3 and the
-  ecCodes 2.50 wheels, a process that imports pyproj *after* ecCodes finishes its work, prints
-  its output and then aborts at exit (status 134, sometimes 139: `free(): invalid pointer`),
-  because the ecCodes wheels and pyproj each bundle libproj, sqlite3 and curl
-  ([earthkit-data#1202](https://github.com/ecmwf/earthkit-data/issues/1202); a fix candidate is
-  [findlibs#30](https://github.com/ecmwf/findlibs/pull/30)). Pinning earthkit-data<1.3 also
-  avoids it. The bundled scripts already import pyproj first.
+- **Declare `findlibs>=0.1.4`** next to earthkit-data (or pdbufr). Older findlibs loads the
+  ecCodes libraries with `RTLD_GLOBAL`; with earthkit-data 1.3 a process that then imports
+  pyproj (earthkit-plots through cartopy, earthkit-transforms through geopandas) finishes its
+  work, prints its output and aborts at exit (status 134, sometimes 139:
+  `free(): invalid pointer`), because the ecCodes wheels and pyproj each bundle libproj, sqlite3
+  and curl ([earthkit-data#1202](https://github.com/ecmwf/earthkit-data/issues/1202)). findlibs
+  0.1.4 fixes it ([findlibs#30](https://github.com/ecmwf/findlibs/pull/30)), so import order no
+  longer matters. A cached environment that predates it needs the upgrade: the floor in the
+  PEP 723 bundles makes `uv run` do it.
 - Licence banners print to stdout — `contextlib.redirect_stdout(sys.stderr)` when emitting JSON.
 - CDS/ADS/MARS sources prompt for missing credentials — check credentials first.
 - MIR caches interpolation weights — set `MIR_CACHE_PATH` to a writable directory.

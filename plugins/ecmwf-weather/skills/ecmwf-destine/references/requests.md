@@ -44,12 +44,19 @@ token. `destine.py check` queries all bridges.
 
 ## Catalogue
 
-`https://catalogue-test.lumi.apps.dte.destination-earth.eu` (override: `DESTINE_CATALOGUE_URL`)
-— public metadata about what the data bridges hold, rebuilt from them every few minutes.
-`destine.py` reads `/catalogue/locations` (a selection → minimal MARS requests per location
-and its Polytope URL), `/catalogue/mars-requests`, `/api/v2/axes/` (each axis's values under a
-selection) and `/ai-catalogue/config` (labels). How it reads selections, all handled by
-`destine.py`:
+`https://catalogue.lumi.apps.dte.destination-earth.eu` (override: `DESTINE_CATALOGUE_URL`)
+— ECMWF's production catalogue: public metadata about what the data bridges (LUMI, MN5 and
+Leonardo) hold, rebuilt from them every few minutes. `destine.py` reads `/catalogue/locations`
+(a selection → minimal MARS requests per location and its Polytope URL),
+`/catalogue/mars-requests`, `/api/v2/axes/` (each axis's values under a selection) and
+`/ai-catalogue/config` (labels). Another host works only if it serves the same endpoints:
+the test deployment (`catalogue-test.lumi…`) is a smaller, older subset that can lack data
+the Climate DT user guide describes (IFS-NEMO and generation 2 `story-nudging`, held on MN5),
+and the MN5 catalogue (`catalogue.mn5…`) has no `/ai-catalogue/config` — `options` then
+reports a wrong address, not an outage. If `request` says a model or date is not available,
+tell the user what the catalogue lists and do not treat it as proof the data does not exist;
+a catalogue that is not the default can be the reason. How `destine.py` reads selections, all
+handled by the script:
 
 - values are matched one by one — no `to`/`by` ranges; lowercase (`ssp3-7.0`, `ifs-fesom`);
 - keys that are not axes of the matched data are ignored, values without data are dropped
@@ -74,7 +81,8 @@ selection) and `/ai-catalogue/config` (labels). How it reads selections, all han
 | `levtype` | `sfc`, `pl`, `o2d`, `o3d`, `hl`, `sol` |
 | `param` | `clte`: `167` 2t 2 m temperature; `clmn`: time-mean parameters, `228004` avg_2t; both: `235055` avg_tprate precipitation rate |
 
-Coverage: roughly 1990–2014 (`hist`), 2015–2049 (`ssp3-7.0`) — exact dates per model:
+Coverage: roughly 1990–2014 (`hist`), 2015–2049 (`ssp3-7.0`; the catalogue lists the ICON
+run to 2039-08-31) — exact dates per model:
 `destine.py options climate-dt --axis date` (hourly) or `--axis year --frequency monthly`.
 Monthly mean 2 m temperature, July 2040, as the catalogue returns it (on LUMI):
 
@@ -98,7 +106,8 @@ Dates: whatever the catalogue lists (`destine.py options extremes-dt --axis date
  "date": "20261010", "time": "0000", "param": "167", "levtype": "sfc", "step": "0", "type": "fc"}
 ```
 
-On-Demand Extremes DT (not in the catalogue): `dataset: on-demand-extremes-dt`,
+On-Demand Extremes DT (the catalogue's `/api/v2` lists it; `destine.py request` and `options`
+take `climate-dt` and `extremes-dt` only): `dataset: on-demand-extremes-dt`,
 `expver: 0099`, `georef: <geohash>`.
 
 ## Feature extraction
@@ -123,7 +132,7 @@ At most 2 concurrent downloads per user; about 50 requests per second.
 
 ## Discovery
 
-- Catalogue browser: https://catalogue-test.lumi.apps.dte.destination-earth.eu/
+- Catalogue browser: https://catalogue.lumi.apps.dte.destination-earth.eu/
 - Climate DT data catalogue: https://platform.destine.eu/docs/climate-dt-user-guide/doc/data/data_catalogue.html
 - STAC browsers: https://catalogue.lumi.apps.dte.destination-earth.eu/ and https://catalogue.mn5.apps.dte.destination-earth.eu/
 - Hosted notebooks with Polytope pre-configured: https://code.insula.destine.eu

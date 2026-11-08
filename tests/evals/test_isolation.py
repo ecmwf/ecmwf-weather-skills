@@ -1361,3 +1361,158 @@ def test_the_test_environment_reaches_subprocesses():
         text=True,
     )
     assert p.stdout.split() == [os.environ["HOME"], os.environ["GH_CONFIG_DIR"]]
+
+
+# --- live tests see the ECMWF data credentials, by link ----------------------------------------
+
+ISSUE_SERVICE_HOME_PATHS = (
+    ".config/gh/hosts.yml",
+    ".env",
+    ".git-credentials",
+    ".netrc",
+    ".ssh/id_ed25519",
+    ".local/share/keyrings/login.keyring",
+    ".config/git/credentials",
+)
+DATA_HOME_PATHS = (
+    ".ecmwfapirc",
+    ".cdsapirc",
+    ".adsapirc",
+    ".destineapirc",
+    ".polytopeapirc",
+    ".polytopeapirc-destine",
+    ".polytope-client/config.yaml",
+)
+
+
+def plant_real_home(real: Path) -> None:
+    """A fake real home with dummy data-credential and issue-service files."""
+    for rel in (*DATA_HOME_PATHS, *ISSUE_SERVICE_HOME_PATHS):
+        (real / rel).parent.mkdir(parents=True, exist_ok=True)
+        (real / rel).write_text(CONTENT)
+
+
+def listing(home: Path) -> set[str]:
+    return {p.relative_to(home).as_posix() for p in home.rglob("*")}
+
+
+def test_data_credentials_are_linked_by_name_and_nothing_else(tmp_path):
+    from conftest import link_data_credentials
+
+    real, home = tmp_path / "real", tmp_path / "home"
+    real.mkdir()
+    home.mkdir()
+    plant_real_home(real)
+    link_data_credentials(real, home)
+    top = {p.name for p in home.iterdir()}
+    assert top == {
+        ".ecmwfapirc",
+        ".cdsapirc",
+        ".adsapirc",
+        ".destineapirc",
+        ".polytopeapirc",
+        ".polytopeapirc-destine",
+        ".polytope-client",
+    }
+    for p in home.iterdir():
+        assert p.is_symlink() and p.resolve() == (real / p.name).resolve(), p
+    assert not any(
+        p.parts[0] in {".config", ".ssh", ".local", ".env"} for p in map(Path, listing(home))
+    )
+
+
+def test_only_the_data_credentials_that_exist_are_linked(tmp_path):
+    from conftest import link_data_credentials
+
+    real, home = tmp_path / "real", tmp_path / "home"
+    real.mkdir()
+    home.mkdir()
+    (real / ".cdsapirc").write_text(CONTENT)
+    link_data_credentials(real, home)
+    assert [p.name for p in home.iterdir()] == [".cdsapirc"]
+
+
+def run_probe(tmp_path, marker: str) -> dict:
+    """Run one test, with or without the `live` marker, under the repository's conftest in a real
+    pytest process whose real home is a fake one; it reports its own HOME and the links in it."""
+    real = tmp_path / "real"
+    real.mkdir()
+    plant_real_home(real)
+    probe = tmp_path / "probe"
+    probe.mkdir()
+    out = tmp_path / "report.json"
+    (probe / "test_probe.py").write_text(
+        "import json, os\nfrom pathlib import Path\nimport pytest\n\n"
+        f"{marker}\n"
+        "def test_probe():\n"
+        "    home = Path(os.environ['HOME'])\n"
+        "    links = {p.name: str(p.resolve()) for p in home.iterdir() if p.is_symlink()}\n"
+        f"    Path({str(out)!r}).write_text(json.dumps({{'home': str(home), 'links': links,\n"
+        "        'all': sorted(p.name for p in home.iterdir())}))\n"
+    )
+    tests_dir = Path(__file__).resolve().parents[1]
+    env = {
+        "PATH": os.environ["PATH"],
+        "HOME": str(real),
+        "PYTHONPATH": os.pathsep.join([str(tests_dir), str(tests_dir.parent / "scripts")]),
+    }
+    p = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "conftest",
+            "-p",
+            "no:cacheprovider",
+            "-m",
+            "live or not live",
+        ],
+        cwd=probe,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert p.returncode == 0, p.stdout + p.stderr
+    return json.loads(out.read_text())
+
+
+def test_a_live_test_home_holds_links_to_the_data_credentials_only(tmp_path):
+    report = run_probe(tmp_path, "@pytest.mark.live")
+    real = (tmp_path / "real").resolve()
+    assert report["home"] != str(real)
+    assert set(report["all"]) == {
+        ".ecmwfapirc",
+        ".cdsapirc",
+        ".adsapirc",
+        ".destineapirc",
+        ".polytopeapirc",
+        ".polytopeapirc-destine",
+        ".polytope-client",
+    }
+    assert {k: Path(v) for k, v in report["links"].items()} == {
+        name: real / name for name in report["all"]
+    }
+
+
+def test_a_test_that_is_not_live_has_no_links(tmp_path):
+    report = run_probe(tmp_path, "")
+    assert report["all"] == [] and report["links"] == {}
+
+
+def test_the_linked_names_cover_every_credential_path_the_scripts_read():
+    import fnmatch
+    import re
+
+    from conftest import DATA_CREDENTIALS, SKILLS
+
+    named = set()
+    for script in SKILLS.glob("*/scripts/*.py"):
+        named.update(re.findall(r"~/(\.[A-Za-z0-9_-]+(?:-[A-Za-z0-9_]+)*)", script.read_text()))
+    wanted = {n for n in named if n.endswith("apirc") or n.startswith((".polytope", ".destine"))}
+    assert {".ecmwfapirc", ".cdsapirc", ".adsapirc", ".polytopeapirc", ".polytope-client"} <= wanted
+    for name in wanted:
+        assert any(fnmatch.fnmatchcase(name, pattern) for pattern in DATA_CREDENTIALS), name
+    for pattern in DATA_CREDENTIALS:
+        assert not any(bad in pattern for bad in ("gh", "ssh", "netrc", "env", "git", "keyring"))
