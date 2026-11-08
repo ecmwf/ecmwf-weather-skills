@@ -5,7 +5,7 @@ compatibility: scripts/feedback.py needs Python 3.9 or newer (standard library o
 license: Apache-2.0
 metadata:
   author: ECMWF
-  version: "0.8.2"
+  version: "0.9.0"
 ---
 
 <!--
