@@ -69,6 +69,7 @@ def test_service_endpoints_are_left_to_check_endpoints():
         "https://charts.mcp.ecmwf.int/mcp",
         "https://catalogue-test.lumi.apps.dte.destination-earth.eu/mcp",
         "https://aviationweather.gov/api/data",
+        "https://jira.ecmwf.int",
     }
     probed = check_endpoints.probed_urls()
     for url, reason in check_links.SERVICE_ENDPOINTS.items():

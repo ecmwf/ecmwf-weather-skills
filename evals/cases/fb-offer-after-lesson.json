@@ -1,0 +1,82 @@
+{
+  "id": "fb-offer-after-lesson",
+  "prompt": "Earlier in this session the relative humidity recipe of the earthkit skill failed on this file: it passed the temperature and dewpoint to earthkit-meteo in degrees Celsius, but the function needs kelvin, so the first results came out above 100 %. We converted both fields to kelvin first and it worked, and the skill says nothing about units there. Now, for forecast.grib2 (ECMWF 2 m temperature and 2 m dewpoint), give me the lowest and highest 2 m relative humidity in per cent.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "setup": {
+    "copy": {
+      "tests/fixtures/ifs-2t-2d-5deg.grib2": "forecast.grib2"
+    },
+    "fakes": {
+      "gh": {
+        "login": "eval-colleague",
+        "signed_in": true,
+        "access": true,
+        "labels": [
+          "skill-feedback"
+        ]
+      },
+      "jira": {}
+    }
+  },
+  "note": "A task that taught something: the skill's recipe failed on units and the user and agent worked around it, then the user asks one more question about the same file. The task's own skill is loaded, the question is answered, and the agent ends with exactly one offer to turn the lesson into skill feedback, in natural wording. Nothing is drafted for filing or filed: both fake services see no create request, and the answer claims no filed issue. The offer is the only thing graded about feedback, so an agent that files without being asked or says nothing fails. The offer pattern's 'I can' and 'I could' openers exclude 'I can't', 'I cannot' and 'I couldn't': a negation such as \"I can't see the earlier part of this session\" is not an offer (seen in an opencode answer to fb-offer-declined-not-repeated).",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-earthkit"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)relative humidity"
+    },
+    {
+      "kind": "final",
+      "pattern": "\\d+(?:\\.\\d+)?\\s*%"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)\\b(?:would you like|do you want|want me to|shall I|should I|can I|may I|if you(?:['\\u2019]d| would)? (?:like|want|wish)|I can(?!['\\u2019]t|\\s+not\\b)|I could(?!n['\\u2019]t|\\s+not\\b)|happy to|let me know if you(?:['\\u2019]d| would)? like)\\b[^.?!\\n]{0,120}?(?:\\bfeedback\\b|(?:file|open|raise|create|draft|write|send|submit)\\w*\\s+(?:an?\\s+|the\\s+|this\\s+|that\\s+)?(?:\\w+\\s+){0,2}(?:issue|report|note)\\b|report\\s+(?:this|it|that)\\b|\\bwrite[- ]?up\\b|\\bmaintainers?\\b)"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?is)\\b(?:would you like|do you want|want me to|shall I|should I|can I|may I|if you(?:['\\u2019]d| would)? (?:like|want|wish)|I can(?!['\\u2019]t|\\s+not\\b)|I could(?!n['\\u2019]t|\\s+not\\b)|happy to|let me know if you(?:['\\u2019]d| would)? like)\\b[^.?!\\n]{0,120}?(?:\\bfeedback\\b|(?:file|open|raise|create|draft|write|send|submit)\\w*\\s+(?:an?\\s+|the\\s+|this\\s+|that\\s+)?(?:\\w+\\s+){0,2}(?:issue|report|note)\\b|report\\s+(?:this|it|that)\\b|\\bwrite[- ]?up\\b|\\bmaintainers?\\b)[^\\n]*\\n.*?\\b(?:would you like|do you want|want me to|shall I|should I|can I|may I|if you(?:['\\u2019]d| would)? (?:like|want|wish)|I can(?!['\\u2019]t|\\s+not\\b)|I could(?!n['\\u2019]t|\\s+not\\b)|happy to|let me know if you(?:['\\u2019]d| would)? like)\\b[^.?!\\n]{0,120}?(?:\\bfeedback\\b|(?:file|open|raise|create|draft|write|send|submit)\\w*\\s+(?:an?\\s+|the\\s+|this\\s+|that\\s+)?(?:\\w+\\s+){0,2}(?:issue|report|note)\\b|report\\s+(?:this|it|that)\\b|\\bwrite[- ]?up\\b|\\bmaintainers?\\b)"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)(?:\\bissues?\\s+(?:was\\s+|has\\s+been\\s+|is\\s+now\\s+)?(?:filed|created|opened)\\b|\\bI(?:'ve| have)?\\s+(?:filed|submitted)\\b|\\bAS-\\d+\\b|ecmwf-weather-skills/issues/\\d+)"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "feedback\\.py\\s+(?:github-file|jira-file)"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "gh\\s+issue\\s+create"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)(curl|wget|Invoke-(RestMethod|WebRequest))[^\\n]*(-X\\s*POST|--request\\s+POST|-d\\s|--data|-Method\\s+Post)"
+    },
+    {
+      "kind": "gh_count",
+      "pattern": "^CREATED ",
+      "count": 0
+    },
+    {
+      "kind": "gh_not_hit",
+      "pattern": "^gh issue create"
+    },
+    {
+      "kind": "gh_no_write"
+    },
+    {
+      "kind": "jira_count",
+      "pattern": "^CREATED ",
+      "count": 0
+    },
+    {
+      "kind": "jira_not_hit",
+      "pattern": "^POST /rest/api/2/issue(?:\\?|$)"
+    }
+  ]
+}

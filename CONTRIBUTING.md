@@ -67,3 +67,10 @@ bypass this.
 
 This project is provided on a best-effort basis. Questions and bugs: GitHub issues. Security
 issues: see [SECURITY.md](SECURITY.md).
+
+Feedback on the skills — a lesson from a real task — can come from your agent: the
+`ecmwf-weather-feedback` skill drafts an anonymised issue, shows it in full and files it only
+after your explicit yes. Everyone files on GitHub, with the label `skill-feedback`. ECMWF staff
+without GitHub can file in ECMWF JIRA project AS (component `weather-skills`) with their own
+personal access token in `JIRA_PAT`, or paste the draft there; the skill's `references/jira.md`
+has the steps.

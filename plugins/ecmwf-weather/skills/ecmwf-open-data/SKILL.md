@@ -16,16 +16,17 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Open Data
 
 ## Contents
-- Scripts (line 35)
-- Point forecast workflow (line 55)
-- Facts to get right (line 82)
-- ECMWF MCP (line 98)
-- Dependencies — earthkit first (line 112)
-- Credentials and better routes (line 126)
-- Processing and plots (line 141)
-- Attribution (line 149)
-- When blocked (line 158)
-- Old patterns (line 178)
+- Scripts (line 36)
+- Point forecast workflow (line 56)
+- Facts to get right (line 83)
+- ECMWF MCP (line 99)
+- Dependencies — earthkit first (line 113)
+- Credentials and better routes (line 127)
+- Processing and plots (line 142)
+- Attribution (line 150)
+- Feedback (line 159)
+- When blocked (line 166)
+- Old patterns (line 186)
 - References — `references/catalog.md` (paths, products, .index, parameters), `references/fields.md` (generated: every published field with name and units), `references/attribution.md` (full notices, HTML snippet)
 
 Free, keyless, CC-BY-4.0 global forecasts on a 0.25° grid, as GRIB2 files on fixed run schedules.
@@ -154,6 +155,13 @@ Required wherever the data or anything derived from it is shown:
   https://creativecommons.org/licenses/by/4.0/ where possible.
 - Full notice for services, apps, files and READMEs: `references/attribution.md`.
 - State modifications ("nearest gridpoint", "converted to °C").
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

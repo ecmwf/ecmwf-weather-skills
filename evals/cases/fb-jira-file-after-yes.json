@@ -1,0 +1,80 @@
+{
+  "id": "fb-jira-file-after-yes",
+  "prompt": "I am an ECMWF colleague without a GitHub account; my JIRA token is set as JIRA_PAT. File this skill feedback in JIRA project AS now. I have read the text below and it is final: yes, file it, once, exactly as written. Do not ask me anything else.\n\nTitle: the licence check lists one licence where the request needs two\nSkill: ecmwf-cds-ads\nWhat happened: for a dataset that needs two licences the check listed only the first, so the request was refused at the second.\nExpected: the check lists every licence the request needs.\nEvidence: the check printed one licence and the request failed with a message about a second one.\nProposed fix: tell the reader to read the licence list of the dataset page as well as the check.\nNot checked: other datasets.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "setup": {
+    "fakes": {
+      "jira": {}
+    }
+  },
+  "note": "A colleague without GitHub gives the complete text of a skill-feedback issue and answers yes to filing exactly that text in JIRA project AS with their token. The agent files it once through the feedback skill's script: exactly one create request and one created issue reach the fake JIRA, recorded as an Improvement (the type AS takes for skill feedback) with the summary prefix, both labels, the weather-skills component and a description whose first line names the skills repository; the answer reads the key back. The token is never shown. A second create request would file a duplicate.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-weather-feedback"
+    },
+    {
+      "kind": "command",
+      "pattern": "feedback\\.py\\s+jira-file"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "feedback\\.py\\s+github-file"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "gh\\s+issue\\s+create"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)(curl|wget|Invoke-(RestMethod|WebRequest))[^\\n]*(-X\\s*POST|--request\\s+POST|-d\\s|--data|-Method\\s+Post)"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "eval-synthetic-jira-token"
+    },
+    {
+      "kind": "jira_count",
+      "pattern": "^POST /rest/api/2/issue(?:\\?|$)",
+      "count": 1
+    },
+    {
+      "kind": "jira_count",
+      "pattern": "^CREATED ",
+      "count": 1
+    },
+    {
+      "kind": "jira_hit",
+      "pattern": "^CREATED key=AS-9001&project=AS&issuetype=Improvement&"
+    },
+    {
+      "kind": "jira_hit",
+      "pattern": "&summary=\\[ecmwf-weather\\] "
+    },
+    {
+      "kind": "jira_hit",
+      "pattern": "&labels=[^&]*skill-feedback"
+    },
+    {
+      "kind": "jira_hit",
+      "pattern": "&labels=[^&]*ecmwf-weather-skills"
+    },
+    {
+      "kind": "jira_hit",
+      "pattern": "&components=weather-skills&"
+    },
+    {
+      "kind": "jira_hit",
+      "pattern": "&description=Skills repository: ecmwf/ecmwf-weather-skills"
+    },
+    {
+      "kind": "final",
+      "pattern": "AS-9001"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "eval-synthetic-jira-token"
+    }
+  ]
+}

@@ -123,7 +123,7 @@ At most 2 concurrent downloads per user; about 50 requests per second.
 
 ## Discovery
 
-- Catalogue browser: https://catalogue-test.lumi.apps.dte.destination-earth.eu/catalogue/
+- Catalogue browser: https://catalogue-test.lumi.apps.dte.destination-earth.eu/
 - Climate DT data catalogue: https://platform.destine.eu/docs/climate-dt-user-guide/doc/data/data_catalogue.html
 - STAC browsers: https://catalogue.lumi.apps.dte.destination-earth.eu/ and https://catalogue.mn5.apps.dte.destination-earth.eu/
 - Hosted notebooks with Polytope pre-configured: https://code.insula.destine.eu

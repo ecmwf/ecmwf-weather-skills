@@ -16,14 +16,15 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF station observations
 
 ## Contents
-- Sources (line 34)
-- Workflow (line 48)
-- Commands (line 67)
-- Verify a forecast against observations (line 93)
-- Thermal-comfort indices (line 112)
-- Processing and plots (line 120)
-- Licence and attribution (line 127)
-- When blocked (line 136)
+- Sources (line 35)
+- Workflow (line 49)
+- Commands (line 68)
+- Verify a forecast against observations (line 94)
+- Thermal-comfort indices (line 113)
+- Processing and plots (line 121)
+- Licence and attribution (line 128)
+- Feedback (line 137)
+- When blocked (line 144)
 - References — `references/codes.md` (report types, varno, QC flags, missing values), `references/requests.md` (MARS request shapes, sizes, latency)
 
 Use ECMWF sources only. The one exception is NOAA Aviation Weather (aviationweather.gov):
@@ -132,6 +133,13 @@ load the `ecmwf-earthkit` skill before writing code. `ekplot.py meteogram` draws
 - NOAA METARs: US government data from aviationweather.gov — say "NOAA Aviation Weather
   (non-ECMWF)" next to every value taken from it.
 End the answer with the attribution line printed by the script.
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

@@ -16,14 +16,15 @@ SPDX-License-Identifier: Apache-2.0
 # Copernicus CDS and ADS
 
 ## Contents
-- Workflow (line 31)
-- ERA5 at a point (line 69)
-- ECMWF MCP (line 90)
-- Regional reanalyses — CARRA and CERRA (line 97)
-- CAMS air quality without a key (line 112)
-- Processing and plots (line 119)
-- Attribution and citation (line 129)
-- When blocked (line 140)
+- Workflow (line 32)
+- ERA5 at a point (line 70)
+- ECMWF MCP (line 91)
+- Regional reanalyses — CARRA and CERRA (line 98)
+- CAMS air quality without a key (line 113)
+- Processing and plots (line 120)
+- Attribution and citation (line 130)
+- Feedback (line 141)
+- When blocked (line 148)
 - References — `references/datasets.md` (common dataset ids, request examples, limits, errors), `references/regional-reanalyses.md` (CARRA, CERRA: requests, subsetting, point series, limits)
 
 Use ECMWF/Copernicus sources only — never substitute a third-party weather or climate API.
@@ -136,6 +137,13 @@ Required in anything published or displayed:
   modified data: "Contains modified …").
 - Cite the dataset DOI (`describe` prints it). Most ERA5/CAMS datasets are CC BY 4.0; read the
   licence per dataset from `describe`.
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

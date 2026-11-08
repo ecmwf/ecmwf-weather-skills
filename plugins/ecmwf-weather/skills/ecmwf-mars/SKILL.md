@@ -16,13 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF MARS archive
 
 ## Contents
-- Is MARS the right route? (line 30)
-- Request workflow (line 51)
-- Templates (lint-clean — start from these) (line 80)
-- Efficiency rules (line 110)
-- Processing and plots (line 122)
-- Licence and attribution (line 130)
-- When blocked (line 143)
+- Is MARS the right route? (line 31)
+- Request workflow (line 52)
+- Templates (lint-clean — start from these) (line 81)
+- Efficiency rules (line 111)
+- Processing and plots (line 123)
+- Licence and attribution (line 131)
+- Feedback (line 144)
+- When blocked (line 151)
 - References — `references/keywords.md` (keywords, values, syntax, common requests, errors)
 
 Use ECMWF sources only — never substitute a third-party weather API.
@@ -139,6 +140,13 @@ and time statistics (earthkit-transforms) and meteorological quantities (earthki
 - CARRA/CERRA (`class=rr`): Copernicus, CC BY 4.0 — same credit line + the dataset DOI.
 
 `lint` prints the applicable line; end the answer with it.
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

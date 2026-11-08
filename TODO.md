@@ -7,6 +7,34 @@ SPDX-License-Identifier: Apache-2.0
 
 Accepted, open work only — remove items when done. Finished work is recorded in `CHANGELOG.md`.
 
+## Claude organisation distribution
+
+ECMWF's catalogue [`ecmwf/claude-plugins`](https://github.com/ecmwf/claude-plugins) pins each
+release of `ecmwf-weather` (tag `X.Y.Z`; its maintainer runs `make update-latest` there) and
+claude.ai syncs it to ECMWF's organisation, where staff find it under **Customize → Plugins →
+Discover** (*Available to install*). The name and description staff see belong to the catalogue.
+In Chat and Cowork the scripts run in a sandbox: on Anthropic's servers, or in a Linux virtual
+machine on the user's computer, with network access limited by the organisation's allowlist.
+
+- [ ] **Hosts for the organisation's network allowlist:** the claude.ai Owner must list every
+      host the scripts call (**Organization settings → Capabilities → Code execution → Additional
+      allowed domains**). Add a target (for example `make egress-hosts`) that prints them, one per
+      line, from `check_endpoints.PROBES`, `ecmwf_status.SERVICES` and the script URLs, so the list
+      stays current; the catalogue's README holds the list in use today.
+- [ ] **uv and earthkit in the sandbox:** check in a Cowork task whether `uv` is present and
+      whether earthkit installs (the package-manager preset of the allowlist is needed for PyPI);
+      check that the standard-library fallbacks say what they cannot do there.
+- [ ] **The bundled MCP connector:** the Owner added `https://mcp.ecmwf.int` under
+      **Organization settings → Connectors**; check that a member who installs the plugin from
+      **Discover** can connect it from the plugin's **Connectors** tab.
+- [ ] **Test in Chat and Cowork** (this answers the Publication item "upload one skill to
+      claude.ai"): install `ecmwf-weather` from **Discover**, run eval prompts in a Cowork task and
+      in Chat, record what works.
+- [ ] **Packaging check:** organisation sync rejects a plugin with a top-level `bin/` folder and
+      limits each plugin to 5,000 files and 200 MB; check it in `make check` before a release.
+- [ ] **Description rule** (proposal for `AGENTS.md`): "**Stable descriptions:** change a skill's
+      or the plugin's `description` only with the maintainer's approval."
+
 ## Publication
 
 - [ ] **URGENT — before submitting to the Claude or OpenAI directories:** upload one skill to

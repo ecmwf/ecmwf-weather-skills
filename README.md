@@ -76,6 +76,7 @@ AI coding agents, with every skill tested by fresh agents (see [Testing](#build-
 | [`ecmwf-mars`](plugins/ecmwf-weather/skills/ecmwf-mars/SKILL.md) | The MARS archive via the ECMWF Web API |
 | [`ecmwf-destine`](plugins/ecmwf-weather/skills/ecmwf-destine/SKILL.md) | Destination Earth Digital Twins (Climate DT, Extremes DT) via DestinE Polytope |
 | [`ecmwf-observations`](plugins/ecmwf-weather/skills/ecmwf-observations/SKILL.md) | Station observations (SYNOP, METAR) from MARS, forecast verification, observed thermal indices |
+| [`ecmwf-weather-feedback`](plugins/ecmwf-weather/skills/ecmwf-weather-feedback/SKILL.md) | Turn what a task taught into one anonymised issue about these skills — shown in full, filed only on your yes |
 
 Scripts and references per skill: [`docs/skills.md`](docs/skills.md).
 
@@ -275,6 +276,17 @@ This software is provided on a **best-effort** basis; no operational support is 
 questions, bug reports or feature requests, [open a GitHub issue](https://github.com/ecmwf/ecmwf-weather-skills/issues)
 or a pull request. Questions about ECMWF data and services themselves go to the
 [ECMWF Support Portal](https://support.ecmwf.int). Security issues: see [SECURITY.md](SECURITY.md).
+
+### Feedback
+
+When a task teaches something the skills did not say — a wrong or missing instruction, a
+workaround, a service that changed — your agent offers once, at the end, to turn it into an
+issue (the `ecmwf-weather-feedback` skill). The draft leaves out names, e-mail addresses, user
+names in file paths, keys and tokens, and you see all of it first; **nothing is filed without
+your explicit yes**. Everyone can file on GitHub, as an issue with the label `skill-feedback`,
+through the GitHub CLI (`gh`) when it is signed in. ECMWF staff without GitHub can file in ECMWF
+JIRA project AS with their own personal access token, or paste the draft there by hand. To switch the offers
+off, tell your agent "no feedback offers".
 
 Contributions — better skill text, new eval cases, fixes — are welcome; see
 [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests include the ECMWF Contributor Licence

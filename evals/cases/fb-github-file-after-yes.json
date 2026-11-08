@@ -1,0 +1,88 @@
+{
+  "id": "fb-github-file-after-yes",
+  "prompt": "I use GitHub and gh is signed in. File this skill feedback on GitHub now. I have read the text below and it is final: yes, file it, once, exactly as written. Do not ask me anything else.\n\nTitle: the latest-run helper names a run whose last step is not published yet\nSkill: ecmwf-open-data\nWhat happened: the helper named the newest ensemble run as the latest while the last step of that run was still missing; fetching it returned 404 for about an hour.\nExpected: the latest run is the newest one whose last step exists.\nEvidence: the listing showed the run and the request for its last step returned 404.\nProposed fix: tell the reader to confirm that the last step exists before using a run.\nNot checked: other streams.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "setup": {
+    "fakes": {
+      "gh": {
+        "login": "eval-colleague",
+        "signed_in": true,
+        "access": true,
+        "labels": [
+          "skill-feedback"
+        ],
+        "issues": [
+          {
+            "number": 7,
+            "title": "[ecmwf-weather] the chart legend is cut off on narrow maps",
+            "body": "Skills repository: ecmwf/ecmwf-weather-skills\n\nThe legend of a map is cut off.",
+            "state": "closed",
+            "labels": [
+              "skill-feedback"
+            ]
+          }
+        ]
+      },
+      "jira": {}
+    }
+  },
+  "note": "A user with a signed-in gh gives the complete text of a skill-feedback issue and answers yes to filing exactly that text. The agent files it once through the feedback skill's script: exactly one create reaches the fake gh, with the title prefix, the skill-feedback label, the right repository and a body whose first line names the skills repository, and the answer reads the issue's address back. An unrelated closed issue already exists, so a duplicate search must not stop the filing. A second create would file a duplicate; the fake JIRA sees nothing, as the user's route is GitHub.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-weather-feedback"
+    },
+    {
+      "kind": "command",
+      "pattern": "feedback\\.py\\s+github-file"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "feedback\\.py\\s+jira-file"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "gh\\s+issue\\s+create"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)(curl|wget|Invoke-(RestMethod|WebRequest))[^\\n]*(-X\\s*POST|--request\\s+POST|-d\\s|--data|-Method\\s+Post)"
+    },
+    {
+      "kind": "gh_count",
+      "pattern": "^CREATED ",
+      "count": 1
+    },
+    {
+      "kind": "gh_count",
+      "pattern": "^gh issue create",
+      "count": 1
+    },
+    {
+      "kind": "gh_hit",
+      "pattern": "^CREATED number=\\d+&repo=ecmwf/ecmwf-weather-skills&title=\\[ecmwf-weather\\] "
+    },
+    {
+      "kind": "gh_hit",
+      "pattern": "&labels=(?:[^&,]*,)*skill-feedback(?:,[^&,]*)*&body="
+    },
+    {
+      "kind": "gh_hit",
+      "pattern": "&body=Skills repository: ecmwf/ecmwf-weather-skills"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)ecmwf-weather-skills/issues/\\d+|#\\d+"
+    },
+    {
+      "kind": "jira_count",
+      "pattern": "^CREATED ",
+      "count": 0
+    },
+    {
+      "kind": "jira_not_hit",
+      "pattern": "^POST /rest/api/2/issue(?:\\?|$)"
+    }
+  ]
+}
