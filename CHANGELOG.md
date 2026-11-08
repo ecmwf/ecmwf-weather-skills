@@ -11,6 +11,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-08
+
 **Skill feedback, filed only on your yes.** A new skill turns what a task taught into one
 anonymised issue about these skills, and the eval runner can no longer file a real one.
 
@@ -797,7 +799,8 @@ Fixes from the first Claude Code evaluation (Haiku, Sonnet, Opus).
 - Generated Open Data field catalogue is ordered deterministically and built from the latest
   complete run, so weekly regeneration only changes when the catalogue does.
 
-[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.2...HEAD
+[Unreleased]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.2...0.9.0
 [0.8.2]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.1...0.8.2
 [0.8.1]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/ecmwf/ecmwf-weather-skills/compare/0.7.1...0.8.0
