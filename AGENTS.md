@@ -408,7 +408,9 @@ hosts block below is defence in depth, not a firewall:
 - **Tests** run outside the sandbox (CI runners may not allow it), so an autouse fixture in
   `tests/conftest.py` gives every test and its subprocesses the same hygiene: the forbidden variables
   removed, a temporary `HOME`, an empty `GH_CONFIG_DIR`, a `gh` that looks absent first on `PATH`, and
-  `ECMWF_WEATHER_JIRA_URL` on a closed loopback port. `tests/evals/test_isolation.py` starts a real
+  `ECMWF_WEATHER_JIRA_URL` on a closed loopback port; tests marked `live` also see the ECMWF data
+  credentials, linked by name into that `HOME` (`DATA_CREDENTIALS` in `tests/conftest.py`; never
+  read or copied, and no issue-service location is linked). `tests/evals/test_isolation.py` starts a real
   sandbox around canary files and checks all of the above; a test that needs a fake starts one itself.
 
 **The ECMWF MCP server is on by default**, the way each agent would get it from the plugin

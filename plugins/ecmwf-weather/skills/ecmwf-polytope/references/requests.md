@@ -19,7 +19,7 @@ Verified against polytope.ecmwf.int; published docs and notebooks contain errors
 
 ```python
 # /// script
-# dependencies = ["earthkit-data[polytope,covjsonkit]>=1.2"]
+# dependencies = ["earthkit-data[polytope,covjsonkit]>=1.2", "findlibs>=0.1.4"]
 # ///
 # needs credentials (not run by the tests)
 import earthkit.data as ekd

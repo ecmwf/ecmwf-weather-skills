@@ -122,7 +122,7 @@ sequential fetch); `--fetcher earthkit` uses earthkit-data's `ecmwf-open-data` s
 Standard-library fallback — only if uv can't be installed, there are no wheels (Windows: use WSL),
 installation fails, or the user declines: `odcatalog.py download` still fetches the exact GRIB
 fields, but nothing can decode them. Say so and offer
-`pip install 'earthkit-data>=1.2' 'earthkit-geo>=1.1' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0'`.
+`pip install 'earthkit-data>=1.2' 'earthkit-geo>=1.1' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0' 'findlibs>=0.1.4'`.
 
 ## Credentials and better routes
 

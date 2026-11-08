@@ -48,8 +48,28 @@ anonymised issue about these skills, and the eval runner can no longer file a re
   no longer exists; it now points at the host root.
 - `make links` leaves ECMWF's JIRA host to `make check-endpoints`, like the other service
   endpoints.
+- Live tests (`make test-live`) could not authenticate: the temporary `HOME` that keeps issue
+  credentials out of tests also hid the ECMWF data credentials. Tests marked `live` now see
+  them, linked by name into that `HOME` (never read or copied); no issue-service location is
+  linked. `tests/evals/test_isolation.py` covers both sides.
+- `destine.py` validated requests against the DestinE catalogue test deployment, which lacks
+  IFS-NEMO and the generation 2 storylines and whose Extremes DT stops months behind. It now
+  uses the production catalogue by default (`DESTINE_CATALOGUE_URL` overrides it), so IFS-NEMO
+  routes to `polytope.mn5`. A catalogue host without the catalogue API (the MN5 one) is
+  reported as such, with a BLOCKED report, instead of as an outage. `make check-endpoints`
+  probes the production catalogue.
+- ecmwf-destine docs: ICON SSP3-7.0 runs to 2039-08-31, and on-demand Extremes DT is in the
+  catalogue.
 
 ### Changed
+
+- earthkit-data#1202 (the abort at exit, status 134 or 139, when pyproj loads after ecCodes) is
+  fixed upstream by findlibs 0.1.4. The pyproj-first workaround is removed from the bundled
+  scripts, the recipes and the ecmwf-earthkit skill's Import order rule; every earthkit-data
+  bundle, pip hint and the `earthkit` dependency group now require `findlibs>=0.1.4`, and
+  `references/pitfalls.md` says to declare it. A test keeps the floor in every bundle. The
+  upstream draft is marked fixed.
+- The `ecmwf-destine` skill and the README hosts table name the production catalogue.
 
 - Generated references regenerated from the live catalogues. `ecmwf-opencharts-wms/references/layer-catalog.md`
   drops the CAMS surface layers for fossil-fuel and wood-burning PM2.5 carbon and the

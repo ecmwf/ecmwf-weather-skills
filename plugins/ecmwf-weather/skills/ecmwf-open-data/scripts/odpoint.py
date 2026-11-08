@@ -14,6 +14,7 @@
 #   "earthkit-transforms[all]>=1.0",
 #   "scipy>=1.16",
 #   "thermofeel>=2.3",
+#   "findlibs>=0.1.4",
 # ]
 # ///
 """Point forecast from ECMWF Open Data — nearest gridpoint time series.
@@ -43,7 +44,6 @@ import argparse
 import atexit
 import contextlib
 import importlib
-import importlib.util
 import json
 import os
 import sys
@@ -213,7 +213,7 @@ def earthkit_barrier(message: str) -> dict:
             "`uv run odpoint.py …` — it installs exactly what is needed.",
             "2. Without uv: pip install 'earthkit-data[ecmwf-opendata]>=1.2' "
             "'earthkit-geo>=1.1' 'earthkit-meteo>=1.2' 'earthkit-utils>=1.0' "
-            "'earthkit-transforms[all]>=1.0' 'thermofeel>=2.3'",
+            "'earthkit-transforms[all]>=1.0' 'thermofeel>=2.3' 'findlibs>=0.1.4'",
             "3. On Windows use WSL (earthkit has no Windows wheels).",
         ],
         "agent": "Run the script with `uv run`; if uv cannot be installed, give these "
@@ -425,21 +425,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def load_pyproj_first() -> None:
-    """Load pyproj (when installed) before earthkit loads ecCodes.
-
-    earthkit-data 1.3 needs ecCodes wheels that bundle their own libproj. When pyproj (pulled in
-    by earthkit-geo and earthkit-transforms) is loaded after them, two copies of that library
-    share the process and it aborts at exit (status 134) once the work is done. Loading pyproj
-    first avoids it. This is a workaround for the report "ecCodes wheels bundling libproj abort
-    at exit when pyproj is imported after them" filed with earthkit-data; remove it once the
-    wheels stop clashing with pyproj."""
-    if importlib.util.find_spec("pyproj") is not None:
-        importlib.import_module("pyproj")
-
-
 def main(argv=None) -> int:
-    load_pyproj_first()  # before the first earthkit import on any path
     p = build_parser()
     a = p.parse_args(argv)
     params = request_params(a.params, a.indices)

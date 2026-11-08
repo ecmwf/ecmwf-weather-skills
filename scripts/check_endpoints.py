@@ -71,9 +71,10 @@ PROBES = {
         "https://polytope.leonardo.apps.dte.destination-earth.eu/api/v1/collections"
     ),
     "destine-news": st.DESTINE_NEWS,
-    # ECMWF's DestinE data catalogue (Omnicat), a test deployment: when it moves, update
-    # CATALOGUE_URL in ecmwf-destine/scripts/destine.py too.
-    "destine-catalogue": "https://catalogue-test.lumi.apps.dte.destination-earth.eu/health",
+    # ECMWF's production DestinE data catalogue (Omnicat), the one destine.py uses: when it
+    # moves, update CATALOGUE_URL in ecmwf-destine/scripts/destine.py too. The MCP's catalogue
+    # backend (a different deployment) is probed through MCP_PROBES.
+    "destine-catalogue": "https://catalogue.lumi.apps.dte.destination-earth.eu/health",
     "mcp": st.SERVICE_STATUS["mcp"],
 }
 PRESENT = {401, 403, 405}

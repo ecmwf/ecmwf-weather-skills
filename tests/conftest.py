@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import fnmatch
 import importlib.util
 import os
 import sys
@@ -37,14 +38,46 @@ def strict_script_env() -> dict[str, str]:
     return env
 
 
+# The user's home, read before any test replaces HOME.
+REAL_HOME = Path.home()
+
+# The ECMWF data credential files and folders (names in the home folder; `*` matches any suffix)
+# that the skills' scripts read: MARS and the Web API (~/.ecmwfapirc), CDS and ADS, Polytope
+# (~/.polytopeapirc and its DestinE sibling ~/.polytopeapirc-destine, ~/.polytope-client) and
+# DestinE (~/.destineapirc). Live tests need them; issue-service locations (gh configuration,
+# ~/.env, ~/.git-credentials, ~/.netrc, ~/.ssh, keyrings) are deliberately absent.
+# tests/evals/test_isolation.py checks this list against the paths named in the scripts.
+DATA_CREDENTIALS = (
+    ".ecmwfapirc",
+    ".cdsapirc",
+    ".adsapirc",
+    ".destineapirc",
+    ".polytopeapirc*",
+    ".polytope-client",
+)
+
+
+def link_data_credentials(real_home: Path, home: Path) -> None:
+    """Symlink each ECMWF data credential of `real_home` into `home` at the same relative path.
+
+    Links only: the files are never opened, read or copied."""
+    with os.scandir(real_home) as entries:
+        names = sorted(e.name for e in entries)
+    for name in names:
+        if any(fnmatch.fnmatchcase(name, pattern) for pattern in DATA_CREDENTIALS):
+            (home / name).symlink_to(real_home / name)
+
+
 @pytest.fixture(autouse=True)
-def _no_issue_service_access(monkeypatch, tmp_path_factory):
+def _no_issue_service_access(request, monkeypatch, tmp_path_factory):
     """No test, and no subprocess it starts, can file a real issue or find a login to do it.
 
     Filing needs a credential, so every test gets the eval agents' hygiene (the eval runner's
     own functions): the issue-service variables removed, a temporary HOME and an empty gh
     configuration folder (a real `gh` finds no login), a `gh` that looks absent first on PATH,
-    and the JIRA host variable on a port nothing listens on. A test that needs a fake gh or JIRA
+    and the JIRA host variable on a port nothing listens on. Tests marked `live` also find the
+    ECMWF data credentials in that HOME, as links to the user's own files (like the eval agents,
+    which keep their data credentials). A test that needs a fake gh or JIRA
     starts one from tests/fakes and sets these itself, after this fixture. Tests run outside
     bubblewrap (CI runners may not allow it); this is their whole isolation."""
     import run_evals
@@ -54,6 +87,8 @@ def _no_issue_service_access(monkeypatch, tmp_path_factory):
     scratch = tmp_path_factory.mktemp("isolation")
     home = scratch / "home"
     home.mkdir()
+    if request.node.get_closest_marker("live"):
+        link_data_credentials(REAL_HOME, home)
     gh_config = scratch / "gh-config"
     gh_config.mkdir()
     gh_bin = scratch / "bin"

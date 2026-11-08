@@ -249,7 +249,9 @@ def preflight(req: dict, token: str, fetch=_get_json, address: str | None = None
 
 # ECMWF's catalogue of what the DestinE data bridges hold (Omnicat, built on ecmwf/qubed; its
 # index is rebuilt from the bridges every few minutes). Only its read-only endpoints are used.
-CATALOGUE_URL = "https://catalogue-test.lumi.apps.dte.destination-earth.eu"
+# The production deployment: it lists every bridge (LUMI, MN5, Leonardo) and is current. A test
+# deployment (catalogue-test.lumi…) holds a smaller, older subset; DESTINE_CATALOGUE_URL selects it.
+CATALOGUE_URL = "https://catalogue.lumi.apps.dte.destination-earth.eu"
 CATALOGUE_ENV = "DESTINE_CATALOGUE_URL"
 # Answers take well under a second; the configuration (labels of every MARS value) is ~0.8 MB.
 CATALOGUE_TIMEOUT_S = 30
@@ -268,7 +270,38 @@ MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", 
 
 
 class CatalogueUnavailable(Exception):
-    """The catalogue could not be reached, or answered something unusable."""
+    """The catalogue could not be reached, or answered something unusable. `status` is the
+    HTTP status when the service answered with an error."""
+
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
+
+
+class CatalogueNotOffered(CatalogueUnavailable):
+    """The host answers but does not offer the catalogue API (no /ai-catalogue/config): a wrong
+    address, not an outage."""
+
+
+def wrong_catalogue_barrier(base: str, error: str) -> dict:
+    """The BLOCKED report for a catalogue address that is not a catalogue API host."""
+    return {
+        "blocked": f"the host {base} does not offer the catalogue API",
+        "why": f"{error}. destine.py reads /ai-catalogue/config, /catalogue/locations, "
+        "/catalogue/mars-requests and /api/v2/axes/; this host answers but lacks the first "
+        "(some catalogue deployments serve only the Qube API).",
+        "user_steps": [
+            f"1. The address used is {base} ("
+            + (f"from {CATALOGUE_ENV}" if os.environ.get(CATALOGUE_ENV) else "the default")
+            + ").",
+            f"2. Unset {CATALOGUE_ENV} to use the default, {CATALOGUE_URL}, or set it to a "
+            "DestinE catalogue host that serves /ai-catalogue/config.",
+            "3. Run the command again.",
+        ],
+        "agent": "This is a wrong address, not a network problem: do not retry on the same host "
+        "or suggest network checks. Give these steps; until the address is fixed, `request` "
+        "still lints offline and its output is NOT validated.",
+    }
 
 
 def catalogue_url(env=os.environ) -> str:
@@ -288,7 +321,7 @@ def _catalogue_fetch(url: str, body: dict | None = None):
         with urllib.request.urlopen(req, timeout=CATALOGUE_TIMEOUT_S) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
-        raise CatalogueUnavailable(f"HTTP {e.code} from {url.split('?')[0]}") from None
+        raise CatalogueUnavailable(f"HTTP {e.code} from {url.split('?')[0]}", e.code) from None
     except urllib.error.URLError as e:
         raise CatalogueUnavailable(f"{type(e).__name__}: {e.reason}") from None
     except (OSError, ValueError, http.client.HTTPException) as e:  # timeout, reset, not JSON
@@ -392,7 +425,14 @@ class Catalogue:
     def config(self) -> dict:
         """Axis order per dataset, and labels for every MARS value (its "language")."""
         if self._config is None:
-            c = self._fetch(f"{self.base}/ai-catalogue/config")
+            try:
+                c = self._fetch(f"{self.base}/ai-catalogue/config")
+            except CatalogueUnavailable as e:
+                if e.status == 404:
+                    raise CatalogueNotOffered(
+                        f"{self.base} has no /ai-catalogue/config (HTTP 404)", 404
+                    ) from None
+                raise
             if not (isinstance(c, dict) and isinstance(c.get("language"), dict)):
                 raise CatalogueUnavailable("unexpected answer from /ai-catalogue/config")
             self._config = c
@@ -1066,11 +1106,19 @@ def request_document(req: dict, cat: Catalogue) -> dict:
     try:
         res.update(validate(req, cat))
     except CatalogueUnavailable as e:
-        status = ecmwf_status.outage_report("destine-catalogue")["summary"]
         res["address"] = address_for(req)
         res["requests"] = [
             {"location": None, "url": None, "address": res["address"], "request": req}
         ]
+        if isinstance(e, CatalogueNotOffered):
+            res["warnings"].append(
+                f"NOT validated: {cat.base} does not offer the catalogue API ({e}). The request "
+                "passed the offline checks only — its values, codes and server are unverified; "
+                f"point {CATALOGUE_ENV} at a DestinE catalogue (default {CATALOGUE_URL}) or "
+                "unset it."
+            )
+            return res
+        status = ecmwf_status.outage_report("destine-catalogue")["summary"]
         res["warnings"].append(
             f"NOT validated: the DestinE catalogue ({cat.base}) could not be reached ({e}). The "
             "request passed the offline checks only — its values, codes and server are "
@@ -1389,6 +1437,8 @@ def main(argv=None) -> int:
             filters["stream"] = STREAMS[a.frequency]
         try:
             res = options_document(a.dataset, a.axis, filters, Catalogue())
+        except CatalogueNotOffered as e:
+            return blocked(wrong_catalogue_barrier(Catalogue().base, str(e)), a.json)
         except CatalogueUnavailable as e:
             return blocked(ecmwf_status.network_barrier("destine-catalogue", str(e)), a.json, 2)
         except ValueError as e:

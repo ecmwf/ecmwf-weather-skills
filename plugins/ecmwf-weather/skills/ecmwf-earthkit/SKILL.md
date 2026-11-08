@@ -17,14 +17,14 @@ SPDX-License-Identifier: Apache-2.0
 
 ## Contents
 - Before you write code (line 38)
-- Components (line 67)
-- Bundled scripts (line 87)
-- Writing your own code (line 115)
-- Bugs and missing features — upstream, with approval only (line 129)
-- Fallback without earthkit (line 148)
-- Attribution (line 154)
-- Feedback (line 162)
-- When blocked (line 169)
+- Components (line 60)
+- Bundled scripts (line 80)
+- Writing your own code (line 108)
+- Bugs and missing features — upstream, with approval only (line 122)
+- Fallback without earthkit (line 141)
+- Attribution (line 147)
+- Feedback (line 155)
+- When blocked (line 162)
 - References — `references/recipes.md` (verified code for every job), `references/pitfalls.md` (1.x breakages and known bugs), `references/upstream.md` (reporting bugs, contributing features), `references/versions.md` (generated: latest versions)
 
 **earthkit first.** For weather and climate data, the code an agent would write by hand already
@@ -57,18 +57,11 @@ say so.
 
 Code for each: `references/recipes.md` — every block there runs in this repository's tests.
 
-**Import order.** When your own code reads GRIB with earthkit-data (ecCodes) and also draws
-maps (earthkit-plots, cartopy) or uses earthkit-transforms, put `import pyproj` before
-`import earthkit.data`. Otherwise the process finishes its work and then aborts at exit
-(status 134, sometimes 139) with earthkit-data 1.3, because the ecCodes wheels and pyproj each
-bring their own libproj (earthkit-data#1202, see `references/pitfalls.md`). The bundled scripts
-already do this.
-
 ## Components
 
 | Component | For | Install spec |
 |---|---|---|
-| earthkit-data | read, fetch, select, convert, write | `earthkit-data>=1.2` (+ `[ecmwf-opendata]`, `[cds]`, `[mars]`, `[polytope]`) |
+| earthkit-data | read, fetch, select, convert, write | `earthkit-data>=1.2` with `findlibs>=0.1.4` (+ `[ecmwf-opendata]`, `[cds]`, `[mars]`, `[polytope]`) |
 | earthkit-plots | maps, figures, time series in ECMWF styles | `earthkit-plots>=1.0` |
 | earthkit-transforms | ensemble, temporal, climatology, spatial statistics | `earthkit-transforms[all]>=1.0` (plain install fails on import) |
 | earthkit-meteo | meteorological quantities, extremes, scores | `earthkit-meteo>=1.2.1` (scores: `[scores]`) |
@@ -116,7 +109,7 @@ consecutive steps (step 0 has none). Pitfalls: `references/pitfalls.md`.
 
 ```
 - [ ] 1. Find each step in "Before you write code"; copy the recipe from references/recipes.md
-- [ ] 2. Declare only those components in PEP 723 metadata; run with uv run; maps or transforms: `import pyproj` first
+- [ ] 2. Declare only those components in PEP 723 metadata; run with uv run
 - [ ] 3. Plot with earthkit-plots (style="auto", units=...); label derived fields yourself
 - [ ] 4. Only for a step earthkit lacks: minimal numpy/xarray code, commented as such
 - [ ] 5. If earthkit failed or lacked something, offer the upstream report (below) once

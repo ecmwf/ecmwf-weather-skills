@@ -14,6 +14,7 @@
 #   "earthkit-meteo>=1.2.1",
 #   "earthkit-utils>=1.0",
 #   "thermofeel>=2.3",
+#   "findlibs>=0.1.4",
 # ]
 # ///
 """Plot ECMWF data with earthkit-plots.
@@ -44,8 +45,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import importlib
-import importlib.util
 import itertools
 import json
 import sys
@@ -66,19 +65,6 @@ FEELS_LIKE_LINES = [  # key in point JSON, legend label, colour
     ("apparent_temperature_C", "Apparent temperature", "#5b3a87"),
     ("wind_chill_C", "Wind chill", "#2166ac"),
 ]
-
-
-def load_pyproj_first() -> None:
-    """Load pyproj (when installed) before earthkit loads ecCodes.
-
-    earthkit-data 1.3 needs ecCodes wheels that bundle their own libproj. When pyproj (pulled in
-    by cartopy, geopandas and earthkit-geo) is loaded after them, two copies of that library
-    share the process and it aborts at exit (status 134) once the work is done. Loading pyproj
-    first avoids it. This is a workaround for the report "ecCodes wheels bundling libproj abort
-    at exit when pyproj is imported after them" filed with earthkit-data; remove it once the
-    wheels stop clashing with pyproj."""
-    if importlib.util.find_spec("pyproj") is not None:
-        importlib.import_module("pyproj")
 
 
 def blocked(b: dict, as_json: bool = False, code: int = 4) -> int:
@@ -766,7 +752,6 @@ def plot_index(
 
 
 def main(argv=None) -> int:
-    load_pyproj_first()  # before the first earthkit import on any command
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -829,7 +814,7 @@ def main(argv=None) -> int:
                     "`uv run ekplot.py …` — it installs exactly what is needed.",
                     "2. Without uv: pip install 'earthkit-plots>=1.0' 'earthkit-data>=1.2' "
                     "'earthkit-transforms[all]>=1.0' 'earthkit-meteo>=1.2.1' 'earthkit-utils>=1.0' "
-                    "'thermofeel>=2.3'",
+                    "'thermofeel>=2.3' 'findlibs>=0.1.4'",
                     "3. On Windows use WSL (earthkit has no Windows wheels).",
                 ],
                 "agent": "Run the script with `uv run`; if uv cannot be installed, give these "
