@@ -10,9 +10,10 @@
 
 URL templates (containing {…}), truncated examples (… or ...) and URLs cut short by a
 placeholder (`https://host/<name>/…`) are skipped; examples in the skills name real
-repositories instead. Service endpoints (the MCP backends, the NOAA API base) are left to
-`check_endpoints.py`, which probes them with the request the scripts make. Third-party outages
-should not block pull requests, so this runs on a schedule, not on every change.
+repositories instead. Service endpoints (the MCP backends, the NOAA API base, ECMWF's JIRA
+host) are left to `check_endpoints.py`, which probes them with the request the scripts make.
+Third-party outages should not block pull requests, so this runs on a schedule, not on every
+change.
 """
 
 from __future__ import annotations

@@ -45,6 +45,11 @@ Agent Skills for ECMWF data. Open work: `TODO.md`. Done work: `CHANGELOG.md`. Re
 - Don't `cat`, `grep` or print `~/.ecmwfapirc`, `~/.cdsapirc`, `~/.adsapirc`,
   `~/.polytopeapirc*`, `~/.destineapirc` or similar; describe them by key names and value
   shapes only. Never ask users to paste a secret into chat or onto a command line.
+- `JIRA_PAT` is the user's own Jira personal access token. `ecmwf-weather-feedback` reads it
+  only from the environment and sends it only to the JIRA host, as an `Authorization: Bearer`
+  header. It is never an option, never printed, never stored in a file or on a command line. A
+  token pasted into chat is not used: tell the user to revoke it and create another.
+  `ECMWF_WEATHER_JIRA_URL` overrides the JIRA host for tests and evals (https or loopback only).
 - `tests/tooling/test_no_secrets.py` blocks credential-shaped values in tracked files.
 - Never pass a credential as an MCP tool argument (e.g. `ecmwf:catalogue_retrieve_data`'s
   `destine_token`): it would enter the transcript. `ecmwf_mcp.py` refuses credential-named
@@ -138,6 +143,11 @@ remove the workaround from the skills.
   "the `ecmwf` MCP server's `<tool>` tool", then `ecmwf:<tool>` (`ecmwf` is the server key in
   `.mcp.json` and `mcp.json`). Never write one agent's tool syntax (`mcp__…`). `ecmwf_mcp.py
   call` commands keep the bare tool name — it is the script's argument.
+- **Every skill offers feedback** — each `SKILL.md` except `ecmwf-weather-feedback` carries the
+  pinned feedback-offer sentence in a `## Feedback` section (offer once, after a task that taught
+  something; `check_skills.py` enforces it: `FEEDBACK_OFFER`). Skills that handle no weather data
+  are listed in `NOT_ROUTED_TO_EARTHKIT` in `check_skills.py` and need not route to
+  `ecmwf-earthkit`.
 - **Default model is IFS HRES** unless the user asks otherwise.
 - **ECMWF sources only** — skills and scripts never fetch weather data from third parties, and
   every SKILL.md says so. One scoped exception, approved by the maintainer: `ecmwf-observations`
@@ -147,7 +157,9 @@ remove the workaround from the skills.
   "NOAA Aviation Weather (non-ECMWF)", never substituted silently. Only its
   `noaa_station_info` / `noaa_latest_metar` functions use that host, with a User-Agent;
   `tests/observations/test_obs.py` enforces it. WMO OSCAR/Surface (`oscar.wmo.int`) is used
-  for station metadata only. Any other exception needs the maintainer's approval first.
+  for station metadata only. `ecmwf-weather-feedback` fetches no weather data: it sends only the
+  user-approved issue text, to GitHub (through the user's `gh`) or to ECMWF JIRA. Any other
+  exception needs the maintainer's approval first.
 - **Observations** come from MARS (`ecmwf-observations`): ODB feedback by default (~10 h
   latency, with first-guess/analysis departures and QC), BUFR reports with `--raw` (~2 days).
   MARS restricts reports (TYPE=OB) and feedback less than 24 h old; accounts without those
@@ -334,6 +346,71 @@ How it isolates the agent:
 - **Gemini CLI**: skills copied into `<tmp>/.gemini/skills/` (verify path at agentskills.io/clients),
   `gemini -p "<prompt>" -o json --approval-mode yolo`.
 
+**No eval agent can file a real issue — the runner makes it impossible, and refuses to run
+without that.** Filing a GitHub or JIRA issue takes a credential, so every case's agent
+(all five agents) runs inside a `bubblewrap` (`bwrap`, Linux) sandbox in which no issue-service
+credential is reachable. That is the guarantee: filing is impossible because there is nothing to
+file with. The sandbox does **not** filter the network (it shares the host's network), so the
+hosts block below is defence in depth, not a firewall:
+
+- **File system**: as it is, except that these are hidden — `~/.config/gh` (and the caller's
+  `GH_CONFIG_DIR`, `$XDG_CONFIG_HOME/gh`), `~/.ssh`, `~/.local/share/keyrings` and the session-bus and
+  keyring sockets under `$XDG_RUNTIME_DIR` by an empty `tmpfs`; `~/.env`, `~/.git-credentials`,
+  `~/.netrc` and `~/.config/git/credentials` by a read-only bind of `/dev/null`. The host's process
+  list is not visible (`--unshare-pid`: the runner's environment holds the caller's tokens), and
+  ending the runner ends the agent. The agent keeps its own login: Claude Code's
+  `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`, Codex's files under `~/.codex`, opencode's data
+  directory stay visible, as do the ECMWF data credentials the data cases need.
+- **Environment**: an allow list — `PATH`, `HOME`, locale, terminal, `USER`/`LOGNAME`/`SHELL`, `TMPDIR`,
+  proxy and CA variables, `XDG_*`, the agents' own authentication variables, and the variables of the
+  ECMWF data services and caches (`ECMWF_*`, `CDSAPI_*`, `ADSAPI_*`, `DESTINE_*`, `POLYTOPE_*`, `MARS_*`,
+  `EARTHKIT_*`, `MIR_*`, `ECCODES_*`, `UV_*`; see `ALLOWED_ENV` and `ALLOWED_ENV_PREFIXES` in
+  `run_evals.py`) — plus the case's `setup.env`. Then every variable naming JIRA, GitHub or gh
+  (`JIRA_PAT`, `GH_TOKEN`, `GITHUB_TOKEN`, `GH_HOST`, …), `SSH_AUTH_SOCK` and
+  `DBUS_SESSION_BUS_ADDRESS` is removed again, so a `setup.env` cannot bring one back. Last come
+  settings no case can undo: an empty `GH_CONFIG_DIR`, `GH_PROMPT_DISABLED=1`,
+  `GH_NO_UPDATE_NOTIFIER=1`, and the issue hosts added to `NO_PROXY`.
+- **Defaults**: a case without a gh fake finds a `gh` that looks absent (first on `PATH`, exit 127,
+  calls logged to `<case>.<agent>.<n>.gh-absent.jsonl`); the case's shim (that or the fake) is also
+  mounted over every real `gh` binary inside the sandbox — the known install locations, each `gh` on
+  the caller's `PATH` and the one the login shell finds — so `bash -lc` and absolute paths reach it
+  too, and the probe checks this; a case without a JIRA fake gets
+  `ECMWF_WEATHER_JIRA_URL` on a closed loopback port. `JIRA_PAT` exists only with a fake JIRA, and then
+  holds the fake's synthetic token, set after the filtering so nothing can replace it.
+- **Hosts block** (not a firewall): a read-only `/etc/hosts` inside the sandbox keeps the system's
+  entries and maps `github.com`, `api.github.com`, `uploads.github.com` and `jira.ecmwf.int` to the
+  unused loopback address `127.0.0.9`. That stops name lookups through the system resolver for those
+  four hosts, so an ordinary client fails at once instead of reaching the real service. It does not
+  stop a program that carries an address of its own, resolves names itself (its own DNS or DNS over
+  HTTPS) or goes through a proxy: the sandbox shares the network, and the model APIs and the ECMWF
+  data hosts stay reachable. A request that got through still could not file anything, because it has
+  no credential to send.
+- **Sandbox files**: the files the sandbox itself relies on cannot be changed from inside. The file
+  system bind is read-write, and a file bound read-only at one path (the hosts file at `/etc/hosts`,
+  the case's `gh` shim over each real `gh`) could still be rewritten through the path it came from. So
+  the hosts file, the shim and the case's folders — the scratch folder with the shim, its copy of the
+  fake script and the empty gh configuration, and the fakes' private folder with the shim, script and
+  configuration — are each bound read-only over themselves: nothing in them can be written, renamed,
+  replaced, removed or hard-linked, and a folder on `PATH` cannot be renamed away and recreated. The
+  fake `gh` and fake JIRA logs stay writable where they are (beside the transcript), because the shim
+  appends to its log from inside; an agent can add lines to a log, and the graders read only plain
+  files, never a link.
+- **Fails closed**: before the first case the runner runs a probe inside the same sandbox and prints
+  each result — hidden locations empty or unreadable, every `gh` found (`/usr/bin/gh` and the one on the
+  real `PATH`) reports no login and is the case's shim, the four hosts resolve to `127.0.0.9` and refuse
+  a connection, the hosts file, the shim and the case's folders cannot be written (`sealed`), no
+  forbidden variable is set. If `bwrap` is missing, cannot start, or any check fails, the runner prints
+  why, exits with a non-zero status and runs no case. There is no switch to run without it.
+- **Fakes**: `setup.fakes` (`jira`, `gh`; `tests/fakes/`) start a fake JIRA on a loopback port and put a
+  fake `gh` first on `PATH` for that case alone; their logs sit beside the transcript and are graded by
+  `jira_hit` / `jira_not_hit` / `jira_count` and `gh_hit` / `gh_not_hit` / `gh_count` / `gh_no_write`
+  (a count kind has `count`: exactly that many matching log lines; a kind needs its fake).
+- **Tests** run outside the sandbox (CI runners may not allow it), so an autouse fixture in
+  `tests/conftest.py` gives every test and its subprocesses the same hygiene: the forbidden variables
+  removed, a temporary `HOME`, an empty `GH_CONFIG_DIR`, a `gh` that looks absent first on `PATH`, and
+  `ECMWF_WEATHER_JIRA_URL` on a closed loopback port. `tests/evals/test_isolation.py` starts a real
+  sandbox around canary files and checks all of the above; a test that needs a fake starts one itself.
+
 **The ECMWF MCP server is on by default**, the way each agent would get it from the plugin
 (server and URL read from the plugin's `mcp.json`); `--no-mcp` (`make evals MCP=0`) runs
 without it. Run both when skill text about the MCP changes — skills must work either way.
@@ -498,7 +575,7 @@ Agents run them only when the maintainer asks for a release.
    the changelog section, deletes the local release branch.
 
 If a step fails, fix the cause in a normal PR and start again from step 2 — never skip a gate.
-`check-endpoints` treats optional services (the bundled ECMWF MCP and its two backends; NOAA Aviation Weather for station metadata; the skills work without them) differently: an outage (HTTP 5xx, timeout) is a warning, while drift — a host that no longer resolves, HTTP 404, a changed status document — still fails. A network error or a rate-limited answer (HTTP 429) is asked again before it counts. Endpoint drift (`check-endpoints`) means ECMWF moved or renamed something: update
+`check-endpoints` treats optional services (the bundled ECMWF MCP and its two backends; NOAA Aviation Weather for station metadata; ECMWF JIRA's anonymous `serverInfo` for the feedback skill; the skills work without them) differently: an outage (HTTP 5xx, timeout) is a warning, while drift — a host that no longer resolves, HTTP 404, a changed status document — still fails. A network error or a rate-limited answer (HTTP 429) is asked again before it counts. Endpoint drift (`check-endpoints`) means ECMWF moved or renamed something: update
 `ecmwf_status.SERVICES`, `check_endpoints.PROBES` or the script URLs first. Agents must not
 change git config, force-push or delete remote tags.
 

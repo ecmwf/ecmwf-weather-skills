@@ -19,6 +19,7 @@ Agents read `SKILL.md` first; this page is for humans browsing the repository.
 - [`ecmwf-open-data`](#ecmwf-open-data)
 - [`ecmwf-opencharts-wms`](#ecmwf-opencharts-wms)
 - [`ecmwf-polytope`](#ecmwf-polytope)
+- [`ecmwf-weather-feedback`](#ecmwf-weather-feedback)
 
 ## `ecmwf-cds-ads`
 
@@ -172,3 +173,20 @@ Source: [`../plugins/ecmwf-weather/skills/ecmwf-polytope/SKILL.md`](../plugins/e
 | Reference | Purpose |
 |---|---|
 | `references/requests.md` | Polytope requests |
+
+## `ecmwf-weather-feedback`
+
+Turns what a task taught about the ECMWF weather skills into one anonymised, privacy-scanned issue for ecmwf/ecmwf-weather-skills — load this skill first, before running any `gh issue` command or filing, drafting or reporting any issue about these skills. The issue goes to GitHub, or to ECMWF JIRA project AS with the user's own token, or is given as text to paste — shown in full and filed only after an explicit yes, file it. Use when the user wants to send feedback about the ECMWF weather skills, report a problem with a skill or its instructions, suggest an improvement, file an issue for ecmwf-weather-skills, or report it in JIRA project AS, and when another ECMWF weather skill offered feedback and the user said yes. Handles no weather data and never edits installed skills.
+
+**Requirements:** scripts/feedback.py needs Python 3.9 or newer (standard library only). Filing on GitHub needs the GitHub CLI (gh) signed in with access to ecmwf/ecmwf-weather-skills; JIRA filing needs the user's own personal access token in JIRA_PAT (ECMWF staff). Without either, the user gets the text to paste.
+
+Source: [`../plugins/ecmwf-weather/skills/ecmwf-weather-feedback/SKILL.md`](../plugins/ecmwf-weather/skills/ecmwf-weather-feedback/SKILL.md)
+
+| Script | Purpose |
+|---|---|
+| `scripts/feedback.py` | Draft and privacy-scan ONE skill-feedback issue for ecmwf/ecmwf-weather-skills — standard |
+
+| Reference | Purpose |
+|---|---|
+| `references/github.md` | Skill feedback on GitHub |
+| `references/jira.md` | Skill feedback through JIRA project AS |

@@ -16,14 +16,15 @@ SPDX-License-Identifier: Apache-2.0
 # earthkit — process, compute, plot
 
 ## Contents
-- Before you write code (line 37)
-- Components (line 66)
-- Bundled scripts (line 86)
-- Writing your own code (line 114)
-- Bugs and missing features — upstream, with approval only (line 128)
-- Fallback without earthkit (line 147)
-- Attribution (line 153)
-- When blocked (line 161)
+- Before you write code (line 38)
+- Components (line 67)
+- Bundled scripts (line 87)
+- Writing your own code (line 115)
+- Bugs and missing features — upstream, with approval only (line 129)
+- Fallback without earthkit (line 148)
+- Attribution (line 154)
+- Feedback (line 162)
+- When blocked (line 169)
 - References — `references/recipes.md` (verified code for every job), `references/pitfalls.md` (1.x breakages and known bugs), `references/upstream.md` (reporting bugs, contributing features), `references/versions.md` (generated: latest versions)
 
 **earthkit first.** For weather and climate data, the code an agent would write by hand already
@@ -157,6 +158,13 @@ source licence. For Open Data: `Data: © <year> ECMWF, CC BY 4.0` — on figures
 `fig.attribution(...)` (the scripts do it). For Copernicus (ERA5/CAMS): "Generated using
 Copernicus Climate Change Service / Atmosphere Monitoring Service information <year>". State
 modifications (regridded, interpolated, unit-converted, ensemble statistics).
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

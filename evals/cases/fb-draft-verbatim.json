@@ -1,0 +1,91 @@
+{
+  "id": "fb-draft-verbatim",
+  "prompt": "I used the ecmwf-open-data skill to fetch the newest ensemble run. Its latest-run lookup named today's 12 UTC run as the latest, but fetching the last step of that run returned 404 for more than an hour afterwards, so my download of the full run failed. The skill says nothing about a run being listed before it is complete. I use GitHub and gh is signed in. I want to send feedback about the ECMWF weather skills: draft the issue and show me exactly what it would say. Do not file anything until I tell you to.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "setup": {
+    "fakes": {
+      "gh": {
+        "login": "eval-colleague",
+        "signed_in": true,
+        "access": true,
+        "labels": [
+          "skill-feedback"
+        ]
+      },
+      "jira": {}
+    }
+  },
+  "note": "A user asks for feedback on a skill and has a signed-in gh. The feedback skill runs the draft command and the answer shows its printed text verbatim in a code block: the summary line with the repository prefix, the labels line and the repository line appear together in one block, so a paraphrase, a summary or text outside a block fails. The answer carries the fixed sentence about what the draft leaves out and asks for the user's yes. Nothing is filed: neither fake service sees a create request.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-weather-feedback"
+    },
+    {
+      "kind": "command",
+      "pattern": "feedback\\.py\\s+draft"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?s)```[a-z]*\\n(?:[^\\n]*\\n)?[ \\t]*Summary:[ \\t]*\\[ecmwf-weather\\][^\\n]*\\n[ \\t]*Labels:[ \\t]*skill-feedback\\b.*?Skills repository:[ \\t]*ecmwf/ecmwf-weather-skills"
+    },
+    {
+      "kind": "final",
+      "pattern": "Labels:\\W*skill-feedback"
+    },
+    {
+      "kind": "final",
+      "pattern": "Skills repository:\\s*ecmwf/ecmwf-weather-skills"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)last step"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)(yes,? file it|(shall|should|may|can) I (file|submit|create|open|post)|want me to (file|submit|create|open|post)|(file|submit|create|open|post) (it|this|the issue)[^\\n]*\\?)"
+    },
+    {
+      "kind": "final",
+      "pattern": "The\\s+draft\\s+leaves\\s+out\\s+names,\\s+e-mail\\s+addresses,\\s+user\\s+names\\s+in\\s+file\\s+paths,\\s+keys\\s+and\\s+tokens\\."
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)(?:\\bissues?\\s+(?:was\\s+|has\\s+been\\s+|is\\s+now\\s+)?(?:filed|created|opened)\\b|\\bI(?:'ve| have)?\\s+(?:filed|submitted)\\b|\\bAS-\\d+\\b|ecmwf-weather-skills/issues/\\d+)"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "feedback\\.py\\s+(?:github-file|jira-file)"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "gh\\s+issue\\s+create"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)(curl|wget|Invoke-(RestMethod|WebRequest))[^\\n]*(-X\\s*POST|--request\\s+POST|-d\\s|--data|-Method\\s+Post)"
+    },
+    {
+      "kind": "gh_count",
+      "pattern": "^CREATED ",
+      "count": 0
+    },
+    {
+      "kind": "gh_not_hit",
+      "pattern": "^gh issue create"
+    },
+    {
+      "kind": "gh_no_write"
+    },
+    {
+      "kind": "jira_count",
+      "pattern": "^CREATED ",
+      "count": 0
+    },
+    {
+      "kind": "jira_not_hit",
+      "pattern": "^POST /rest/api/2/issue(?:\\?|$)"
+    }
+  ]
+}

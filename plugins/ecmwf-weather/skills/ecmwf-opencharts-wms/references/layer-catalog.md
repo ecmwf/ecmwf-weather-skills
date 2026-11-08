@@ -59,11 +59,9 @@ All layers in https://eccharts.ecmwf.int/wms/?token=public GetCapabilities. Vali
 | `composition_duaod550` | Dust aerosol optical depth at 550 nm (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | yes | `sh_all_aod` |
 | `composition_europe_co_forecast_surface` | Carbon monoxide (provided by CAMS) | yes | `sh_co_web_surface_concentration` |
 | `composition_europe_dust_forecast_surface` | Dust (provided by CAMS) | yes | `sh_dust_web_surface_concentration` |
-| `composition_europe_ec_ff_forecast_surface` | Pm2.5 anthropogenic fossil fuel carbon at surface [ug/m3] (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | no | `sh_ec_ff_surface_concentration` |
 | `composition_europe_ec_res_forecast_surface` | Ground-level residential elementary carbon (provided by CAMS) | yes | `sh_Reds_surface_concentration` |
 | `composition_europe_ec_resid_forecast_surface` | Residential elementary carbon (provided by CAMS) | yes | `sh_ec_resid_web_surface_concentration` |
 | `composition_europe_ec_total_forecast_surface` | Total elementary carbon (provided by CAMS) | yes | `sh_ec_total_web_surface_concentration` |
-| `composition_europe_ec_wb_forecast_surface` | Pm2.5 anthropogenic wood burning carbon at surface [ug/m3] (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | no | `sh_ec_wb_surface_concentration` |
 | `composition_europe_hcho_forecast_surface` | Formaldehyde (provided by CAMS) | yes | `sh_hcho_web_surface_concentration` |
 | `composition_europe_nh3_forecast_surface` | Ammonia (provided by CAMS) | yes | `sh_nh3_web_surface_concentration` |
 | `composition_europe_nmvoc_forecast_surface` | Non methane vocs (provided by CAMS) | yes | `sh_nmvoc_web_surface_concentration` |
@@ -114,7 +112,6 @@ All layers in https://eccharts.ecmwf.int/wms/?token=public GetCapabilities. Vali
 | `composition_o3_850hpa` | Ozone at 850 hPa [ppbv] (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | yes | `sh_all_o3_850hpa` |
 | `composition_o3_surface` | Ozone at surface [ppbv] (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | yes | `sh_all_o3_sfc` |
 | `composition_o3_totalcolumn` | Total column of ozone [DU] (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | yes | `sh_all_tco3` |
-| `composition_o3sfc` | Ozone at surface (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | no | `sh_all_o3_sfc` |
 | `composition_pm10` | PM10 - coarse particulate matter [ug / m3] (provided by CAMS) | yes | `sh_all_pm10_defra_daqi` |
 | `composition_pm2p5` | PM2.5 - fine particulate matter [ug / m3] (provided by CAMS) | yes | `sh_all_pm2p5_defra_daqi` |
 | `composition_so2_300hpa` | Sulphur dioxide at 300 hPa [ppbv] (provided by CAMS, the Copernicus Atmosphere Monitoring Service) | yes | `sh_all_so2_300hpa` |

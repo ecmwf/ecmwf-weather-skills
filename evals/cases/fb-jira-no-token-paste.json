@@ -1,0 +1,86 @@
+{
+  "id": "fb-jira-no-token-paste",
+  "prompt": "I am a forecaster. I have no GitHub account and no JIRA token. I used the ecmwf-opencharts-wms skill and its layer catalogue listed a layer for the 2 m temperature anomaly that the WMS answers with an error for every time I tried; the catalogue does not say that the layer needs a different time dimension. Please prepare the report so that I can get it into JIRA myself.",
+  "timeout": 900,
+  "max_budget_usd": 3,
+  "setup": {
+    "env": {
+      "JIRA_PAT": ""
+    }
+  },
+  "note": "A user with neither GitHub nor a JIRA token reports a skill problem. The agent still drafts the issue for project AS and gives the paste route: the exact summary, labels, component and description, the link to the AS project and the repository line, because AS is shared by several skills repositories. Nothing is filed, no token is requested in chat, and no command sends a create request. The case sets JIRA_PAT empty so that a token in the maintainer's own shell cannot reach it. The issue type is graded on the line the draft command prints, as in the other JIRA draft case.",
+  "expect": [
+    {
+      "kind": "skill",
+      "name": "ecmwf-weather-feedback"
+    },
+    {
+      "kind": "command",
+      "pattern": "feedback\\.py\\s+jira-draft"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "feedback\\.py\\s+(?:jira-file|github-file)"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "gh\\s+issue\\s+create"
+    },
+    {
+      "kind": "command_not",
+      "pattern": "(?i)(curl|wget|Invoke-(RestMethod|WebRequest))[^\\n]*(-X\\s*POST|--request\\s+POST|-d\\s|--data|-Method\\s+Post)"
+    },
+    {
+      "kind": "final",
+      "pattern": "https?://[^\\s)>\\]]+/projects/AS/"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)layer"
+    },
+    {
+      "kind": "final",
+      "pattern": "\\[ecmwf-weather\\]"
+    },
+    {
+      "kind": "final",
+      "pattern": "skill-feedback"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)labels?\\W[^\\n]*(?<![/\\w])ecmwf-weather-skills\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)component(?:s|/s)?\\W+weather-skills\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "(?i)issue type\\W*improvement\\b"
+    },
+    {
+      "kind": "final",
+      "pattern": "Skills repository:\\s*ecmwf/ecmwf-weather-skills"
+    },
+    {
+      "kind": "final",
+      "pattern": "The\\s+draft\\s+leaves\\s+out\\s+names,\\s+e-mail\\s+addresses,\\s+user\\s+names\\s+in\\s+file\\s+paths,\\s+keys\\s+and\\s+tokens\\."
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)issue type\\W*(?:bug|new feature|epic|sub-?task|task)\\b"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)(?<!not )(?<!n't )(?<!never )\\b(?:use|choose|select|pick)\\s+(?:an?\\s+)?(?:bug|new feature|epic|sub-?task)\\b"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)(?:\\bissues?\\s+(?:was\\s+|has\\s+been\\s+|is\\s+now\\s+)?(?:filed|created|opened)\\b|\\bI(?:'ve| have)?\\s+(?:filed|submitted)\\b|\\bAS-\\d+\\b|ecmwf-weather-skills/issues/\\d+)"
+    },
+    {
+      "kind": "final_not",
+      "pattern": "(?i)(send|paste|share|give|tell) me (your|the) (jira )?(token|pat)\\b"
+    }
+  ]
+}

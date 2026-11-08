@@ -25,6 +25,7 @@ chat. Source, documentation and issues: https://github.com/ecmwf/ecmwf-weather-s
 | `ecmwf-mars` | Check, size, plan and retrieve requests from the ECMWF MARS archive |
 | `ecmwf-destine` | Destination Earth Digital Twin data via DestinE Polytope (upgraded access on request) |
 | `ecmwf-observations` | Station observations from MARS, forecast verification, observed thermal indices |
+| `ecmwf-weather-feedback` | Turns what a task taught into one anonymised, privacy-scanned issue about these skills, filed on GitHub or in ECMWF JIRA only after your explicit yes |
 
 ## What runs, and what it sends
 
@@ -34,7 +35,8 @@ on first use (earthkit components, eccodes, polytope-client, ecmwf-api-client, c
 Nothing is installed globally and nothing runs in the background, except the optional local web
 map server (`webmap.py serve`), which listens on 127.0.0.1 only.
 
-The scripts contact only these services, and only to fetch data, catalogues and status:
+The scripts contact only these services, and only to fetch data, catalogues and status — except
+the two feedback rows, which send one issue, and only after your explicit yes:
 
 | Host | Purpose | Sent |
 |---|---|---|
@@ -50,11 +52,13 @@ The scripts contact only these services, and only to fetch data, catalogues and 
 | `oscar.wmo.int` (WMO OSCAR/Surface) | station metadata for WMO ids missing from the bundled index | WMO station id |
 | `mcp.ecmwf.int`; when it is down, the services behind it: `charts.mcp.ecmwf.int`, `catalogue-test.lumi.apps.dte.destination-earth.eu` | ECMWF's MCP server, called by `ecmwf_mcp.py` when your agent has no MCP tools | tool arguments (coordinates, dates, chart names); never credentials |
 | `apps.ecmwf.int`, `status.ecmwf.int` | ECMWF service status, only after a connection failure | nothing beyond the request |
+| `jira.ecmwf.int` (ECMWF JIRA project AS, for ECMWF staff) | feedback on these skills, only when you file it there with `ecmwf-weather-feedback`; the maintainers' `make check-endpoints` also asks it for its public server information | the issue text; your own personal access token (`Authorization` header, read from `JIRA_PAT`) |
+| `github.com`, `api.github.com` (through your own `gh`) | feedback on these skills as a GitHub issue, only when you file it with `ecmwf-weather-feedback` | the issue text; `gh`'s own sign-in, which the script never reads |
 | `pypi.org`, `files.pythonhosted.org` (via `uv`), `astral.sh` | Python packages; uv install instructions | package names |
 | `unpkg.com` (in the generated web map page, loaded by your browser) | Leaflet map library | — |
 
 Links shown to users only (not contacted by the scripts): `www.ecmwf.int`, `support.ecmwf.int`,
-`creativecommons.org`, `doi.org`, `github.com`, `docs.astral.sh`, `codes.ecmwf.int`,
+`creativecommons.org`, `doi.org`, `docs.astral.sh`, `codes.ecmwf.int`,
 `meteoalarm.org`.
 
 ## ECMWF MCP server (bundled)

@@ -18,6 +18,13 @@ PATTERNS = {
         r"(?i)(key|token)[\"']?\s*[:=]\s*[\"']?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     ),
     "private key block": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    # A Jira personal access token is about 44 base64 characters with no recognisable prefix.
+    "Jira personal access token": re.compile(
+        r"\bJIRA_PAT[\"']?\s*[:=]\s*[\"']?[A-Za-z0-9+/_=-]{20,}"
+    ),
+    "bearer token": re.compile(
+        r"(?i)\bAuthorization[\"']?\s*:\s*[\"']?Bearer\s+[A-Za-z0-9+/_=.-]{32,}"
+    ),
 }
 
 
@@ -38,10 +45,32 @@ def test_no_credentials_in_tracked_files():
 def test_patterns_detect_synthetic_credentials():
     hexkey = "ab" * 16
     uuid = "-".join(["a" * 8, "b" * 4, "c" * 4, "d" * 4, "e" * 12])
+    pat = "Zm9vYmFyYmF6cXV4c3ludGhldGljdG9rZW4xMjM0"  # synthetic, 40 base64 characters
     samples = [
         f'"key": "{hexkey}"',
         f"key: {uuid}",
         "eyJ" + "a" * 30 + "." + "b" * 30 + "." + "c" * 20,
+        f"JIRA_PAT={pat}",
+        f'JIRA_PAT = "{pat}"',
+        f"export JIRA_PAT='{pat}'",
+        f"Authorization: Bearer {pat}",
+        f'headers = {{"Authorization": "Bearer {pat}"}}',
     ]
     for s in samples:
         assert any(rx.search(s) for rx in PATTERNS.values()), s
+
+
+def test_jira_token_patterns_leave_names_and_placeholders_alone():
+    placeholders = [
+        "JIRA_PAT=<your personal access token>",
+        "JIRA_PAT is not set",
+        "the variable JIRA_PAT holds it",
+        '"JIRA_PAT" if token else None',
+        "JIRA_PAT=",
+        "Authorization: Bearer <token>",
+        'f"Bearer {token}"',
+        'headers["Authorization"] = f"Bearer {token}"',
+        "Authorization: Bearer …",
+    ]
+    for s in placeholders:
+        assert not any(rx.search(s) for rx in PATTERNS.values()), s

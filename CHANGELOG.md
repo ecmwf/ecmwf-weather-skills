@@ -11,6 +11,55 @@ Format follows [Keep a Changelog](https://keepachangelog.com/); versions follow
 
 ## [Unreleased]
 
+**Skill feedback, filed only on your yes.** A new skill turns what a task taught into one
+anonymised issue about these skills, and the eval runner can no longer file a real one.
+
+### Added
+
+- `ecmwf-weather-feedback` skill: turns a wrong or missing instruction, a workaround or a
+  changed service into one issue for `ecmwf/ecmwf-weather-skills`. The agent writes the draft,
+  scans it for personal data (names, e-mail addresses, user names in file paths, keys, tokens),
+  shows it verbatim and files it once, only after an explicit "yes, file it". Routes, found by
+  `feedback.py routes`: GitHub with the label `skill-feedback` through the user's signed-in `gh`;
+  ECMWF JIRA project AS with the user's own `JIRA_PAT` (ECMWF staff), after a duplicate check;
+  or the text to paste by hand. The token comes only from the environment and goes only to the
+  JIRA host. The script has `routes`, `draft`, `scan`, `jira-draft`, `jira-check`, `jira-file`
+  and `github-file`.
+- Every other skill has a `## Feedback` section: after a task that taught something, the agent
+  offers once to draft feedback — never after a no, never when nothing was learned, and never
+  once the user says "no feedback offers". `check_skills.py` enforces the section in each skill.
+- Eval runner: every agent runs in a fail-closed `bubblewrap` sandbox with no GitHub, `gh`,
+  JIRA or SSH credential in reach, so no eval can file an issue; system-resolver lookups of the
+  GitHub and ECMWF JIRA hosts are blocked as well (not a firewall); the runner refuses to run a
+  case if its start-up probe fails. Fake JIRA and fake `gh` services
+  (`setup.fakes`) and the expectation kinds `jira_hit`, `jira_not_hit`, `jira_count`,
+  `gh_hit`, `gh_not_hit`, `gh_count` and `gh_no_write` let cases grade filing without a real
+  issue; new `fb-*` cases cover the offer, the draft, the privacy scan and filing. Tests get the
+  same hygiene: no issue-service variables, a temporary `HOME`, a `gh` that looks absent.
+- `make check-endpoints` probes ECMWF JIRA's anonymous `serverInfo` as an optional service: an
+  outage is a warning, drift still fails.
+- `tests/tooling/test_no_secrets.py` also catches JIRA personal access tokens in tracked files.
+- README, CONTRIBUTING and AGENTS.md describe the feedback routes and the rules that keep them
+  safe; `TODO.md` has a "Claude organisation distribution" section.
+
+### Fixed
+
+- ecmwf-destine: the catalogue-browser link in `references/requests.md` pointed at a path that
+  no longer exists; it now points at the host root.
+- `make links` leaves ECMWF's JIRA host to `make check-endpoints`, like the other service
+  endpoints.
+
+### Changed
+
+- Generated references regenerated from the live catalogues. `ecmwf-opencharts-wms/references/layer-catalog.md`
+  drops the CAMS surface layers for fossil-fuel and wood-burning PM2.5 carbon and the
+  `composition_o3sfc` ozone layer, which the WMS no longer lists.
+  `ecmwf-earthkit/references/versions.md` records newer releases of earthkit-data, earthkit-meteo,
+  earthkit-utils, earthkit-climate and covjsonkit. `ecmwf-observations/references/stations.csv`
+  drops the Belarus, Ghana and Cook Islands stations that are no longer listed, renames several
+  stations (Biarritz, Telgárt, the Sudan stations now marked as automatic, Djibouti Aerodrome)
+  and corrects the coordinates or elevation of a few others.
+
 ## [0.8.2] - 2026-10-25
 
 **Known earthkit issues linked, `figsize` hint, green weekly link check.** Agents point to an

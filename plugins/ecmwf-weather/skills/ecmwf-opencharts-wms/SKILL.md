@@ -16,16 +16,17 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF maps — WMS, OpenCharts, web maps
 
 ## Contents
-- Choose the route (line 31)
-- Web map workflow (line 51)
-- WMS (line 68)
-- OpenCharts (line 86)
-- ECMWF MCP (line 110)
-- Rules the server enforces (line 134)
-- Access and tokens (line 145)
-- Processing and plots (line 151)
-- Attribution (line 159)
-- When blocked (line 172)
+- Choose the route (line 32)
+- Web map workflow (line 52)
+- WMS (line 69)
+- OpenCharts (line 87)
+- ECMWF MCP (line 111)
+- Rules the server enforces (line 135)
+- Access and tokens (line 146)
+- Processing and plots (line 152)
+- Attribution (line 160)
+- Feedback (line 173)
+- When blocked (line 180)
 - References — `references/layers.md` (what layers mean, styles, dimensions), `references/layer-catalog.md` (generated: every layer), `references/webmap.md` (customise, deploy, MapLibre/OpenLayers snippets)
 
 ## Choose the route
@@ -168,6 +169,13 @@ European Commission nor ECMWF is responsible for any use that may be made of the
 information or data it contains." (after the ECMWF line on maps; on its own for CAMS charts).
 The scripts print the line and the web map shows it. Don't use the ECMWF logo except as a link
 to ecmwf.int.
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

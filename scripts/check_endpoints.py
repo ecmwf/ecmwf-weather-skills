@@ -14,7 +14,8 @@ Run by `make check-endpoints`, which `make release-prepare` and the weekly CI ca
 - every service host still answers HTTP (401/403 count as present: authentication is expected);
 - the optional services the scripts call as APIs answer the request the scripts make: both MCP
   backends an `initialize` message, NOAA Aviation Weather (non-ECMWF; station metadata for
-  `ecmwf-observations`) a station list. An outage warns; drift fails.
+  `ecmwf-observations`) a station list, ECMWF's JIRA (where `ecmwf-weather-feedback` files
+  issues for staff) the anonymous serverInfo document. An outage warns; drift fails.
 
 A network error or a rate-limited answer (HTTP 429) is asked again before it counts.
 """
@@ -45,6 +46,7 @@ def _load(name: str, directory: Path = SCRIPTS):
 st = _load("ecmwf_status")
 mcp = _load("ecmwf_mcp")
 obs = _load("obs", ROOT / "plugins/ecmwf-weather/skills/ecmwf-observations/scripts")
+feedback = _load("feedback", ROOT / "plugins/ecmwf-weather/skills/ecmwf-weather-feedback/scripts")
 
 # One cheap URL per service that must answer (any HTTP status below 404, or 401/403/405).
 PROBES = {
@@ -89,15 +91,20 @@ MCP_PROBES = {f"mcp-{name}": url for name, url in sorted(mcp.BACKENDS.items())}
 NOAA_STATION = "LPPT"
 NOAA_PROBE = f"{obs.NOAA_API}/stationinfo?ids={NOAA_STATION}&format=json"
 NOAA_HEADERS = {"User-Agent": obs.UA, "Accept": "application/json"}
+# ECMWF's JIRA, where `ecmwf-weather-feedback` files issues for staff. The one anonymous request
+# is serverInfo (no sign-in, no issue content); the project itself needs a sign-in. The host is
+# feedback.JIRA_URL, not the ECMWF_WEATHER_JIRA_URL override that tests and evals use.
+JIRA_PROBE = f"{feedback.JIRA_URL}/rest/api/2/serverInfo"
+JIRA_HEADERS = {"Accept": "application/json"}
 # URLs the skills name as API bases or endpoints rather than as pages to read:
 # `check_links.py` leaves them out because this script probes them.
-SERVICE_ENDPOINTS = (*mcp.BACKENDS.values(), obs.NOAA_API)
+SERVICE_ENDPOINTS = (*mcp.BACKENDS.values(), obs.NOAA_API, feedback.JIRA_URL)
 TIMEOUT_S = 30
 
 
 def probed_urls() -> list[str]:
     """Every URL this script requests, apart from the ones read from the status feeds."""
-    return [*PROBES.values(), *MCP_PROBES.values(), NOAA_PROBE]
+    return [*PROBES.values(), *MCP_PROBES.values(), NOAA_PROBE, JIRA_PROBE]
 
 
 def _mcp_initialize_request() -> dict:
@@ -142,6 +149,23 @@ def _noaa_problem(body: str) -> str | None:
     ):
         return None
     return f"changed shape (expected a JSON list of stations with icaoId {NOAA_STATION})"
+
+
+def _jira_problem(body: str) -> str | None:
+    """Why `body` is not the serverInfo document of a Jira server, or None."""
+    try:
+        info = json.loads(body)
+    except ValueError:
+        return "answers HTTP 200, but not with JSON any more"
+    if (
+        isinstance(info, dict)
+        and isinstance(info.get("version"), str)
+        and info["version"]
+        and isinstance(info.get("baseUrl"), str)
+        and info["baseUrl"]
+    ):
+        return None
+    return "changed shape (expected the serverInfo JSON with version and baseUrl)"
 
 
 def _fetch(url: str, data: bytes | None = None, headers: dict | None = None) -> tuple[int, str]:
@@ -286,6 +310,7 @@ def check(fetch=None, warnings: list[str] | None = None) -> list[str]:
             name: (url, _mcp_initialize_request(), _mcp_problem) for name, url in MCP_PROBES.items()
         },
         "noaa": (NOAA_PROBE, {"headers": NOAA_HEADERS}, _noaa_problem),
+        "jira": (JIRA_PROBE, {"headers": JIRA_HEADERS}, _jira_problem),
     }
     for name, (url, request, answer_problem) in requests.items():
         try:

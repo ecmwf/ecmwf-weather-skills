@@ -16,13 +16,14 @@ SPDX-License-Identifier: Apache-2.0
 # ECMWF Polytope
 
 ## Contents
-- Access check (line 40)
-- Point forecast and ensemble workflow (line 65)
-- ECMWF MCP (line 96)
-- Other features (line 110)
-- Processing and plots (line 120)
-- Licence and attribution (line 128)
-- When blocked (line 136)
+- Access check (line 41)
+- Point forecast and ensemble workflow (line 66)
+- ECMWF MCP (line 97)
+- Other features (line 111)
+- Processing and plots (line 121)
+- Licence and attribution (line 129)
+- Feedback (line 137)
+- When blocked (line 144)
 - References — `references/requests.md` (request keywords, every feature schema, data available, Destination Earth)
 
 Polytope cuts features out of ECMWF's datacubes server-side: a 10-day hourly point forecast is
@@ -132,6 +133,13 @@ Data section (`class: ai`, AIFS): show `Data: © <year> ECMWF, CC BY 4.0` with t
 (www.ecmwf.int). What is restricted is access, not the licence: operational data needs an
 entitled account (see Access check). `ptpoint.py` prints the line in `attribution`, and
 `ekplot.py` stamps it on figures.
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

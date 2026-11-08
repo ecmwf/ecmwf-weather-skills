@@ -26,6 +26,14 @@ INITIALIZE_RESULT = {
 INITIALIZE_JSON = json.dumps(INITIALIZE_RESULT)
 INITIALIZE_SSE = f"event: message\ndata: {INITIALIZE_JSON}\n\n"
 STATIONINFO = [{"icaoId": "LPPT", "wmoId": "08579", "site": "Lisboa", "lat": 38.77, "lon": -9.13}]
+# What an anonymous GET of JIRA's serverInfo answers (Jira Server, REST v2).
+JIRA_SERVERINFO = {
+    "baseUrl": "https://jira.ecmwf.int",
+    "version": "9.12.40",
+    "versionNumbers": [9, 12, 40],
+    "deploymentType": "Server",
+    "serverTitle": "JIRA",
+}
 
 
 def fetcher(overrides=None):
@@ -39,6 +47,8 @@ def fetcher(overrides=None):
             return 200, INITIALIZE_JSON
         if url == ce.NOAA_PROBE:
             return 200, json.dumps(STATIONINFO)
+        if url == ce.JIRA_PROBE:
+            return 200, json.dumps(JIRA_SERVERINFO)
         if url == ce.st.STATUS:
             return 200, json.dumps(STATUS)
         if url == ce.st.SESSIONS:
@@ -136,12 +146,13 @@ def test_destine_catalogue_probe_is_the_one_the_skill_uses():
     assert ce.PROBES["destine-catalogue"] == f"{destine.CATALOGUE_URL}/health"
 
 
-# --- optional services probed with their own request: the MCP backends and NOAA -----------------
+# --- optional services probed with their own request: the MCP backends, NOAA and JIRA -----------
 
 OPTIONAL_SERVICES = {
     "mcp-charts": (ce.mcp.BACKENDS["charts"], INITIALIZE_JSON),
     "mcp-catalogue": (ce.mcp.BACKENDS["catalogue"], INITIALIZE_JSON),
     "noaa": (ce.NOAA_PROBE, json.dumps(STATIONINFO)),
+    "jira": (ce.JIRA_PROBE, json.dumps(JIRA_SERVERINFO)),
 }
 # One malformed answer per service: HTTP 200, but not what the skills' scripts parse.
 CHANGED_SHAPE = {
@@ -158,6 +169,15 @@ CHANGED_SHAPE = {
         json.dumps({"data": STATIONINFO}),
         json.dumps([{"station": "LPPT"}]),
         json.dumps([{"icaoId": "EGLL"}]),
+        "",
+    ],
+    "jira": [
+        "<html>Log in to Jira</html>",
+        "[]",
+        json.dumps({"version": "9.12.40"}),
+        json.dumps({"baseUrl": "https://jira.ecmwf.int"}),
+        json.dumps({"version": "", "baseUrl": "https://jira.ecmwf.int"}),
+        json.dumps({"errorMessages": ["You do not have the permission"]}),
         "",
     ],
 }
@@ -310,13 +330,37 @@ def test_noaa_probe_is_the_request_obs_makes():
     assert seen[ce.NOAA_PROBE]["headers"] == obs_headers
 
 
+def test_jira_probe_is_an_anonymous_serverinfo_request_on_the_feedback_skills_host():
+    from conftest import load_script
+
+    feedback = load_script("ecmwf-weather-feedback", "feedback")
+    expected = f"{feedback.JIRA_URL}/rest/api/2/serverInfo"
+    assert expected == ce.JIRA_PROBE
+    assert expected == "https://jira.ecmwf.int/rest/api/2/serverInfo"
+
+    seen = {}
+    base = fetcher()
+
+    def spy(url, **request):
+        seen[url] = request
+        return base(url, **request)
+
+    assert ce.check(fetch=spy, warnings=[]) == []
+    request = seen[ce.JIRA_PROBE]
+    assert request.get("data") is None
+    # No credential of any kind is sent: the probe is anonymous.
+    assert not {h.lower() for h in request.get("headers", {})} & {"authorization", "cookie"}
+
+
 def test_service_endpoints_are_the_urls_the_scripts_use():
     assert set(ce.SERVICE_ENDPOINTS) == {
         *ce.mcp.BACKENDS.values(),
         "https://aviationweather.gov/api/data",
+        "https://jira.ecmwf.int",
     }
     assert set(ce.probed_urls()) >= set(ce.mcp.BACKENDS.values())
     assert ce.NOAA_PROBE.startswith("https://aviationweather.gov/api/data/stationinfo?ids=")
+    assert ce.JIRA_PROBE in ce.probed_urls()
 
 
 @pytest.mark.live

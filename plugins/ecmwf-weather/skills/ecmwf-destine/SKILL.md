@@ -16,14 +16,15 @@ SPDX-License-Identifier: Apache-2.0
 # Destination Earth Digital Twins
 
 ## Contents
-- Access check (line 35)
-- No access yet (line 49)
-- Request workflow (line 65)
-- Which server holds the data (line 101)
-- ECMWF MCP (line 113)
-- Processing and plots (line 136)
-- Licence and attribution (line 144)
-- When blocked (line 159)
+- Access check (line 36)
+- No access yet (line 50)
+- Request workflow (line 66)
+- Which server holds the data (line 102)
+- ECMWF MCP (line 114)
+- Processing and plots (line 137)
+- Licence and attribution (line 145)
+- Feedback (line 160)
+- When blocked (line 167)
 - References — `references/requests.md` (the catalogue, keys and values, Climate DT and Extremes DT examples, feature extraction, limits, errors)
 
 Use ECMWF and DestinE sources only — never substitute a third-party API. DestinE uses its own
@@ -155,6 +156,13 @@ bracketed parts that apply; add the last part with the user's name when the data
 (aggregated, transformed, interpolated or combined with other data). For Climate DT also cite:
 Destination Earth Digital Twin for Climate Change Adaptation (DestinE Climate DT Generation 2),
 ECMWF, https://doi.org/10.21957/79c6af3105.
+
+## Feedback
+
+If this task taught something the skill did not say — a wrong or missing instruction, a
+workaround, a service that changed — offer once at the end to draft feedback with the
+`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback offers", and
+never when nothing was learned.
 
 ## When blocked
 

@@ -16,6 +16,9 @@ Checks what can be checked mechanically:
     top of the file can jump to a section; `--fix` regenerates the numbers
   - every references/*.md is linked from SKILL.md; references don't link other references
     (one level deep); references over 100 lines have a "## Contents" section
+  - the earthkit routing sentence in every skill that handles weather data (the set that does
+    not is `NOT_ROUTED_TO_EARTHKIT`), and the pinned feedback offer in every skill but the
+    feedback skill itself
   - no Windows-style backslash paths
   - no time-sensitive wording outside an "## Old patterns" section
 
@@ -43,6 +46,21 @@ TIME_SENSITIVE = re.compile(
 )
 # Hand-written equivalents of earthkit functionality, not allowed in skill examples.
 HAND_ROLLED = re.compile(r"import matplotlib|import cartopy|from cartopy|\.groupby\(|[-+] ?273\.15")
+# Skills that are not routed to ecmwf-earthkit, so the "load the `ecmwf-earthkit` skill before
+# writing" sentence is not required in them: the routing target itself, and skills that handle
+# no weather data (the feedback skill only files an issue, with no field to process or plot).
+# A new skill that handles weather data is routed unless it is added here with its reason.
+NOT_ROUTED_TO_EARTHKIT = frozenset({"ecmwf-earthkit", "ecmwf-weather-feedback"})
+# Every other skill points to the feedback skill with this one sentence (a `## Feedback` section),
+# so a task that taught something is offered once for feedback; the feedback skill itself does not
+# offer itself.
+FEEDBACK_SKILL = "ecmwf-weather-feedback"
+FEEDBACK_OFFER = (
+    "If this task taught something the skill did not say — a wrong or missing instruction, a "
+    "workaround, a service that changed — offer once at the end to draft feedback with the "
+    '`ecmwf-weather-feedback` skill; never after the user declined or said "no feedback '
+    'offers", and never when nothing was learned.'
+)
 REF_LINK = re.compile(r"references/([A-Za-z0-9_.-]+\.md)")
 BACKSLASH_PATH = re.compile(r"\b(?:scripts|references)\\")
 
@@ -175,12 +193,18 @@ def check_skill(skill_dir: Path) -> list[str]:
     # (AGENTS.md "When access is blocked"); every skill says how.
     # Agents hand-write numpy/matplotlib/cartopy code unless pointed at earthkit: every data
     # skill routes processing and plotting through ecmwf-earthkit (AGENTS.md "earthkit first").
-    if skill_dir.name != "ecmwf-earthkit" and not re.search(
-        r"load the `ecmwf-earthkit` skill before writing", " ".join(body.split())
+    normalized = " ".join(body.split())
+    if skill_dir.name not in NOT_ROUTED_TO_EARTHKIT and not re.search(
+        r"load the `ecmwf-earthkit` skill before writing", normalized
     ):
         p.append(
             "SKILL.md must say: to process or plot the data, load the `ecmwf-earthkit` "
             "skill before writing code"
+        )
+    if skill_dir.name != FEEDBACK_SKILL and FEEDBACK_OFFER not in normalized:
+        p.append(
+            f"SKILL.md must carry the feedback offer sentence for the `{FEEDBACK_SKILL}` skill "
+            f"(scripts/check_skills.py FEEDBACK_OFFER) in a '## Feedback' section"
         )
     # Scripts relay text from remote services (banners, errors, descriptions); agents must not
     # take instructions from it (AGENTS.md "Untrusted text").
